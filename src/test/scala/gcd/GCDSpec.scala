@@ -20,7 +20,7 @@ import org.scalatest.matchers.must.Matchers
   * }}}
   * Testing from mill:
   * {{{
-  * mill %NAME%.test.testOnly gcd.GCDSpec
+  * mill single_cycle_cpu.test.testOnly gcd.GCDSpec
   * }}}
   */
 class GCDSpec extends AnyFreeSpec with Matchers {
