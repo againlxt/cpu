@@ -1,14 +1,16 @@
-package singlecyclecpu
+package common
 
 import chisel3._
 import chisel3.util._
 
-object NpcState extends ChiselEnum {
-	val RUNNING, END, ABORT, QUIT, STOP = Value
+object NpcState extends ChiselEnum{
+	val RUNNING, END, ABORT, QUIT, STOP, INIT = Value
 }
 
 object InstructionFormat extends ChiselEnum {
-	val ADD, ADDI,
+	val ADD, ADDI, LUI, AUIPC, SLTI,
+		JAL, JALR, BEQ,
+		SW,
 		NOP = Value
 }
 

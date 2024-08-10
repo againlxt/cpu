@@ -3,77 +3,93 @@ package singlecyclecpu
 import chisel3._
 import chisel3.util._
 import singlecyclecpu._
+import ifu._
+import idu._
+import exu._
+import common._
 
 object Main extends App {
-	emitVerilog(new TOP(), Array("--target-dir", "generated"))
+	emitVerilog(new top, Array("--target-dir", "generated"))
 }
 
-class TOP() extends Module {
+class top extends Module {
 	val io = IO(new Bundle {
-		val pc 		= Input(UInt(32.W))
-		val memData = Input(UInt(32.W))
-
-		val insFormat = Output(UInt(32.W))
-		val insType   = Output(UInt(3.W))
-        // R-type
-		val func7     = Output(UInt(7.W))
-		val rs2       = Output(UInt(5.W))
-		val rs1       = Output(UInt(5.W))
-		val func3     = Output(UInt(3.W))
-		val rd        = Output(UInt(5.W))
-		val opcode    = Output(UInt(7.W))
-        // I-type imm
-		val iImm      = Output(UInt(12.W))
-        // S-type imm
-		val sImm      = Output(UInt(12.W))
-        // B-type imm
-		val bImm      = Output(UInt(13.W))
-        // U-type imm
-		val uImm      = Output(UInt(32.W))
-        // J-type imm
-		val jImm      = Output(UInt(21.W))
+		val npcState 	= Input(UInt(3.W))
+		val memData 	= Input(UInt(32.W))
+		val pcInput 	= Input(UInt(32.W))
+		val nextPC 		= Output(UInt(32.W))
 	})
+	val pc 				= Module(new PC)
+	val ifu 			= Module(new IFU)
+	val riscv32BaseReg 	= Module(new Riscv32BaseReg)
+	val idu 			= Module(new IDU)
+	val exu 			= Module(new EXU)
+	val memDataWire 	= io.memData
 
-	val ifu = Module(new IFU(32, 32))
-	val idu = Module(new IDU(32, 32))
+	// PC Reg
+	pc.io.npcState 	:= io.npcState
+	pc.io.dnpc 		:= io.nextPC
+	val pcWire 		= pc.io.pc
 
-	// IFU connection
-	ifu.io.npcState := NpcState.RUNNING.asUInt
-	ifu.io.pc 		:= io.pc
-	ifu.io.memData 	:= io.memData
+	// IFU
+	// Input
+	ifu.io.pc 		:= pcWire
+	ifu.io.memData 	:= memDataWire
+	// Output
 	val cmdWire 	= ifu.io.cmd
-	val pcOutWire	= ifu.io.pcOut
 
-	// IDU connection
-	idu.io.npcState := NpcState.RUNNING.asUInt
+	// IDU
+	// Input
 	idu.io.cmd 		:= cmdWire
+	val rs1DataWire = Wire(UInt(32.W))
+	val rs2DataWire = Wire(UInt(32.W))
+	// Output
+	val immTypeWire = idu.io.immType
+	val regWRWire 	= idu.io.regWR
+	val srcAALUWire = idu.io.srcAALU
+	val srcBALUWire = idu.io.srcBALU
+	val ctrALUWire 	= idu.io.ctrALU
+	val branchWire 	= idu.io.branch
+	val memToRegWire= idu.io.memToReg
+	val memWRWire 	= idu.io.memWR
+	val memOPWire 	= idu.io.memOP
+	val rs1IndexWire= idu.io.rs1Index
+	val rs2IndexWire= idu.io.rs2Index
+	val rdIndexWire = idu.io.rdIndex
+	val rs1Wire 	= idu.io.rs1
+	val rs2Wire 	= idu.io.rs2
+	val immWire 	= idu.io.imm
 
-	val insFormatWire 	= idu.io.insFormat
-	val insTypeWire 	= idu.io.insType
-	val func7Wire 		= idu.io.func7
-	val rs2Wire 		= idu.io.rs2
-	val rs1Wire 		= idu.io.rs1
-	val func3Wire 		= idu.io.func3
-	val rdWire			= idu.io.rd
-	val opcodeWire 		= idu.io.opcode
-	val iImmWire		= idu.io.iImm
-	val sImmWire		= idu.io.sImm
-	val bImmWire 		= idu.io.bImm
-	val uImmWire 		= idu.io.uImm
-	val jImmWire 		= idu.io.jImm
+	// Base Reg
+	// Input
+	riscv32BaseReg.io.rs1Index 	:= rs1IndexWire
+	riscv32BaseReg.io.rs2Index 	:= rs2IndexWire
+	riscv32BaseReg.io.rdIndex 	:= rdIndexWire
+	val dataInWire 	= Wire(UInt(32.W))
+	riscv32BaseReg.io.regWR 	:= regWRWire
+	// Output
+	rs1DataWire 				:= riscv32BaseReg.io.rs1Data
+	rs2DataWire 				:= riscv32BaseReg.io.rs2Data
 
-	// Ouput
-	io.insFormat 	:= insFormatWire
-	io.insType 		:= insTypeWire
-	io.func7 		:= func7Wire
-	io.rs2 			:= rs2Wire
-	io.rs1 			:= rs1Wire
-	io.func3 		:= func3Wire
-	io.rd 			:= rdWire
-	io.opcode 		:= opcodeWire
-	io.iImm 		:= iImmWire
-	io.sImm 		:= sImmWire
-	io.bImm 		:= bImmWire
-	io.uImm 		:= uImmWire
-	io.jImm 		:= jImmWire
+	// EXU
+	// Input
+	exu.io.npcState 		:= io.npcState
+	exu.io.rs1Data 			:= rs1DataWire
+	exu.io.rs2Data 			:= rs2DataWire
+	exu.io.immData 			:= immWire
+	exu.io.pc 				:= pcWire
+	exu.io.aluASrcCtr 		:= srcAALUWire
+	exu.io.aluBSrcCtr 		:= srcBALUWire
+	exu.io.aluCtr 			:= ctrALUWire
+	exu.io.memOPCtr 		:= memOPWire
+	exu.io.memWRCtr 		:= memWRWire
+	exu.io.branchCtr 		:= branchWire
+	exu.io.memToRegCtr		:= memToRegWire
+	// Output
+	io.nextPC 				:= exu.io.nextPC
+	dataInWire 				:= exu.io.rdData
+
+	idu.io.rs1Data 	:= rs1DataWire
+	idu.io.rs2Data 	:= rs2DataWire
+	riscv32BaseReg.io.dataIn 	:= dataInWire
 }

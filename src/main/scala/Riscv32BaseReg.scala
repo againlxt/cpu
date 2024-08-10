@@ -1,0 +1,29 @@
+package  singlecyclecpu
+
+import chisel3._
+import chisel3.util._
+import scala.collection.immutable.ArraySeq
+
+class Riscv32BaseReg extends Module {
+	val io = IO(new Bundle {
+		val rs1Index 	= Input(UInt(5.W))
+		val rs2Index 	= Input(UInt(5.W))
+		val rdIndex 	= Input(UInt(5.W))
+		val dataIn 		= Input(UInt(32.W))
+		val regWR 		= Input(Bool())
+
+		val rs1Data 	= Output(UInt(32.W))
+		val rs2Data 	= Output(UInt(32.W))
+	})
+
+	val riscv32BaseReg 	= RegInit(VecInit(Seq.fill(32)(0.U(32.W))))
+
+	when(io.regWR === 1.U) {
+		riscv32BaseReg(io.rdIndex)	:= io.dataIn
+	} .otherwise {
+		riscv32BaseReg(io.rdIndex) := riscv32BaseReg(io.rdIndex)
+	}
+
+	io.rs1Data 	:= riscv32BaseReg(io.rs1Index)
+	io.rs2Data 	:= riscv32BaseReg(io.rs2Index)
+}
