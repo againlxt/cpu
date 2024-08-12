@@ -33,7 +33,7 @@ class ContrGen extends Module {
 		(opcodeWire === "b0010111".U).asBool -> InstructionFormat.AUIPC,
 		(func3Wire === "b010".U & opcodeWire === "b0010011".U).asBool -> InstructionFormat.SLTI,
 		(opcodeWire === "b1101111".U).asBool -> InstructionFormat.JAL,
-		(func3Wire === "b000".U & opcodeWire === "b1101011".U).asBool -> InstructionFormat.JALR,
+		(func3Wire === "b000".U & opcodeWire === "b1100111".U).asBool -> InstructionFormat.JALR,
 		(func3Wire === "b010".U & opcodeWire === "b0100011".U).asBool -> InstructionFormat.SW,
 		(func3Wire === "b000".U & opcodeWire === "b1100011".U).asBool -> InstructionFormat.BEQ
 	))
@@ -45,8 +45,8 @@ class ContrGen extends Module {
 		(opcodeWire === "b0010111".U) -> InstructionType.U,
 		(func3Wire === "b010".U & opcodeWire === "b0010011".U).asBool -> InstructionType.I,
 		(opcodeWire === "b1101111".U).asBool -> InstructionType.J,
-		(func3Wire === "b000".U & opcodeWire === "b1101011".U).asBool -> InstructionType.I,
-		(func3Wire === "b010".U & opcodeWire === "b0100011".U).asBool -> InstructionType.SW,
+		(func3Wire === "b000".U & opcodeWire === "b1100111".U).asBool -> InstructionType.I,
+		(func3Wire === "b010".U & opcodeWire === "b0100011".U).asBool -> InstructionType.S,
 		(func3Wire === "b000".U & opcodeWire === "b1100011".U).asBool -> InstructionType.B
 	))
 

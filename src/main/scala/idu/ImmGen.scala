@@ -15,12 +15,12 @@ class ImmGen extends Module {
 		val imm 	  = Output(UInt(32.W))
 	})
 
-	val iImmWire 	= Cat(0.U(20.W), io.iImm)
-	val sImmWire 	= Cat(0.U(20.W), io.sImm)
-	val bImmWire 	= Cat(0.U(19.W), io.bImm)
+	val iImmWire 	= Cat(Fill(20, io.iImm(11)), io.iImm)
+	val sImmWire 	= Cat(Fill(20, io.sImm(11)), io.sImm)
+	val bImmWire 	= Cat(Fill(19, io.bImm(12)), io.bImm)
 	val uImmWire 	= io.uImm
-	val jImmWire 	= Cat(0.U(11.W), io.jImm)
-	val immTypewire = io.immType
+	val jImmWire 	= Cat(Fill(11, io.jImm(20)), io.jImm)
+	val immTypewire = io.immType	
 
 	io.imm := MuxCase(	0.U(32.W),
 						Array(	(immTypewire === 1.U) -> iImmWire,

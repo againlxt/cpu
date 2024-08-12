@@ -8,6 +8,13 @@ import idu._
 import exu._
 import common._
 
+/* 
+import "DPI-C" function void sim_exit();
+always @(io_memData) begin
+    if(io_memData==32'h00100073)   sim_exit();
+end
+*/
+
 object Main extends App {
 	emitVerilog(new top, Array("--target-dir", "generated"))
 }
@@ -28,7 +35,7 @@ class top extends Module {
 
 	// PC Reg
 	pc.io.npcState 	:= io.npcState
-	pc.io.dnpc 		:= io.nextPC
+	pc.io.dnpc 		:= io.pcInput
 	val pcWire 		= pc.io.pc
 
 	// IFU
