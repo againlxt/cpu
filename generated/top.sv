@@ -1106,48 +1106,48 @@ module top(	// src/main/scala/Main.scala:22:7
                 reset,	// src/main/scala/Main.scala:22:7
   input  [2:0]  io_npcState,	// src/main/scala/Main.scala:23:20
   input  [31:0] io_memData,	// src/main/scala/Main.scala:23:20
-                io_pcInput,	// src/main/scala/Main.scala:23:20
   output [31:0] io_nextPC	// src/main/scala/Main.scala:23:20
 );
 
-  wire [31:0] _exu_io_rdData;	// src/main/scala/Main.scala:33:49
-  wire        _idu_io_regWR;	// src/main/scala/Main.scala:32:49
-  wire        _idu_io_srcAALU;	// src/main/scala/Main.scala:32:49
-  wire [1:0]  _idu_io_srcBALU;	// src/main/scala/Main.scala:32:49
-  wire [3:0]  _idu_io_ctrALU;	// src/main/scala/Main.scala:32:49
-  wire [2:0]  _idu_io_branch;	// src/main/scala/Main.scala:32:49
-  wire [4:0]  _idu_io_rs1Index;	// src/main/scala/Main.scala:32:49
-  wire [4:0]  _idu_io_rs2Index;	// src/main/scala/Main.scala:32:49
-  wire [4:0]  _idu_io_rdIndex;	// src/main/scala/Main.scala:32:49
-  wire [31:0] _idu_io_imm;	// src/main/scala/Main.scala:32:49
-  wire [31:0] _riscv32BaseReg_io_rs1Data;	// src/main/scala/Main.scala:31:41
-  wire [31:0] _riscv32BaseReg_io_rs2Data;	// src/main/scala/Main.scala:31:41
-  wire [31:0] _ifu_io_cmd;	// src/main/scala/Main.scala:30:49
-  wire [31:0] _pc_io_pc;	// src/main/scala/Main.scala:29:49
-  PC pc (	// src/main/scala/Main.scala:29:49
+  wire [31:0] _exu_io_nextPC;	// src/main/scala/Main.scala:32:49
+  wire [31:0] _exu_io_rdData;	// src/main/scala/Main.scala:32:49
+  wire        _idu_io_regWR;	// src/main/scala/Main.scala:31:49
+  wire        _idu_io_srcAALU;	// src/main/scala/Main.scala:31:49
+  wire [1:0]  _idu_io_srcBALU;	// src/main/scala/Main.scala:31:49
+  wire [3:0]  _idu_io_ctrALU;	// src/main/scala/Main.scala:31:49
+  wire [2:0]  _idu_io_branch;	// src/main/scala/Main.scala:31:49
+  wire [4:0]  _idu_io_rs1Index;	// src/main/scala/Main.scala:31:49
+  wire [4:0]  _idu_io_rs2Index;	// src/main/scala/Main.scala:31:49
+  wire [4:0]  _idu_io_rdIndex;	// src/main/scala/Main.scala:31:49
+  wire [31:0] _idu_io_imm;	// src/main/scala/Main.scala:31:49
+  wire [31:0] _riscv32BaseReg_io_rs1Data;	// src/main/scala/Main.scala:30:41
+  wire [31:0] _riscv32BaseReg_io_rs2Data;	// src/main/scala/Main.scala:30:41
+  wire [31:0] _ifu_io_cmd;	// src/main/scala/Main.scala:29:49
+  wire [31:0] _pc_io_pc;	// src/main/scala/Main.scala:28:49
+  PC pc (	// src/main/scala/Main.scala:28:49
     .clock       (clock),
     .reset       (reset),
-    .io_npcState ({29'h0, io_npcState}),	// src/main/scala/Main.scala:37:25
-    .io_dnpc     (io_pcInput),
+    .io_npcState ({29'h0, io_npcState}),	// src/main/scala/Main.scala:36:25
+    .io_dnpc     (_exu_io_nextPC),	// src/main/scala/Main.scala:32:49
     .io_pc       (_pc_io_pc)
   );
-  IFU ifu (	// src/main/scala/Main.scala:30:49
+  IFU ifu (	// src/main/scala/Main.scala:29:49
     .io_memData (io_memData),
     .io_cmd     (_ifu_io_cmd)
   );
-  Riscv32BaseReg riscv32BaseReg (	// src/main/scala/Main.scala:31:41
+  Riscv32BaseReg riscv32BaseReg (	// src/main/scala/Main.scala:30:41
     .clock       (clock),
     .reset       (reset),
-    .io_rs1Index (_idu_io_rs1Index),	// src/main/scala/Main.scala:32:49
-    .io_rs2Index (_idu_io_rs2Index),	// src/main/scala/Main.scala:32:49
-    .io_rdIndex  (_idu_io_rdIndex),	// src/main/scala/Main.scala:32:49
-    .io_dataIn   (_exu_io_rdData),	// src/main/scala/Main.scala:33:49
-    .io_regWR    (_idu_io_regWR),	// src/main/scala/Main.scala:32:49
+    .io_rs1Index (_idu_io_rs1Index),	// src/main/scala/Main.scala:31:49
+    .io_rs2Index (_idu_io_rs2Index),	// src/main/scala/Main.scala:31:49
+    .io_rdIndex  (_idu_io_rdIndex),	// src/main/scala/Main.scala:31:49
+    .io_dataIn   (_exu_io_rdData),	// src/main/scala/Main.scala:32:49
+    .io_regWR    (_idu_io_regWR),	// src/main/scala/Main.scala:31:49
     .io_rs1Data  (_riscv32BaseReg_io_rs1Data),
     .io_rs2Data  (_riscv32BaseReg_io_rs2Data)
   );
-  IDU idu (	// src/main/scala/Main.scala:32:49
-    .io_cmd      (_ifu_io_cmd),	// src/main/scala/Main.scala:30:49
+  IDU idu (	// src/main/scala/Main.scala:31:49
+    .io_cmd      (_ifu_io_cmd),	// src/main/scala/Main.scala:29:49
     .io_regWR    (_idu_io_regWR),
     .io_srcAALU  (_idu_io_srcAALU),
     .io_srcBALU  (_idu_io_srcBALU),
@@ -1158,17 +1158,18 @@ module top(	// src/main/scala/Main.scala:22:7
     .io_rdIndex  (_idu_io_rdIndex),
     .io_imm      (_idu_io_imm)
   );
-  EXU exu (	// src/main/scala/Main.scala:33:49
-    .io_rs1Data    (_riscv32BaseReg_io_rs1Data),	// src/main/scala/Main.scala:31:41
-    .io_rs2Data    (_riscv32BaseReg_io_rs2Data),	// src/main/scala/Main.scala:31:41
-    .io_immData    (_idu_io_imm),	// src/main/scala/Main.scala:32:49
-    .io_pc         (_pc_io_pc),	// src/main/scala/Main.scala:29:49
-    .io_aluASrcCtr (_idu_io_srcAALU),	// src/main/scala/Main.scala:32:49
-    .io_aluBSrcCtr (_idu_io_srcBALU),	// src/main/scala/Main.scala:32:49
-    .io_aluCtr     (_idu_io_ctrALU),	// src/main/scala/Main.scala:32:49
-    .io_branchCtr  (_idu_io_branch),	// src/main/scala/Main.scala:32:49
-    .io_nextPC     (io_nextPC),
+  EXU exu (	// src/main/scala/Main.scala:32:49
+    .io_rs1Data    (_riscv32BaseReg_io_rs1Data),	// src/main/scala/Main.scala:30:41
+    .io_rs2Data    (_riscv32BaseReg_io_rs2Data),	// src/main/scala/Main.scala:30:41
+    .io_immData    (_idu_io_imm),	// src/main/scala/Main.scala:31:49
+    .io_pc         (_pc_io_pc),	// src/main/scala/Main.scala:28:49
+    .io_aluASrcCtr (_idu_io_srcAALU),	// src/main/scala/Main.scala:31:49
+    .io_aluBSrcCtr (_idu_io_srcBALU),	// src/main/scala/Main.scala:31:49
+    .io_aluCtr     (_idu_io_ctrALU),	// src/main/scala/Main.scala:31:49
+    .io_branchCtr  (_idu_io_branch),	// src/main/scala/Main.scala:31:49
+    .io_nextPC     (_exu_io_nextPC),
     .io_rdData     (_exu_io_rdData)
   );
+  assign io_nextPC = _exu_io_nextPC;	// src/main/scala/Main.scala:22:7, :32:49
 endmodule
 

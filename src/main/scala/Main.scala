@@ -23,7 +23,6 @@ class top extends Module {
 	val io = IO(new Bundle {
 		val npcState 	= Input(UInt(3.W))
 		val memData 	= Input(UInt(32.W))
-		val pcInput 	= Input(UInt(32.W))
 		val nextPC 		= Output(UInt(32.W))
 	})
 	val pc 				= Module(new PC)
@@ -35,7 +34,7 @@ class top extends Module {
 
 	// PC Reg
 	pc.io.npcState 	:= io.npcState
-	pc.io.dnpc 		:= io.pcInput
+	pc.io.dnpc 		:= io.nextPC
 	val pcWire 		= pc.io.pc
 
 	// IFU
