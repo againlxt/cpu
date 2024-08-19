@@ -6,9 +6,9 @@ import scala.collection.immutable.ArraySeq
 
 class Riscv32BaseReg extends Module {
 	val io = IO(new Bundle {
-		val rs1Index 	= Input(UInt(5.W))
-		val rs2Index 	= Input(UInt(5.W))
-		val rdIndex 	= Input(UInt(5.W))
+		val rs1Index 	= Input(UInt(4.W))
+		val rs2Index 	= Input(UInt(4.W))
+		val rdIndex 	= Input(UInt(4.W))
 		val dataIn 		= Input(UInt(32.W))
 		val regWR 		= Input(Bool())
 
@@ -16,7 +16,7 @@ class Riscv32BaseReg extends Module {
 		val rs2Data 	= Output(UInt(32.W))
 	})
 
-	val riscv32BaseReg 	= RegInit(VecInit(Seq.fill(32)(0.U(32.W))))
+	val riscv32BaseReg 	= RegInit(VecInit(Seq.fill(16)(0.U(32.W))))
 
 	when(io.regWR === 1.U) {
 		riscv32BaseReg(io.rdIndex)	:= io.dataIn

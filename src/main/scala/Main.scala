@@ -13,6 +13,11 @@ import "DPI-C" function void sim_exit();
 always @(io_memData) begin
     if(io_memData==32'h00100073)   sim_exit();
 end
+
+export "DPI-C" function getCommond;
+function bit [31:0] getCommond;
+	return _ifu_io_cmd;
+endfunction
 */
 
 object Main extends App {

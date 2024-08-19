@@ -99,7 +99,7 @@ endmodule
 module Riscv32BaseReg(	// src/main/scala/Riscv32BaseReg.scala:7:7
   input         clock,	// src/main/scala/Riscv32BaseReg.scala:7:7
                 reset,	// src/main/scala/Riscv32BaseReg.scala:7:7
-  input  [4:0]  io_rs1Index,	// src/main/scala/Riscv32BaseReg.scala:8:20
+  input  [3:0]  io_rs1Index,	// src/main/scala/Riscv32BaseReg.scala:8:20
                 io_rs2Index,	// src/main/scala/Riscv32BaseReg.scala:8:20
                 io_rdIndex,	// src/main/scala/Riscv32BaseReg.scala:8:20
   input  [31:0] io_dataIn,	// src/main/scala/Riscv32BaseReg.scala:8:20
@@ -124,40 +124,8 @@ module Riscv32BaseReg(	// src/main/scala/Riscv32BaseReg.scala:7:7
   reg  [31:0]       riscv32BaseReg_13;	// src/main/scala/Riscv32BaseReg.scala:19:42
   reg  [31:0]       riscv32BaseReg_14;	// src/main/scala/Riscv32BaseReg.scala:19:42
   reg  [31:0]       riscv32BaseReg_15;	// src/main/scala/Riscv32BaseReg.scala:19:42
-  reg  [31:0]       riscv32BaseReg_16;	// src/main/scala/Riscv32BaseReg.scala:19:42
-  reg  [31:0]       riscv32BaseReg_17;	// src/main/scala/Riscv32BaseReg.scala:19:42
-  reg  [31:0]       riscv32BaseReg_18;	// src/main/scala/Riscv32BaseReg.scala:19:42
-  reg  [31:0]       riscv32BaseReg_19;	// src/main/scala/Riscv32BaseReg.scala:19:42
-  reg  [31:0]       riscv32BaseReg_20;	// src/main/scala/Riscv32BaseReg.scala:19:42
-  reg  [31:0]       riscv32BaseReg_21;	// src/main/scala/Riscv32BaseReg.scala:19:42
-  reg  [31:0]       riscv32BaseReg_22;	// src/main/scala/Riscv32BaseReg.scala:19:42
-  reg  [31:0]       riscv32BaseReg_23;	// src/main/scala/Riscv32BaseReg.scala:19:42
-  reg  [31:0]       riscv32BaseReg_24;	// src/main/scala/Riscv32BaseReg.scala:19:42
-  reg  [31:0]       riscv32BaseReg_25;	// src/main/scala/Riscv32BaseReg.scala:19:42
-  reg  [31:0]       riscv32BaseReg_26;	// src/main/scala/Riscv32BaseReg.scala:19:42
-  reg  [31:0]       riscv32BaseReg_27;	// src/main/scala/Riscv32BaseReg.scala:19:42
-  reg  [31:0]       riscv32BaseReg_28;	// src/main/scala/Riscv32BaseReg.scala:19:42
-  reg  [31:0]       riscv32BaseReg_29;	// src/main/scala/Riscv32BaseReg.scala:19:42
-  reg  [31:0]       riscv32BaseReg_30;	// src/main/scala/Riscv32BaseReg.scala:19:42
-  reg  [31:0]       riscv32BaseReg_31;	// src/main/scala/Riscv32BaseReg.scala:19:42
-  wire [31:0][31:0] _GEN =
-    {{riscv32BaseReg_31},
-     {riscv32BaseReg_30},
-     {riscv32BaseReg_29},
-     {riscv32BaseReg_28},
-     {riscv32BaseReg_27},
-     {riscv32BaseReg_26},
-     {riscv32BaseReg_25},
-     {riscv32BaseReg_24},
-     {riscv32BaseReg_23},
-     {riscv32BaseReg_22},
-     {riscv32BaseReg_21},
-     {riscv32BaseReg_20},
-     {riscv32BaseReg_19},
-     {riscv32BaseReg_18},
-     {riscv32BaseReg_17},
-     {riscv32BaseReg_16},
-     {riscv32BaseReg_15},
+  wire [15:0][31:0] _GEN =
+    {{riscv32BaseReg_15},
      {riscv32BaseReg_14},
      {riscv32BaseReg_13},
      {riscv32BaseReg_12},
@@ -191,90 +159,42 @@ module Riscv32BaseReg(	// src/main/scala/Riscv32BaseReg.scala:7:7
       riscv32BaseReg_13 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
       riscv32BaseReg_14 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
       riscv32BaseReg_15 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
-      riscv32BaseReg_16 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
-      riscv32BaseReg_17 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
-      riscv32BaseReg_18 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
-      riscv32BaseReg_19 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
-      riscv32BaseReg_20 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
-      riscv32BaseReg_21 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
-      riscv32BaseReg_22 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
-      riscv32BaseReg_23 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
-      riscv32BaseReg_24 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
-      riscv32BaseReg_25 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
-      riscv32BaseReg_26 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
-      riscv32BaseReg_27 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
-      riscv32BaseReg_28 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
-      riscv32BaseReg_29 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
-      riscv32BaseReg_30 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
-      riscv32BaseReg_31 <= 32'h0;	// src/main/scala/Riscv32BaseReg.scala:19:{42,50}
     end
     else begin	// src/main/scala/Riscv32BaseReg.scala:7:7
       automatic logic [31:0] _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
       _GEN_0 = io_regWR ? io_dataIn : _GEN[io_rdIndex];	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h0)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
+      if (io_rdIndex == 4'h0)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
         riscv32BaseReg_0 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h1)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
+      if (io_rdIndex == 4'h1)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
         riscv32BaseReg_1 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h2)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
+      if (io_rdIndex == 4'h2)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
         riscv32BaseReg_2 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h3)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
+      if (io_rdIndex == 4'h3)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
         riscv32BaseReg_3 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h4)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
+      if (io_rdIndex == 4'h4)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
         riscv32BaseReg_4 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h5)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
+      if (io_rdIndex == 4'h5)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
         riscv32BaseReg_5 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h6)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
+      if (io_rdIndex == 4'h6)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
         riscv32BaseReg_6 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h7)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
+      if (io_rdIndex == 4'h7)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
         riscv32BaseReg_7 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h8)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
+      if (io_rdIndex == 4'h8)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
         riscv32BaseReg_8 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h9)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
+      if (io_rdIndex == 4'h9)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
         riscv32BaseReg_9 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'hA)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
+      if (io_rdIndex == 4'hA)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
         riscv32BaseReg_10 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'hB)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
+      if (io_rdIndex == 4'hB)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
         riscv32BaseReg_11 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'hC)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
+      if (io_rdIndex == 4'hC)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
         riscv32BaseReg_12 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'hD)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
+      if (io_rdIndex == 4'hD)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
         riscv32BaseReg_13 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'hE)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
+      if (io_rdIndex == 4'hE)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
         riscv32BaseReg_14 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'hF)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
-        riscv32BaseReg_15 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h10)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
-        riscv32BaseReg_16 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h11)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
-        riscv32BaseReg_17 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h12)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
-        riscv32BaseReg_18 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h13)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
-        riscv32BaseReg_19 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h14)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
-        riscv32BaseReg_20 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h15)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
-        riscv32BaseReg_21 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h16)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
-        riscv32BaseReg_22 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h17)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
-        riscv32BaseReg_23 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h18)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
-        riscv32BaseReg_24 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h19)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
-        riscv32BaseReg_25 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h1A)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
-        riscv32BaseReg_26 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h1B)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
-        riscv32BaseReg_27 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h1C)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
-        riscv32BaseReg_28 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h1D)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
-        riscv32BaseReg_29 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
-      if (io_rdIndex == 5'h1E)	// src/main/scala/Riscv32BaseReg.scala:7:7, :22:49
-        riscv32BaseReg_30 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
       if (&io_rdIndex)	// src/main/scala/Riscv32BaseReg.scala:22:49
-        riscv32BaseReg_31 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
+        riscv32BaseReg_15 <= _GEN_0;	// src/main/scala/Riscv32BaseReg.scala:19:42, :22:49, :24:44
     end
   end // always @(posedge)
   `ifdef ENABLE_INITIAL_REG_	// src/main/scala/Riscv32BaseReg.scala:7:7
@@ -282,46 +202,30 @@ module Riscv32BaseReg(	// src/main/scala/Riscv32BaseReg.scala:7:7
       `FIRRTL_BEFORE_INITIAL	// src/main/scala/Riscv32BaseReg.scala:7:7
     `endif // FIRRTL_BEFORE_INITIAL
     initial begin	// src/main/scala/Riscv32BaseReg.scala:7:7
-      automatic logic [31:0] _RANDOM[0:31];	// src/main/scala/Riscv32BaseReg.scala:7:7
+      automatic logic [31:0] _RANDOM[0:15];	// src/main/scala/Riscv32BaseReg.scala:7:7
       `ifdef INIT_RANDOM_PROLOG_	// src/main/scala/Riscv32BaseReg.scala:7:7
         `INIT_RANDOM_PROLOG_	// src/main/scala/Riscv32BaseReg.scala:7:7
       `endif // INIT_RANDOM_PROLOG_
       `ifdef RANDOMIZE_REG_INIT	// src/main/scala/Riscv32BaseReg.scala:7:7
-        for (logic [5:0] i = 6'h0; i < 6'h20; i += 6'h1) begin
-          _RANDOM[i[4:0]] = `RANDOM;	// src/main/scala/Riscv32BaseReg.scala:7:7
+        for (logic [4:0] i = 5'h0; i < 5'h10; i += 5'h1) begin
+          _RANDOM[i[3:0]] = `RANDOM;	// src/main/scala/Riscv32BaseReg.scala:7:7
         end	// src/main/scala/Riscv32BaseReg.scala:7:7
-        riscv32BaseReg_0 = _RANDOM[5'h0];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_1 = _RANDOM[5'h1];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_2 = _RANDOM[5'h2];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_3 = _RANDOM[5'h3];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_4 = _RANDOM[5'h4];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_5 = _RANDOM[5'h5];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_6 = _RANDOM[5'h6];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_7 = _RANDOM[5'h7];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_8 = _RANDOM[5'h8];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_9 = _RANDOM[5'h9];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_10 = _RANDOM[5'hA];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_11 = _RANDOM[5'hB];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_12 = _RANDOM[5'hC];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_13 = _RANDOM[5'hD];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_14 = _RANDOM[5'hE];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_15 = _RANDOM[5'hF];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_16 = _RANDOM[5'h10];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_17 = _RANDOM[5'h11];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_18 = _RANDOM[5'h12];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_19 = _RANDOM[5'h13];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_20 = _RANDOM[5'h14];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_21 = _RANDOM[5'h15];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_22 = _RANDOM[5'h16];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_23 = _RANDOM[5'h17];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_24 = _RANDOM[5'h18];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_25 = _RANDOM[5'h19];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_26 = _RANDOM[5'h1A];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_27 = _RANDOM[5'h1B];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_28 = _RANDOM[5'h1C];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_29 = _RANDOM[5'h1D];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_30 = _RANDOM[5'h1E];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
-        riscv32BaseReg_31 = _RANDOM[5'h1F];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
+        riscv32BaseReg_0 = _RANDOM[4'h0];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
+        riscv32BaseReg_1 = _RANDOM[4'h1];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
+        riscv32BaseReg_2 = _RANDOM[4'h2];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
+        riscv32BaseReg_3 = _RANDOM[4'h3];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
+        riscv32BaseReg_4 = _RANDOM[4'h4];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
+        riscv32BaseReg_5 = _RANDOM[4'h5];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
+        riscv32BaseReg_6 = _RANDOM[4'h6];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
+        riscv32BaseReg_7 = _RANDOM[4'h7];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
+        riscv32BaseReg_8 = _RANDOM[4'h8];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
+        riscv32BaseReg_9 = _RANDOM[4'h9];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
+        riscv32BaseReg_10 = _RANDOM[4'hA];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
+        riscv32BaseReg_11 = _RANDOM[4'hB];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
+        riscv32BaseReg_12 = _RANDOM[4'hC];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
+        riscv32BaseReg_13 = _RANDOM[4'hD];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
+        riscv32BaseReg_14 = _RANDOM[4'hE];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
+        riscv32BaseReg_15 = _RANDOM[4'hF];	// src/main/scala/Riscv32BaseReg.scala:7:7, :19:42
       `endif // RANDOMIZE_REG_INIT
     end // initial
     `ifdef FIRRTL_AFTER_INITIAL	// src/main/scala/Riscv32BaseReg.scala:7:7
@@ -1139,9 +1043,9 @@ module top(	// src/main/scala/Main.scala:22:7
   Riscv32BaseReg riscv32BaseReg (	// src/main/scala/Main.scala:31:41
     .clock       (clock),
     .reset       (reset),
-    .io_rs1Index (_idu_io_rs1Index),	// src/main/scala/Main.scala:32:49
-    .io_rs2Index (_idu_io_rs2Index),	// src/main/scala/Main.scala:32:49
-    .io_rdIndex  (_idu_io_rdIndex),	// src/main/scala/Main.scala:32:49
+    .io_rs1Index (_idu_io_rs1Index[3:0]),	// src/main/scala/Main.scala:32:49, :73:41
+    .io_rs2Index (_idu_io_rs2Index[3:0]),	// src/main/scala/Main.scala:32:49, :74:41
+    .io_rdIndex  (_idu_io_rdIndex[3:0]),	// src/main/scala/Main.scala:32:49, :75:41
     .io_dataIn   (_exu_io_rdData),	// src/main/scala/Main.scala:33:49
     .io_regWR    (_idu_io_regWR),	// src/main/scala/Main.scala:32:49
     .io_rs1Data  (_riscv32BaseReg_io_rs1Data),
