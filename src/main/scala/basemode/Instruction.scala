@@ -8,7 +8,11 @@ object NpcState extends ChiselEnum{
 }
 
 object InstructionFormat extends ChiselEnum {
-	val ADD, ADDI, LUI, AUIPC, SLTI,
+	val // Pseudo-instructions
+		RET,
+		
+		// instructions
+		ADD, ADDI, LUI, AUIPC, SLTI,
 		JAL, JALR, BEQ,
 		SW,
 		NOP = Value

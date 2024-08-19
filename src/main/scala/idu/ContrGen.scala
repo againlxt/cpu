@@ -27,6 +27,8 @@ class ContrGen extends Module {
 	val func7Wire 	= io.func7
 
 	val instructionFormatWire = MuxCase(InstructionFormat.NOP, Seq(
+		(func3Wire === "b000".U & opcodeWire === "b1100111".U).asBool -> InstructionFormat.RET,
+
 		(func7Wire === "b0000000".U && func3Wire === "b000".U && opcodeWire === "b0110011".U).asBool -> InstructionFormat.ADD,
 		(func3Wire === "b000".U && opcodeWire === "b0010011".U).asBool -> InstructionFormat.ADDI,
 		(opcodeWire === "b0110111".U).asBool -> InstructionFormat.LUI,
@@ -61,6 +63,8 @@ class ContrGen extends Module {
 
 	io.immType 	:= instructionTypeWire.asUInt
 	switch(instructionFormatWire) {
+		// 
+
 		is(InstructionFormat.ADD) {
 			io.regWR 	:= 1.U
 			io.srcAALU 	:= 0.U
