@@ -8,6 +8,7 @@ import alu._
 import common._
 import singlecyclecpu._
 import memory.ReadWriteSmem
+import chisel3.util.HasBlackBoxResource
 
 class EXU extends Module {
 	val io = IO(new Bundle {

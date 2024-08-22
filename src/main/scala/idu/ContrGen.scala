@@ -7,6 +7,7 @@ import common._
 
 class ContrGen extends Module {
 	val io = IO(new Bundle{
+		val cmd  	= Input(UInt(32.W))
 		val opcode 	= Input(UInt(7.W))
 		val func3 	= Input(UInt(3.W))
 		val func7 	= Input(UInt(7.W))
@@ -27,7 +28,7 @@ class ContrGen extends Module {
 	val func7Wire 	= io.func7
 
 	val instructionFormatWire = MuxCase(InstructionFormat.NOP, Seq(
-		(func3Wire === "b000".U & opcodeWire === "b1100111".U).asBool -> InstructionFormat.RET,
+		(io.cmd(19,0) === "b00001000000001100111".U).asBool -> InstructionFormat.RET,
 
 		(func7Wire === "b0000000".U && func3Wire === "b000".U && opcodeWire === "b0110011".U).asBool -> InstructionFormat.ADD,
 		(func3Wire === "b000".U && opcodeWire === "b0010011".U).asBool -> InstructionFormat.ADDI,
@@ -63,8 +64,16 @@ class ContrGen extends Module {
 
 	io.immType 	:= instructionTypeWire.asUInt
 	switch(instructionFormatWire) {
-		// 
-
+		is(InstructionFormat.RET) {
+			io.regWR 	:= 1.U
+			io.srcAALU 	:= 1.U
+			io.srcBALU 	:= 2.U
+			io.ctrALU 	:= 2.U
+			io.branch 	:= 2.U
+			io.memToReg := 0.U
+			io.memWR 	:= 0.U
+			io.memOP 	:= 0.U
+		}
 		is(InstructionFormat.ADD) {
 			io.regWR 	:= 1.U
 			io.srcAALU 	:= 0.U

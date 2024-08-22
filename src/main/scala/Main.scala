@@ -6,6 +6,7 @@ import singlecyclecpu._
 import ifu._
 import idu._
 import exu._
+import alu._
 import common._
 
 /* 
@@ -21,7 +22,7 @@ end
 
 import "DPI-C" function void set_ftrace_ret_flag();
 always @(io_memData) begin
-	if(io_memData[16:0]==17'b00001_000_00000_11001_11) set_ftrace_ret_flag();
+	if(io_memData[19:0]==20'b00001_000_00000_11001_11) set_ftrace_ret_flag();
 end
 
 export "DPI-C" function getCommond;
@@ -31,7 +32,7 @@ endfunction
 */
 
 object Main extends App {
-	emitVerilog(new top, Array("--target-dir", "generated"))
+	emitVerilog(new top, Array("--split-verilog" ,"--target-dir", "generated"))
 }
 
 class top extends Module {

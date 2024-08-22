@@ -50,7 +50,8 @@ class IDU extends Module {
 	// Instantitate ContrGen
     val contrGen 	= Module(new ContrGen())
 	// Input
-    contrGen.io.opcode := opcodeWire
+	contrGen.io.cmd 	:= io.cmd;
+    contrGen.io.opcode  := opcodeWire
     contrGen.io.func3 	:= func3Wire
     contrGen.io.func7 	:= func7Wire
 	// Output

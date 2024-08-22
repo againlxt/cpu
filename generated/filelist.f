@@ -1,0 +1,15 @@
+PC.sv
+IFU.sv
+Riscv32BaseReg.sv
+ContrGen.sv
+ImmGen.sv
+IDU.sv
+ALUControl.sv
+Shifter.sv
+FullAdder.sv
+CLAGen.sv
+ALUAdder.sv
+ALU.sv
+BranchCond.sv
+EXU.sv
+top.sv
