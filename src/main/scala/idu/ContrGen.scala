@@ -210,7 +210,7 @@ class CGDPIC extends BlackBox with HasBlackBoxInline {
 	|
 	|import "DPI-C" function void set_ftrace_function_call_flag();
 	|always @(instructionFormat) begin
-	|	if((instructionFormat==instructionFormatJAL && instructionFormat==instructionFormatJALR)) 
+	|	if((instructionFormat==instructionFormatJAL || instructionFormat==instructionFormatJALR)) 
 	|		set_ftrace_function_call_flag();
 	|end
 	|
