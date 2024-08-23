@@ -60,20 +60,23 @@ module ContrGen(	// src/main/scala/idu/ContrGen.scala:8:7
                 io_srcAALU,	// src/main/scala/idu/ContrGen.scala:9:20
   output [1:0]  io_srcBALU,	// src/main/scala/idu/ContrGen.scala:9:20
   output [3:0]  io_ctrALU,	// src/main/scala/idu/ContrGen.scala:9:20
-  output [2:0]  io_branch	// src/main/scala/idu/ContrGen.scala:9:20
+  output [2:0]  io_branch,	// src/main/scala/idu/ContrGen.scala:9:20
+  output        io_memWR,	// src/main/scala/idu/ContrGen.scala:9:20
+                io_memValid,	// src/main/scala/idu/ContrGen.scala:9:20
+  output [2:0]  io_memOP	// src/main/scala/idu/ContrGen.scala:9:20
 );
 
-  wire       _instructionTypeWire_T = io_func7 == 7'h0;	// src/main/scala/idu/ContrGen.scala:33:28
-  wire       _instructionTypeWire_T_20 = io_func3 == 3'h0;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:33:58
-  wire       _instructionTypeWire_T_3 = io_opcode == 7'h33;	// src/main/scala/idu/ContrGen.scala:33:85
-  wire       _instructionTypeWire_T_11 = io_opcode == 7'h13;	// src/main/scala/idu/ContrGen.scala:34:55
-  wire       _instructionTypeWire_T_8 = io_opcode == 7'h37;	// src/main/scala/idu/ContrGen.scala:35:29
-  wire       _instructionTypeWire_T_9 = io_opcode == 7'h17;	// src/main/scala/idu/ContrGen.scala:36:29
-  wire       _instructionTypeWire_T_17 = io_func3 == 3'h2;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:37:28
-  wire       _instructionTypeWire_T_13 = io_opcode == 7'h6F;	// src/main/scala/idu/ContrGen.scala:38:29
-  wire       _instructionTypeWire_T_15 = io_opcode == 7'h67;	// src/main/scala/idu/ContrGen.scala:39:54
-  wire       _instructionTypeWire_T_18 = io_opcode == 7'h23;	// src/main/scala/idu/ContrGen.scala:40:54
-  wire       _instructionTypeWire_T_21 = io_opcode == 7'h63;	// src/main/scala/idu/ContrGen.scala:41:54
+  wire       _instructionTypeWire_T = io_func7 == 7'h0;	// src/main/scala/idu/ContrGen.scala:34:28
+  wire       _instructionTypeWire_T_20 = io_func3 == 3'h0;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:34:58
+  wire       _instructionTypeWire_T_3 = io_opcode == 7'h33;	// src/main/scala/idu/ContrGen.scala:34:85
+  wire       _instructionTypeWire_T_11 = io_opcode == 7'h13;	// src/main/scala/idu/ContrGen.scala:35:55
+  wire       _instructionTypeWire_T_8 = io_opcode == 7'h37;	// src/main/scala/idu/ContrGen.scala:36:29
+  wire       _instructionTypeWire_T_9 = io_opcode == 7'h17;	// src/main/scala/idu/ContrGen.scala:37:29
+  wire       _instructionTypeWire_T_17 = io_func3 == 3'h2;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:38:28
+  wire       _instructionTypeWire_T_13 = io_opcode == 7'h6F;	// src/main/scala/idu/ContrGen.scala:39:29
+  wire       _instructionTypeWire_T_15 = io_opcode == 7'h67;	// src/main/scala/idu/ContrGen.scala:40:54
+  wire       _instructionTypeWire_T_18 = io_opcode == 7'h23;	// src/main/scala/idu/ContrGen.scala:41:54
+  wire       _instructionTypeWire_T_21 = io_opcode == 7'h63;	// src/main/scala/idu/ContrGen.scala:42:54
   wire [3:0] instructionFormatWire =
     io_cmd[19:0] == 20'h8067
       ? 4'h0
@@ -96,17 +99,28 @@ module ContrGen(	// src/main/scala/idu/ContrGen.scala:8:7
                                       : {2'h2,
                                          ~(_instructionTypeWire_T_20
                                            & _instructionTypeWire_T_21),
-                                         1'h0};	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:31:{24,31}, :33:{28,58,71,85}, :34:{41,55}, :35:29, :36:29, :37:{28,41}, :38:29, :39:{41,54}, :40:{41,54}, :41:{41,54}
-  wire       _GEN = instructionFormatWire == 4'h0;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:66:39
-  wire       _GEN_0 = instructionFormatWire == 4'h1;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:66:39
-  wire       _GEN_1 = instructionFormatWire == 4'h2;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:66:39
-  wire       _GEN_2 = instructionFormatWire == 4'h3;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:66:39
-  wire       _GEN_3 = instructionFormatWire == 4'h4;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:66:39
-  wire       _GEN_4 = instructionFormatWire == 4'h6;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:66:39
-  wire       _GEN_5 = instructionFormatWire == 4'h7;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:66:39
-  wire       _GEN_6 = instructionFormatWire == 4'h8;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:66:39
-  wire       _GEN_7 = _GEN_3 | _GEN_4;	// src/main/scala/idu/ContrGen.scala:66:39, :108:41, :118:41
-  wire       _GEN_8 = _GEN_1 | _GEN_2 | _GEN_3;	// src/main/scala/idu/ContrGen.scala:66:39, :90:41, :100:41, :110:41
+                                         1'h0};	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:32:{24,31}, :34:{28,58,71,85}, :35:{41,55}, :36:29, :37:29, :38:{28,41}, :39:29, :40:{41,54}, :41:{41,54}, :42:{41,54}
+  wire       _GEN = instructionFormatWire == 4'h0;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:68:39
+  wire       _GEN_0 = instructionFormatWire == 4'h1;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:68:39
+  wire       _GEN_1 = instructionFormatWire == 4'h2;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:68:39
+  wire       _GEN_2 = instructionFormatWire == 4'h3;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:68:39
+  wire       _GEN_3 = instructionFormatWire == 4'h4;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:68:39
+  wire       _GEN_4 = instructionFormatWire == 4'h6;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:68:39
+  wire       _GEN_5 = instructionFormatWire == 4'h7;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:68:39
+  wire       _GEN_6 = instructionFormatWire == 4'h8;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:68:39
+  wire       _GEN_7 = instructionFormatWire == 4'h9;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:68:39
+  wire       _GEN_8 = _GEN_3 | _GEN_4;	// src/main/scala/idu/ContrGen.scala:68:39, :114:41, :125:41
+  wire       _GEN_9 = _GEN_1 | _GEN_2 | _GEN_3;	// src/main/scala/idu/ContrGen.scala:68:39, :94:41, :105:41, :116:41
+  wire       _GEN_10 = _GEN_5 | _GEN_6;	// src/main/scala/idu/ContrGen.scala:68:39, :139:41, :150:41
+  wire       _GEN_11 = _GEN | _GEN_0 | _GEN_1 | _GEN_2 | _GEN_3 | _GEN_4 | _GEN_10;	// src/main/scala/idu/ContrGen.scala:68:39, :76:41, :87:41, :98:41, :109:41, :120:41, :131:41, :139:41, :142:41, :150:41, :153:41
+  wire       io_memWR_0 = ~_GEN_11 & _GEN_7;	// src/main/scala/idu/ContrGen.scala:68:39, :76:41, :87:41, :98:41, :109:41, :120:41, :131:41, :142:41, :153:41
+  CGDPIC cgDPIC (	// src/main/scala/idu/ContrGen.scala:181:28
+    .cmd                   (io_cmd),
+    .instructionFormat     ({28'h0, instructionFormatWire}),	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:183:41
+    .instructionFormatJAL  (32'h6),	// src/main/scala/idu/ContrGen.scala:184:41
+    .instructionFormatJALR (32'h7),	// src/main/scala/idu/ContrGen.scala:185:41
+    .instructionFormatRET  (32'h0)	// src/main/scala/idu/ContrGen.scala:186:41
+  );
   assign io_immType =
     _instructionTypeWire_T & _instructionTypeWire_T_20 & _instructionTypeWire_T_3
       ? 3'h0
@@ -124,26 +138,23 @@ module ContrGen(	// src/main/scala/idu/ContrGen.scala:8:7
                               ? 3'h2
                               : _instructionTypeWire_T_20 & _instructionTypeWire_T_21
                                   ? 3'h3
-                                  : 3'h6;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:8:7, :33:{28,58,85}, :34:55, :35:29, :36:29, :37:28, :38:29, :39:54, :40:54, :41:54, :45:71, :46:41, :49:41, :51:41, :52:41, :53:41
-  assign io_regWR = _GEN | _GEN_0 | _GEN_1 | _GEN_2 | _GEN_7 | _GEN_5;	// src/main/scala/idu/ContrGen.scala:8:7, :66:39, :68:41, :78:41, :88:41, :98:41, :108:41, :118:41
-  assign io_srcAALU = _GEN | ~(_GEN_0 | _GEN_1 | _GEN_2) & (_GEN_7 | _GEN_5);	// src/main/scala/idu/ContrGen.scala:8:7, :66:39, :69:41, :79:41, :89:41, :99:41, :108:41, :109:41, :118:41, :119:41
+                                  : 3'h6;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:8:7, :34:{28,58,85}, :35:55, :36:29, :37:29, :38:28, :39:29, :40:54, :41:54, :42:54, :46:71, :47:41, :50:41, :52:41, :53:41, :54:41
+  assign io_regWR = _GEN | _GEN_0 | _GEN_1 | _GEN_2 | _GEN_8 | _GEN_5;	// src/main/scala/idu/ContrGen.scala:8:7, :68:39, :70:41, :81:41, :92:41, :103:41, :114:41, :125:41
+  assign io_srcAALU = _GEN | ~(_GEN_0 | _GEN_1 | _GEN_2) & (_GEN_8 | _GEN_5);	// src/main/scala/idu/ContrGen.scala:8:7, :68:39, :71:41, :82:41, :93:41, :104:41, :114:41, :115:41, :125:41, :126:41
   assign io_srcBALU =
     _GEN
       ? 2'h2
       : _GEN_0
           ? 2'h0
-          : _GEN_8
-              ? 2'h1
-              : _GEN_4 | _GEN_5
-                  ? 2'h2
-                  : _GEN_6 ? 2'h0 : {1'h0, instructionFormatWire == 4'h9};	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:8:7, :33:28, :37:28, :58:21, :66:39, :70:41, :80:41, :90:41, :100:41, :110:41, :120:41, :130:41, :140:41, :150:41
+          : _GEN_9 ? 2'h1 : _GEN_4 | _GEN_5 ? 2'h2 : _GEN_6 ? 2'h0 : {1'h0, _GEN_7};	// src/main/scala/idu/ContrGen.scala:8:7, :34:28, :38:28, :59:21, :68:39, :72:41, :83:41, :94:41, :105:41, :116:41, :127:41, :138:41, :149:41, :160:41
   assign io_ctrALU =
     _GEN
       ? 4'h2
-      : _GEN_0 | _GEN_1
-          ? 4'h0
-          : _GEN_2 ? 4'h3 : _GEN_7 ? 4'h0 : {2'h0, _GEN_5 | _GEN_6, 1'h0};	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:8:7, :33:28, :58:21, :66:39, :71:41, :81:41, :91:41, :101:41, :108:41, :111:41, :118:41, :121:41, :131:41, :141:41
+      : _GEN_0 | _GEN_1 ? 4'h0 : _GEN_2 ? 4'h3 : _GEN_8 ? 4'h0 : {2'h0, _GEN_10, 1'h0};	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:8:7, :34:28, :59:21, :68:39, :73:41, :84:41, :95:41, :106:41, :114:41, :117:41, :125:41, :128:41, :139:41, :150:41
   assign io_branch =
-    _GEN ? 3'h2 : _GEN_0 | _GEN_8 ? 3'h0 : _GEN_4 ? 3'h1 : _GEN_5 ? 3'h2 : {_GEN_6, 2'h0};	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:8:7, :58:21, :66:39, :72:41, :82:41, :90:41, :92:41, :100:41, :102:41, :110:41, :112:41, :122:41, :132:41, :142:41
+    _GEN ? 3'h2 : _GEN_0 | _GEN_9 ? 3'h0 : _GEN_4 ? 3'h1 : _GEN_5 ? 3'h2 : {_GEN_6, 2'h0};	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:8:7, :59:21, :68:39, :74:41, :85:41, :94:41, :96:41, :105:41, :107:41, :116:41, :118:41, :129:41, :140:41, :151:41
+  assign io_memWR = io_memWR_0;	// src/main/scala/idu/ContrGen.scala:8:7, :68:39, :76:41, :87:41, :98:41, :109:41, :120:41, :131:41, :142:41, :153:41
+  assign io_memValid = io_memWR_0;	// src/main/scala/idu/ContrGen.scala:8:7, :68:39, :76:41, :87:41, :98:41, :109:41, :120:41, :131:41, :142:41, :153:41
+  assign io_memOP = _GEN_11 ? 3'h0 : {1'h0, _GEN_7, 1'h0};	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:8:7, :34:28, :68:39, :76:41, :78:41, :87:41, :89:41, :98:41, :100:41, :109:41, :111:41, :120:41, :122:41, :131:41, :133:41, :142:41, :144:41, :153:41, :155:41, :166:41
 endmodule
 

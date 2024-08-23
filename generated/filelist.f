@@ -1,6 +1,7 @@
 PC.sv
 IFU.sv
 Riscv32BaseReg.sv
+extern_modules.sv
 ContrGen.sv
 ImmGen.sv
 IDU.sv
@@ -11,5 +12,8 @@ CLAGen.sv
 ALUAdder.sv
 ALU.sv
 BranchCond.sv
+DataMem.sv
 EXU.sv
 top.sv
+./CGDPIC.sv
+./DataMemV.sv

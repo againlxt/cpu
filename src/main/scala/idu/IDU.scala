@@ -2,6 +2,7 @@ package idu
 
 import chisel3._
 import chisel3.util._
+import chisel3.util.HasBlackBoxResource
 import scala.collection.immutable.ArraySeq
 
 import idu._
@@ -22,6 +23,7 @@ class IDU extends Module {
 		val branch 	= Output(UInt(3.W))
 		val memToReg= Output(UInt(1.W))
 		val memWR 	= Output(UInt(1.W))
+		val memValid= Output(UInt(1.W))
 		val memOP 	= Output(UInt(3.W))
 
 		// Output to Riscv32BaseReg
@@ -50,7 +52,7 @@ class IDU extends Module {
 	// Instantitate ContrGen
     val contrGen 	= Module(new ContrGen())
 	// Input
-	contrGen.io.cmd 	:= io.cmd;
+    contrGen.io.cmd 	:= io.cmd
     contrGen.io.opcode  := opcodeWire
     contrGen.io.func3 	:= func3Wire
     contrGen.io.func7 	:= func7Wire
@@ -63,6 +65,7 @@ class IDU extends Module {
     val branchWire 	= contrGen.io.branch
     val memToRegWire= contrGen.io.memToReg
     val memWRWire 	= contrGen.io.memWR
+    val memValidWire= contrGen.io.memValid
     val memOPWire 	= contrGen.io.memOP
 
 	// Instantitate ImmGen
@@ -86,6 +89,7 @@ class IDU extends Module {
     io.branch 		:= branchWire
     io.memToReg 	:= memToRegWire
     io.memWR 		:= memWRWire
+	io.memValid 	:= memValidWire 
     io.memOP 		:= memOPWire
 
     io.rs1Index 	:= rs1IndexWire

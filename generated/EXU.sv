@@ -58,35 +58,47 @@ module EXU(	// src/main/scala/exu/EXU.scala:13:7
   input         io_aluASrcCtr,	// src/main/scala/exu/EXU.scala:14:20
   input  [1:0]  io_aluBSrcCtr,	// src/main/scala/exu/EXU.scala:14:20
   input  [3:0]  io_aluCtr,	// src/main/scala/exu/EXU.scala:14:20
+  input  [2:0]  io_memOPCtr,	// src/main/scala/exu/EXU.scala:14:20
+  input         io_memWRCtr,	// src/main/scala/exu/EXU.scala:14:20
+                io_memValidCtr,	// src/main/scala/exu/EXU.scala:14:20
   input  [2:0]  io_branchCtr,	// src/main/scala/exu/EXU.scala:14:20
   output [31:0] io_nextPC,	// src/main/scala/exu/EXU.scala:14:20
                 io_rdData	// src/main/scala/exu/EXU.scala:14:20
 );
 
-  wire _branchCond_io_pcASrc;	// src/main/scala/exu/EXU.scala:67:41
-  wire _branchCond_io_pcBSrc;	// src/main/scala/exu/EXU.scala:67:41
-  wire _alu_io_less;	// src/main/scala/exu/EXU.scala:56:25
-  wire _alu_io_zero;	// src/main/scala/exu/EXU.scala:56:25
-  ALU alu (	// src/main/scala/exu/EXU.scala:56:25
+  wire        _branchCond_io_pcASrc;	// src/main/scala/exu/EXU.scala:69:41
+  wire        _branchCond_io_pcBSrc;	// src/main/scala/exu/EXU.scala:69:41
+  wire        _alu_io_less;	// src/main/scala/exu/EXU.scala:58:25
+  wire        _alu_io_zero;	// src/main/scala/exu/EXU.scala:58:25
+  wire [31:0] _alu_io_aluOut;	// src/main/scala/exu/EXU.scala:58:25
+  ALU alu (	// src/main/scala/exu/EXU.scala:58:25
     .io_aluCtr   (io_aluCtr),
-    .io_srcAData (io_aluASrcCtr ? io_pc : io_rs1Data),	// src/main/scala/exu/EXU.scala:50:38
+    .io_srcAData (io_aluASrcCtr ? io_pc : io_rs1Data),	// src/main/scala/exu/EXU.scala:52:38
     .io_srcBData
       (io_aluBSrcCtr == 2'h0
          ? io_rs2Data
-         : io_aluBSrcCtr == 2'h1 ? io_immData : {29'h0, io_aluBSrcCtr == 2'h2, 2'h0}),	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/exu/EXU.scala:52:33, :53:33, :54:33
+         : io_aluBSrcCtr == 2'h1 ? io_immData : {29'h0, io_aluBSrcCtr == 2'h2, 2'h0}),	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/exu/EXU.scala:54:33, :55:33, :56:33
     .io_less     (_alu_io_less),
     .io_zero     (_alu_io_zero),
-    .io_aluOut   (io_rdData)
+    .io_aluOut   (_alu_io_aluOut)
   );
-  BranchCond branchCond (	// src/main/scala/exu/EXU.scala:67:41
+  BranchCond branchCond (	// src/main/scala/exu/EXU.scala:69:41
     .io_branch (io_branchCtr),
-    .io_less   (_alu_io_less),	// src/main/scala/exu/EXU.scala:56:25
-    .io_zero   (_alu_io_zero),	// src/main/scala/exu/EXU.scala:56:25
+    .io_less   (_alu_io_less),	// src/main/scala/exu/EXU.scala:58:25
+    .io_zero   (_alu_io_zero),	// src/main/scala/exu/EXU.scala:58:25
     .io_pcASrc (_branchCond_io_pcASrc),
     .io_pcBSrc (_branchCond_io_pcBSrc)
   );
+  DataMem dataMem (	// src/main/scala/exu/EXU.scala:79:41
+    .io_addr   (_alu_io_aluOut),	// src/main/scala/exu/EXU.scala:58:25
+    .io_memOP  (io_memOPCtr),
+    .io_dataIn (io_rs2Data),
+    .io_wrEn   (io_memWRCtr),
+    .io_valid  (io_memValidCtr)
+  );
   assign io_nextPC =
     (_branchCond_io_pcASrc ? io_immData : 32'h4)
-    + (_branchCond_io_pcBSrc ? io_rs1Data : io_pc);	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/exu/EXU.scala:13:7, :67:41, :87:{31,69}, :88:12
+    + (_branchCond_io_pcBSrc ? io_rs1Data : io_pc);	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/exu/EXU.scala:13:7, :69:41, :90:{31,69}, :91:12
+  assign io_rdData = _alu_io_aluOut;	// src/main/scala/exu/EXU.scala:13:7, :58:25
 endmodule
 

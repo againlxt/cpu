@@ -50,26 +50,7 @@
   `endif // not def ENABLE_INITIAL_MEM_
 `endif // not def SYNTHESIS
 
-module BranchCond(	// src/main/scala/exu/EXU.scala:184:7
-  input  [2:0] io_branch,	// src/main/scala/exu/EXU.scala:185:20
-  input        io_less,	// src/main/scala/exu/EXU.scala:185:20
-               io_zero,	// src/main/scala/exu/EXU.scala:185:20
-  output       io_pcASrc,	// src/main/scala/exu/EXU.scala:185:20
-               io_pcBSrc	// src/main/scala/exu/EXU.scala:185:20
-);
+// external module CGDPIC
 
-  wire _io_pcBSrc_T = io_branch == 3'h0;	// src/main/scala/exu/EXU.scala:201:29
-  wire _io_pcBSrc_T_1 = io_branch == 3'h1;	// src/main/scala/exu/EXU.scala:202:29
-  wire _io_pcBSrc_T_31 = io_branch == 3'h2;	// src/main/scala/exu/EXU.scala:203:29
-  wire _io_pcBSrc_T_6 = io_branch == 3'h4;	// src/main/scala/exu/EXU.scala:204:29
-  wire _io_pcBSrc_T_11 = io_branch == 3'h5;	// src/main/scala/exu/EXU.scala:206:29
-  wire _io_pcBSrc_T_16 = io_branch == 3'h6;	// src/main/scala/exu/EXU.scala:208:29
-  assign io_pcASrc =
-    ~_io_pcBSrc_T
-    & (_io_pcBSrc_T_1 | _io_pcBSrc_T_31 | ~(_io_pcBSrc_T_6 & ~io_zero)
-       & (_io_pcBSrc_T_6 & io_zero | _io_pcBSrc_T_11 & ~io_zero
-          | ~(_io_pcBSrc_T_11 & io_zero | _io_pcBSrc_T_16 & ~io_less)
-          & (_io_pcBSrc_T_16 & io_less | (&io_branch) & ~io_less)));	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/exu/EXU.scala:184:7, :201:29, :202:29, :203:29, :204:{29,42,44}, :205:42, :206:{29,42}, :207:42, :208:{29,42,44}, :209:42, :210:{29,42}
-  assign io_pcBSrc = ~(_io_pcBSrc_T | _io_pcBSrc_T_1) & _io_pcBSrc_T_31;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/exu/EXU.scala:184:7, :201:29, :202:29, :203:29
-endmodule
+// external module DataMemV
 

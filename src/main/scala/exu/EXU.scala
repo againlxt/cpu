@@ -25,6 +25,7 @@ class EXU extends Module {
 		val aluCtr 		= Input(UInt(4.W))
 		val memOPCtr 	= Input(UInt(3.W))
 		val memWRCtr	= Input(UInt(1.W))
+		val memValidCtr	= Input(UInt(1.W))
 		val branchCtr 	= Input(UInt(3.W))
 		val memToRegCtr = Input(UInt(1.W))
 
@@ -43,6 +44,7 @@ class EXU extends Module {
 	val aluCtrWire 		= io.aluCtr
 	val memOPCtrWire 	= io.memOPCtr
 	val memWRCtrWire	= io.memWRCtr
+	val memValidCtrWire = io.memValidCtr
 	val branchCtrWire 	= io.branchCtr
 	val memToRegCtrWire = io.memToRegCtr
 
@@ -80,6 +82,7 @@ class EXU extends Module {
 	dataMem.io.memOP 		:= memOPCtrWire
 	dataMem.io.dataIn 		:= rs2DataWire
 	dataMem.io.wrEn 		:= memWRCtrWire
+	dataMem.io.valid 		:= memValidCtrWire
 	// Output
 	val dataOutWire 	= dataMem.io.dataOut
 
@@ -96,6 +99,7 @@ class DataMem extends Module {
 		val memOP 	= Input(UInt(3.W))
 		val dataIn 	= Input(UInt(32.W))
 		val wrEn 	= Input(Bool())
+		val valid  	= Input(Bool())
 
 		val dataOut = Output(UInt(32.W))
 	})
@@ -103,13 +107,14 @@ class DataMem extends Module {
 	val memOPWire 	= io.memOP
 	val dataInWire 	= io.dataIn
 	val wrEnWire 	= io.wrEn
+	val validWire 	= io.valid
 
-	val lenWire 	= MuxCase (1.U(3.W), Seq(
-		(memOPWire === "b000".U).asBool -> 1.U(3.W),
-		(memOPWire === "b001".U).asBool -> 2.U(3.W),
-		(memOPWire === "b010".U).asBool -> 4.U(3.W),
-		(memOPWire === "b101".U).asBool -> 2.U(3.W),
-		(memOPWire === "b100".U).asBool -> 1.U(3.W)
+	val wMaskWire 	= MuxCase (1.U(8.W), Seq(
+		(memOPWire === "b000".U).asBool -> "b00000001".U,
+		(memOPWire === "b001".U).asBool -> "b00000011".U,
+		(memOPWire === "b010".U).asBool -> "b00001111".U,
+		(memOPWire === "b101".U).asBool -> "b00000011".U,
+		(memOPWire === "b100".U).asBool -> "b00000001".U
 	))
 	val sOrUWire 	= MuxCase (0.U(1.W), Seq(
 		(memOPWire === "b000".U).asBool -> 1.U(1.W),
@@ -118,18 +123,62 @@ class DataMem extends Module {
 		(memOPWire === "b101".U).asBool -> 0.U(1.W),
 		(memOPWire === "b100".U).asBool -> 0.U(1.W)
 	))
-	val dataMem 	= Module(new ReadWriteSmem(32, 32, Integer.parseInt("79999999", 16)))
-	dataMem.io.enable 	:= wrEnWire
-	dataMem.io.write 	:= wrEnWire
+	
+	val dataMem 		= Module(new DataMemV())
 	dataMem.io.addr 	:= addrWire
-	dataMem.io.len 		:= lenWire
+	dataMem.io.wmask 	:= wMaskWire
 	dataMem.io.dataIn 	:= dataInWire
+	dataMem.io.wrEn 	:= wrEnWire
+	dataMem.io.valid 	:= validWire
 	val signdataWire 	= Wire(SInt(32.W))
 	val unsigndataWire  = Wire(UInt(32.W))
 	signdataWire 		:= dataMem.io.dataOut.asSInt
 	unsigndataWire		:= dataMem.io.dataOut.asUInt
 
 	io.dataOut 			:= Mux(sOrUWire.asBool, signdataWire.asUInt, unsigndataWire)
+}
+
+class DataMemV extends BlackBox with HasBlackBoxInline {
+	val io = IO(new Bundle{
+		// Input
+		val addr 	= Input(UInt(32.W))
+		val wmask 	= Input(UInt(8.W))
+		val dataIn 	= Input(UInt(32.W))
+		val wrEn 	= Input(Bool())
+		val valid  	= Input(Bool())
+
+		val dataOut = Output(UInt(32.W))
+	})
+
+	setInline("DataMemV.sv",
+	"""module DataMemV(
+	   |
+	   |	input [31:0] addr,
+	   |	input [7:0]  wmask,
+	   |	input [31:0] dataIn,
+	   |	input 		 wrEn,
+	   |	input 		 valid,
+	   |
+	   |	output [31:0] dataOut
+	   |);
+	   |reg[31:0] rdata;
+	   |import "DPI-C" function int unsigned pmem_read(input int unsigned raddr);
+	   |import "DPI-C" function void pmem_write(
+	   |	input int unsigned waddr, input int unsigned wdata, input byte wmask);	
+	   |always @(*) begin
+	   |	if(valid) begin
+	   |		rdata = pmem_read(addr);
+	   |		if(wrEn) begin
+	   |			pmem_write(addr, dataIn, wmask);
+	   |		end
+	   |	end
+	   |	else begin
+	   |		rdata = 32'd0;
+	   |	end
+	   |end
+	   |assign dataOut = rdata;
+	   |endmodule
+	""".stripMargin)
 }
 
 class BranchCond extends Module {

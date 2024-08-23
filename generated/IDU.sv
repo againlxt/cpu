@@ -50,43 +50,49 @@
   `endif // not def ENABLE_INITIAL_MEM_
 `endif // not def SYNTHESIS
 
-module IDU(	// src/main/scala/idu/IDU.scala:9:7
-  input  [31:0] io_cmd,	// src/main/scala/idu/IDU.scala:10:16
-  output        io_regWR,	// src/main/scala/idu/IDU.scala:10:16
-                io_srcAALU,	// src/main/scala/idu/IDU.scala:10:16
-  output [1:0]  io_srcBALU,	// src/main/scala/idu/IDU.scala:10:16
-  output [3:0]  io_ctrALU,	// src/main/scala/idu/IDU.scala:10:16
-  output [2:0]  io_branch,	// src/main/scala/idu/IDU.scala:10:16
-  output [4:0]  io_rs1Index,	// src/main/scala/idu/IDU.scala:10:16
-                io_rs2Index,	// src/main/scala/idu/IDU.scala:10:16
-                io_rdIndex,	// src/main/scala/idu/IDU.scala:10:16
-  output [31:0] io_imm	// src/main/scala/idu/IDU.scala:10:16
+module IDU(	// src/main/scala/idu/IDU.scala:10:7
+  input  [31:0] io_cmd,	// src/main/scala/idu/IDU.scala:11:16
+  output        io_regWR,	// src/main/scala/idu/IDU.scala:11:16
+                io_srcAALU,	// src/main/scala/idu/IDU.scala:11:16
+  output [1:0]  io_srcBALU,	// src/main/scala/idu/IDU.scala:11:16
+  output [3:0]  io_ctrALU,	// src/main/scala/idu/IDU.scala:11:16
+  output [2:0]  io_branch,	// src/main/scala/idu/IDU.scala:11:16
+  output        io_memWR,	// src/main/scala/idu/IDU.scala:11:16
+                io_memValid,	// src/main/scala/idu/IDU.scala:11:16
+  output [2:0]  io_memOP,	// src/main/scala/idu/IDU.scala:11:16
+  output [4:0]  io_rs1Index,	// src/main/scala/idu/IDU.scala:11:16
+                io_rs2Index,	// src/main/scala/idu/IDU.scala:11:16
+                io_rdIndex,	// src/main/scala/idu/IDU.scala:11:16
+  output [31:0] io_imm	// src/main/scala/idu/IDU.scala:11:16
 );
 
-  wire [2:0] _contrGen_io_immType;	// src/main/scala/idu/IDU.scala:51:33
-  ContrGen contrGen (	// src/main/scala/idu/IDU.scala:51:33
-    .io_cmd     (io_cmd),
-    .io_opcode  (io_cmd[6:0]),	// src/main/scala/idu/IDU.scala:43:33
-    .io_func3   (io_cmd[14:12]),	// src/main/scala/idu/IDU.scala:41:33
-    .io_func7   (io_cmd[31:25]),	// src/main/scala/idu/IDU.scala:38:33
-    .io_immType (_contrGen_io_immType),
-    .io_regWR   (io_regWR),
-    .io_srcAALU (io_srcAALU),
-    .io_srcBALU (io_srcBALU),
-    .io_ctrALU  (io_ctrALU),
-    .io_branch  (io_branch)
+  wire [2:0] _contrGen_io_immType;	// src/main/scala/idu/IDU.scala:53:33
+  ContrGen contrGen (	// src/main/scala/idu/IDU.scala:53:33
+    .io_cmd      (io_cmd),
+    .io_opcode   (io_cmd[6:0]),	// src/main/scala/idu/IDU.scala:45:33
+    .io_func3    (io_cmd[14:12]),	// src/main/scala/idu/IDU.scala:43:33
+    .io_func7    (io_cmd[31:25]),	// src/main/scala/idu/IDU.scala:40:33
+    .io_immType  (_contrGen_io_immType),
+    .io_regWR    (io_regWR),
+    .io_srcAALU  (io_srcAALU),
+    .io_srcBALU  (io_srcBALU),
+    .io_ctrALU   (io_ctrALU),
+    .io_branch   (io_branch),
+    .io_memWR    (io_memWR),
+    .io_memValid (io_memValid),
+    .io_memOP    (io_memOP)
   );
-  ImmGen immGen (	// src/main/scala/idu/IDU.scala:69:33
-    .io_iImm    (io_cmd[31:20]),	// src/main/scala/idu/IDU.scala:44:33
-    .io_sImm    ({io_cmd[31:25], io_cmd[11:7]}),	// src/main/scala/idu/IDU.scala:38:33, :42:41, :45:30
-    .io_bImm    ({io_cmd[31], io_cmd[7], io_cmd[30:25], io_cmd[11:8], 1'h0}),	// src/main/scala/idu/IDU.scala:46:{30,37,49,60,76}
-    .io_uImm    ({io_cmd[31:12], 12'h0}),	// src/main/scala/idu/IDU.scala:47:{30,37}
-    .io_jImm    ({io_cmd[31], io_cmd[19:12], io_cmd[20], io_cmd[30:21], 1'h0}),	// src/main/scala/idu/IDU.scala:46:{30,37}, :48:{30,49,65,77}
-    .io_immType (_contrGen_io_immType),	// src/main/scala/idu/IDU.scala:51:33
+  ImmGen immGen (	// src/main/scala/idu/IDU.scala:72:33
+    .io_iImm    (io_cmd[31:20]),	// src/main/scala/idu/IDU.scala:46:33
+    .io_sImm    ({io_cmd[31:25], io_cmd[11:7]}),	// src/main/scala/idu/IDU.scala:40:33, :44:41, :47:30
+    .io_bImm    ({io_cmd[31], io_cmd[7], io_cmd[30:25], io_cmd[11:8], 1'h0}),	// src/main/scala/idu/IDU.scala:48:{30,37,49,60,76}
+    .io_uImm    ({io_cmd[31:12], 12'h0}),	// src/main/scala/idu/IDU.scala:49:{30,37}
+    .io_jImm    ({io_cmd[31], io_cmd[19:12], io_cmd[20], io_cmd[30:21], 1'h0}),	// src/main/scala/idu/IDU.scala:48:{30,37}, :50:{30,49,65,77}
+    .io_immType (_contrGen_io_immType),	// src/main/scala/idu/IDU.scala:53:33
     .io_imm     (io_imm)
   );
-  assign io_rs1Index = io_cmd[19:15];	// src/main/scala/idu/IDU.scala:9:7, :40:41
-  assign io_rs2Index = io_cmd[24:20];	// src/main/scala/idu/IDU.scala:9:7, :39:41
-  assign io_rdIndex = io_cmd[11:7];	// src/main/scala/idu/IDU.scala:9:7, :42:41
+  assign io_rs1Index = io_cmd[19:15];	// src/main/scala/idu/IDU.scala:10:7, :42:41
+  assign io_rs2Index = io_cmd[24:20];	// src/main/scala/idu/IDU.scala:10:7, :41:41
+  assign io_rdIndex = io_cmd[11:7];	// src/main/scala/idu/IDU.scala:10:7, :44:41
 endmodule
 

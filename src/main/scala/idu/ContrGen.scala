@@ -20,6 +20,7 @@ class ContrGen extends Module {
 		val branch 	= Output(UInt(3.W))
 		val memToReg= Output(UInt(1.W))
 		val memWR 	= Output(UInt(1.W))
+		val memValid= Output(UInt(1.W))
 		val memOP 	= Output(UInt(3.W))
 	})
 
@@ -60,6 +61,7 @@ class ContrGen extends Module {
 	io.branch   := 0.U
 	io.memToReg := 0.U
 	io.memWR    := 0.U
+	io.memValid := 0.U
 	io.memOP    := 0.U
 
 	io.immType 	:= instructionTypeWire.asUInt
@@ -72,6 +74,7 @@ class ContrGen extends Module {
 			io.branch 	:= 2.U
 			io.memToReg := 0.U
 			io.memWR 	:= 0.U
+			io.memValid := 0.U
 			io.memOP 	:= 0.U
 		}
 		is(InstructionFormat.ADD) {
@@ -82,6 +85,7 @@ class ContrGen extends Module {
 			io.branch 	:= 0.U
 			io.memToReg := 0.U
 			io.memWR 	:= 0.U
+			io.memValid := 0.U
 			io.memOP 	:= 0.U
 		}
 		is(InstructionFormat.ADDI) {
@@ -92,6 +96,7 @@ class ContrGen extends Module {
 			io.branch 	:= 0.U
 			io.memToReg := 0.U
 			io.memWR 	:= 0.U
+			io.memValid := 0.U
 			io.memOP 	:= 0.U
 		}
 		is(InstructionFormat.LUI) {
@@ -102,6 +107,7 @@ class ContrGen extends Module {
 			io.branch 	:= 0.U
 			io.memToReg := 0.U
 			io.memWR 	:= 0.U
+			io.memValid := 0.U
 			io.memOP 	:= 0.U
 		}
 		is(InstructionFormat.AUIPC) {
@@ -112,6 +118,7 @@ class ContrGen extends Module {
 			io.branch 	:= 0.U
 			io.memToReg := 0.U
 			io.memWR 	:= 0.U
+			io.memValid := 0.U
 			io.memOP 	:= 0.U
 		}
 		is(InstructionFormat.JAL) {
@@ -122,6 +129,7 @@ class ContrGen extends Module {
 			io.branch 	:= 1.U
 			io.memToReg := 0.U
 			io.memWR 	:= 0.U
+			io.memValid := 0.U
 			io.memOP 	:= 0.U
 		}
 		is(InstructionFormat.JALR) {
@@ -132,6 +140,7 @@ class ContrGen extends Module {
 			io.branch 	:= 2.U
 			io.memToReg := 0.U
 			io.memWR 	:= 0.U
+			io.memValid := 0.U
 			io.memOP 	:= 0.U
 		}
 		is(InstructionFormat.BEQ) {
@@ -142,6 +151,7 @@ class ContrGen extends Module {
 			io.branch 	:= 4.U
 			io.memToReg := 0.U
 			io.memWR 	:= 0.U
+			io.memValid := 0.U
 			io.memOP 	:= 0.U
 		}
 		is(InstructionFormat.SW) {
@@ -152,6 +162,7 @@ class ContrGen extends Module {
 			io.branch 	:= 0.U
 			io.memToReg := 0.U
 			io.memWR 	:= 1.U
+			io.memValid := 1.U
 			io.memOP 	:= 2.U
 		}
 		is(InstructionFormat.NOP) {
@@ -162,9 +173,56 @@ class ContrGen extends Module {
 			io.branch 	:= 0.U
 			io.memToReg := 0.U
 			io.memWR 	:= 0.U
+			io.memValid := 0.U
 			io.memOP 	:= 0.U
 		}
 	}
+
+	val cgDPIC = Module(new CGDPIC())
+	cgDPIC.io.cmd 					:= io.cmd
+	cgDPIC.io.instructionFormat 	:= instructionFormatWire.asUInt
+	cgDPIC.io.instructionFormatJAL 	:= InstructionFormat.JAL.asUInt
+	cgDPIC.io.instructionFormatJALR := InstructionFormat.JALR.asUInt
+	cgDPIC.io.instructionFormatRET 	:= InstructionFormat.RET.asUInt
 }
 
+class CGDPIC extends BlackBox with HasBlackBoxInline {
+	val io = IO(new Bundle{
+		val cmd 					= Input(UInt(32.W))
+		val instructionFormat 		= Input(UInt(32.W))
+		val instructionFormatJAL	= Input(UInt(32.W))
+		val instructionFormatJALR	= Input(UInt(32.W))
+		val instructionFormatRET	= Input(UInt(32.W))
+	})
 
+	setInline("CGDPIC.sv",
+	"""module CGDPIC(
+	|	input [31:0] cmd,
+	|	input [31:0] instructionFormat,
+	|	input [31:0] instructionFormatJAL,
+	|	input [31:0] instructionFormatJALR,
+	|	input [31:0] instructionFormatRET
+	|);
+	|import "DPI-C" function void sim_exit();
+	|always @(cmd) begin
+	|    if(cmd==32'h00100073)   sim_exit();
+	|end
+	|
+	|import "DPI-C" function void set_ftrace_function_call_flag();
+	|always @(instructionFormat) begin
+	|	if((instructionFormat==instructionFormatJAL && instructionFormat==instructionFormatJALR)) 
+	|		set_ftrace_function_call_flag();
+	|end
+	|
+	|import "DPI-C" function void set_ftrace_ret_flag();
+	|always @(instructionFormat) begin
+	|	if(instructionFormat==instructionFormatRET) set_ftrace_ret_flag();
+	|end
+	|
+	|export "DPI-C" function getCommond;
+	|function bit [31:0] getCommond;
+	|	return cmd;
+	|endfunction
+	|endmodule
+	""".stripMargin)
+}

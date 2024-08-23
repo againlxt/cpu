@@ -66,6 +66,9 @@ module top(	// src/main/scala/Main.scala:38:7
   wire [1:0]  _idu_io_srcBALU;	// src/main/scala/Main.scala:48:49
   wire [3:0]  _idu_io_ctrALU;	// src/main/scala/Main.scala:48:49
   wire [2:0]  _idu_io_branch;	// src/main/scala/Main.scala:48:49
+  wire        _idu_io_memWR;	// src/main/scala/Main.scala:48:49
+  wire        _idu_io_memValid;	// src/main/scala/Main.scala:48:49
+  wire [2:0]  _idu_io_memOP;	// src/main/scala/Main.scala:48:49
   wire [4:0]  _idu_io_rs1Index;	// src/main/scala/Main.scala:48:49
   wire [4:0]  _idu_io_rs2Index;	// src/main/scala/Main.scala:48:49
   wire [4:0]  _idu_io_rdIndex;	// src/main/scala/Main.scala:48:49
@@ -88,9 +91,9 @@ module top(	// src/main/scala/Main.scala:38:7
   Riscv32BaseReg riscv32BaseReg (	// src/main/scala/Main.scala:47:41
     .clock       (clock),
     .reset       (reset),
-    .io_rs1Index (_idu_io_rs1Index[3:0]),	// src/main/scala/Main.scala:48:49, :89:41
-    .io_rs2Index (_idu_io_rs2Index[3:0]),	// src/main/scala/Main.scala:48:49, :90:41
-    .io_rdIndex  (_idu_io_rdIndex[3:0]),	// src/main/scala/Main.scala:48:49, :91:41
+    .io_rs1Index (_idu_io_rs1Index[3:0]),	// src/main/scala/Main.scala:48:49, :90:41
+    .io_rs2Index (_idu_io_rs2Index[3:0]),	// src/main/scala/Main.scala:48:49, :91:41
+    .io_rdIndex  (_idu_io_rdIndex[3:0]),	// src/main/scala/Main.scala:48:49, :92:41
     .io_dataIn   (_exu_io_rdData),	// src/main/scala/Main.scala:49:49
     .io_regWR    (_idu_io_regWR),	// src/main/scala/Main.scala:48:49
     .io_rs1Data  (_riscv32BaseReg_io_rs1Data),
@@ -103,22 +106,28 @@ module top(	// src/main/scala/Main.scala:38:7
     .io_srcBALU  (_idu_io_srcBALU),
     .io_ctrALU   (_idu_io_ctrALU),
     .io_branch   (_idu_io_branch),
+    .io_memWR    (_idu_io_memWR),
+    .io_memValid (_idu_io_memValid),
+    .io_memOP    (_idu_io_memOP),
     .io_rs1Index (_idu_io_rs1Index),
     .io_rs2Index (_idu_io_rs2Index),
     .io_rdIndex  (_idu_io_rdIndex),
     .io_imm      (_idu_io_imm)
   );
   EXU exu (	// src/main/scala/Main.scala:49:49
-    .io_rs1Data    (_riscv32BaseReg_io_rs1Data),	// src/main/scala/Main.scala:47:41
-    .io_rs2Data    (_riscv32BaseReg_io_rs2Data),	// src/main/scala/Main.scala:47:41
-    .io_immData    (_idu_io_imm),	// src/main/scala/Main.scala:48:49
-    .io_pc         (_pc_io_pc),	// src/main/scala/Main.scala:45:49
-    .io_aluASrcCtr (_idu_io_srcAALU),	// src/main/scala/Main.scala:48:49
-    .io_aluBSrcCtr (_idu_io_srcBALU),	// src/main/scala/Main.scala:48:49
-    .io_aluCtr     (_idu_io_ctrALU),	// src/main/scala/Main.scala:48:49
-    .io_branchCtr  (_idu_io_branch),	// src/main/scala/Main.scala:48:49
-    .io_nextPC     (_exu_io_nextPC),
-    .io_rdData     (_exu_io_rdData)
+    .io_rs1Data     (_riscv32BaseReg_io_rs1Data),	// src/main/scala/Main.scala:47:41
+    .io_rs2Data     (_riscv32BaseReg_io_rs2Data),	// src/main/scala/Main.scala:47:41
+    .io_immData     (_idu_io_imm),	// src/main/scala/Main.scala:48:49
+    .io_pc          (_pc_io_pc),	// src/main/scala/Main.scala:45:49
+    .io_aluASrcCtr  (_idu_io_srcAALU),	// src/main/scala/Main.scala:48:49
+    .io_aluBSrcCtr  (_idu_io_srcBALU),	// src/main/scala/Main.scala:48:49
+    .io_aluCtr      (_idu_io_ctrALU),	// src/main/scala/Main.scala:48:49
+    .io_memOPCtr    (_idu_io_memOP),	// src/main/scala/Main.scala:48:49
+    .io_memWRCtr    (_idu_io_memWR),	// src/main/scala/Main.scala:48:49
+    .io_memValidCtr (_idu_io_memValid),	// src/main/scala/Main.scala:48:49
+    .io_branchCtr   (_idu_io_branch),	// src/main/scala/Main.scala:48:49
+    .io_nextPC      (_exu_io_nextPC),
+    .io_rdData      (_exu_io_rdData)
   );
   assign io_curPC = _pc_io_pc;	// src/main/scala/Main.scala:38:7, :45:49
   assign io_nextPC = _exu_io_nextPC;	// src/main/scala/Main.scala:38:7, :49:49

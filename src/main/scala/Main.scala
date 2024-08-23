@@ -76,6 +76,7 @@ class top extends Module {
 	val branchWire 	= idu.io.branch
 	val memToRegWire= idu.io.memToReg
 	val memWRWire 	= idu.io.memWR
+	val memValidWire= idu.io.memValid
 	val memOPWire 	= idu.io.memOP
 	val rs1IndexWire= idu.io.rs1Index
 	val rs2IndexWire= idu.io.rs2Index
@@ -107,6 +108,7 @@ class top extends Module {
 	exu.io.aluCtr 			:= ctrALUWire
 	exu.io.memOPCtr 		:= memOPWire
 	exu.io.memWRCtr 		:= memWRWire
+	exu.io.memValidCtr 		:= memValidWire
 	exu.io.branchCtr 		:= branchWire
 	exu.io.memToRegCtr		:= memToRegWire
 	// Output
