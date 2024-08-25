@@ -64,12 +64,12 @@ class ALUControl extends Module {
 			when(io.aluCtr(3) === 0.U) {
 				aOrLCtrWire 	:= 0.U
 				lOrRCtrWire 	:= 0.U
-				uOrSCtrWire 	:= 1.U
+				uOrSCtrWire 	:= 0.U
 				subOrAddCtrWire := 1.U
 			}. otherwise {
 				aOrLCtrWire 	:= 0.U
 				lOrRCtrWire 	:= 0.U
-				uOrSCtrWire 	:= 0.U
+				uOrSCtrWire 	:= 1.U
 				subOrAddCtrWire := 1.U
 			}
 		}

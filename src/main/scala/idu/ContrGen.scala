@@ -323,6 +323,18 @@ class ContrGen extends Module {
 			io.memValid := 0.U
 			io.memOP 	:= 0.U
 		}
+		is(InstructionFormat.SLTU) {
+			io.regWR 	:= 1.U
+			io.srcAALU 	:= 0.U
+			io.srcBALU 	:= 0.U
+			io.ctrALU 	:= "b1010".U
+			io.branch 	:= 0.U
+			io.memToReg := 0.U
+			io.memWR 	:= 0.U
+			io.memValid := 0.U
+			io.memOP 	:= 0.U
+		}
+		
 		is(InstructionFormat.AND) {
 			io.regWR 	:= 1.U
 			io.srcAALU 	:= 0.U

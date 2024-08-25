@@ -9,6 +9,7 @@ import common._
 import singlecyclecpu._
 import memory.ReadWriteSmem
 import chisel3.util.HasBlackBoxResource
+import java.time.Clock
 
 class EXU extends Module {
 	val io = IO(new Bundle {
@@ -125,6 +126,7 @@ class DataMem extends Module {
 	))
 	
 	val dataMem 		= Module(new DataMemV())
+	dataMem.io.clk 		:= this.clock.asUInt
 	dataMem.io.addr 	:= addrWire
 	dataMem.io.wmask 	:= wMaskWire
 	dataMem.io.dataIn 	:= dataInWire
@@ -133,7 +135,7 @@ class DataMem extends Module {
 	val signdataWire 	= Wire(SInt(32.W))
 	val unsigndataWire  = Wire(UInt(32.W))
 	signdataWire 		:= dataMem.io.dataOut.asSInt
-	unsigndataWire		:= dataMem.io.dataOut.asUInt
+	unsigndataWire		:= dataMem.io.dataOut
 
 	io.dataOut 			:= Mux(sOrUWire.asBool, signdataWire.asUInt, unsigndataWire)
 }
@@ -141,6 +143,7 @@ class DataMem extends Module {
 class DataMemV extends BlackBox with HasBlackBoxInline {
 	val io = IO(new Bundle{
 		// Input
+		val clk 	= Input(UInt(1.W))
 		val addr 	= Input(UInt(32.W))
 		val wmask 	= Input(UInt(8.W))
 		val dataIn 	= Input(UInt(32.W))
@@ -152,7 +155,7 @@ class DataMemV extends BlackBox with HasBlackBoxInline {
 
 	setInline("DataMemV.sv",
 	"""module DataMemV(
-	   |
+	   |	input 		clk,
 	   |	input [31:0] addr,
 	   |	input [7:0]  wmask,
 	   |	input [31:0] dataIn,
@@ -165,18 +168,20 @@ class DataMemV extends BlackBox with HasBlackBoxInline {
 	   |import "DPI-C" function int unsigned pmem_read(input int unsigned raddr);
 	   |import "DPI-C" function void pmem_write(
 	   |	input int unsigned waddr, input int unsigned wdata, input byte wmask);	
+	   |always @(posedge clk) begin
+	   |	if(wrEn & valid) begin
+	   |		pmem_write(addr, dataIn, wmask);
+	   |	end
+	   |end
+	   |assign dataOut = rdata;
 	   |always @(*) begin
 	   |	if(valid) begin
 	   |		rdata = pmem_read(addr);
-	   |		if(wrEn) begin
-	   |			pmem_write(addr, dataIn, wmask);
-	   |		end
 	   |	end
 	   |	else begin
 	   |		rdata = 32'd0;
 	   |	end
 	   |end
-	   |assign dataOut = rdata;
 	   |endmodule
 	""".stripMargin)
 }

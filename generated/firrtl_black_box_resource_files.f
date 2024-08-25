@@ -1,2 +1,0 @@
-CGDPIC.sv
-DataMemV.sv
