@@ -11,10 +11,13 @@ object InstructionFormat extends ChiselEnum {
 	val // Pseudo-instructions
 		RET,
 		
-		// instructions
-		ADD, ADDI, LUI, AUIPC, SLTI,
-		JAL, JALR, BEQ,
-		SW,
+		// riscv32e instructions
+		LUI, AUIPC, JAL, JALR, BEQ, BNE, BLT, BGE, BLTU, BGEU,
+		LB, LH, LW, LBU, LHU, SB, SH, SW, ADDI, SLTI,
+		SLTIU, XORI, ORI, ANDI, SLLI, SRLI, SRAI, ADD, SUB, SLL,
+		SLT, SLTU, XOR, SRL, SRA, OR, AND,
+
+		FENCE, FENCEI, ECALL, EBREAK, CSRRW, CSRRS, CSRRC, CSRRWI, CSRRSI, CSRRCI,
 		NOP = Value
 }
 

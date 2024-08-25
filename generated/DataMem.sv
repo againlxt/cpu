@@ -51,11 +51,12 @@
 `endif // not def SYNTHESIS
 
 module DataMem(	// src/main/scala/exu/EXU.scala:95:7
-  input [31:0] io_addr,	// src/main/scala/exu/EXU.scala:96:20
-  input [2:0]  io_memOP,	// src/main/scala/exu/EXU.scala:96:20
-  input [31:0] io_dataIn,	// src/main/scala/exu/EXU.scala:96:20
-  input        io_wrEn,	// src/main/scala/exu/EXU.scala:96:20
-               io_valid	// src/main/scala/exu/EXU.scala:96:20
+  input  [31:0] io_addr,	// src/main/scala/exu/EXU.scala:96:20
+  input  [2:0]  io_memOP,	// src/main/scala/exu/EXU.scala:96:20
+  input  [31:0] io_dataIn,	// src/main/scala/exu/EXU.scala:96:20
+  input         io_wrEn,	// src/main/scala/exu/EXU.scala:96:20
+                io_valid,	// src/main/scala/exu/EXU.scala:96:20
+  output [31:0] io_dataOut	// src/main/scala/exu/EXU.scala:96:20
 );
 
   DataMemV dataMem (	// src/main/scala/exu/EXU.scala:127:41
@@ -69,7 +70,7 @@ module DataMem(	// src/main/scala/exu/EXU.scala:95:7
     .dataIn  (io_dataIn),
     .wrEn    (io_wrEn),
     .valid   (io_valid),
-    .dataOut (/* unused */)
+    .dataOut (io_dataOut)
   );
 endmodule
 

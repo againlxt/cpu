@@ -50,111 +50,376 @@
   `endif // not def ENABLE_INITIAL_MEM_
 `endif // not def SYNTHESIS
 
-module ContrGen(	// src/main/scala/idu/ContrGen.scala:8:7
-  input  [31:0] io_cmd,	// src/main/scala/idu/ContrGen.scala:9:20
-  input  [6:0]  io_opcode,	// src/main/scala/idu/ContrGen.scala:9:20
-  input  [2:0]  io_func3,	// src/main/scala/idu/ContrGen.scala:9:20
-  input  [6:0]  io_func7,	// src/main/scala/idu/ContrGen.scala:9:20
-  output [2:0]  io_immType,	// src/main/scala/idu/ContrGen.scala:9:20
-  output        io_regWR,	// src/main/scala/idu/ContrGen.scala:9:20
-                io_srcAALU,	// src/main/scala/idu/ContrGen.scala:9:20
-  output [1:0]  io_srcBALU,	// src/main/scala/idu/ContrGen.scala:9:20
-  output [3:0]  io_ctrALU,	// src/main/scala/idu/ContrGen.scala:9:20
-  output [2:0]  io_branch,	// src/main/scala/idu/ContrGen.scala:9:20
-  output        io_memWR,	// src/main/scala/idu/ContrGen.scala:9:20
-                io_memValid,	// src/main/scala/idu/ContrGen.scala:9:20
-  output [2:0]  io_memOP	// src/main/scala/idu/ContrGen.scala:9:20
+module ContrGen(	// src/main/scala/idu/ContrGen.scala:9:7
+  input  [31:0] io_cmd,	// src/main/scala/idu/ContrGen.scala:10:20
+  input  [6:0]  io_opcode,	// src/main/scala/idu/ContrGen.scala:10:20
+  input  [2:0]  io_func3,	// src/main/scala/idu/ContrGen.scala:10:20
+  input  [6:0]  io_func7,	// src/main/scala/idu/ContrGen.scala:10:20
+  output [2:0]  io_immType,	// src/main/scala/idu/ContrGen.scala:10:20
+  output        io_regWR,	// src/main/scala/idu/ContrGen.scala:10:20
+                io_srcAALU,	// src/main/scala/idu/ContrGen.scala:10:20
+  output [1:0]  io_srcBALU,	// src/main/scala/idu/ContrGen.scala:10:20
+  output [3:0]  io_ctrALU,	// src/main/scala/idu/ContrGen.scala:10:20
+  output [2:0]  io_branch,	// src/main/scala/idu/ContrGen.scala:10:20
+  output        io_memToReg,	// src/main/scala/idu/ContrGen.scala:10:20
+                io_memWR,	// src/main/scala/idu/ContrGen.scala:10:20
+                io_memValid,	// src/main/scala/idu/ContrGen.scala:10:20
+  output [2:0]  io_memOP	// src/main/scala/idu/ContrGen.scala:10:20
 );
 
-  wire       _instructionTypeWire_T = io_func7 == 7'h0;	// src/main/scala/idu/ContrGen.scala:34:28
-  wire       _instructionTypeWire_T_20 = io_func3 == 3'h0;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:34:58
-  wire       _instructionTypeWire_T_3 = io_opcode == 7'h33;	// src/main/scala/idu/ContrGen.scala:34:85
-  wire       _instructionTypeWire_T_11 = io_opcode == 7'h13;	// src/main/scala/idu/ContrGen.scala:35:55
-  wire       _instructionTypeWire_T_8 = io_opcode == 7'h37;	// src/main/scala/idu/ContrGen.scala:36:29
-  wire       _instructionTypeWire_T_9 = io_opcode == 7'h17;	// src/main/scala/idu/ContrGen.scala:37:29
-  wire       _instructionTypeWire_T_17 = io_func3 == 3'h2;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:38:28
-  wire       _instructionTypeWire_T_13 = io_opcode == 7'h6F;	// src/main/scala/idu/ContrGen.scala:39:29
-  wire       _instructionTypeWire_T_15 = io_opcode == 7'h67;	// src/main/scala/idu/ContrGen.scala:40:54
-  wire       _instructionTypeWire_T_18 = io_opcode == 7'h23;	// src/main/scala/idu/ContrGen.scala:41:54
-  wire       _instructionTypeWire_T_21 = io_opcode == 7'h63;	// src/main/scala/idu/ContrGen.scala:42:54
-  wire [3:0] instructionFormatWire =
+  wire       _instructionTypeWire_T_131 = io_func3 == 3'h0;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:36:79
+  wire       _instructionTypeWire_T_34 = io_opcode == 7'h13;	// src/main/scala/idu/ContrGen.scala:36:106
+  wire       _instructionTypeWire_T_125 = io_func3 == 3'h2;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:43:28
+  wire       _instructionTypeWire_T_49 = io_func3 == 3'h3;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:44:28
+  wire       _instructionTypeWire_T_101 = io_func3 == 3'h6;	// src/main/scala/idu/ContrGen.scala:46:28
+  wire       _instructionTypeWire_T_122 = io_func3 == 3'h4;	// src/main/scala/idu/ContrGen.scala:47:28
+  wire       _instructionTypeWire_T_128 = io_func3 == 3'h1;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:48:61
+  wire       _instructionTypeWire_T_116 = io_func3 == 3'h5;	// src/main/scala/idu/ContrGen.scala:49:61
+  wire       _instructionTypeWire_T_36 = io_opcode == 7'h37;	// src/main/scala/idu/ContrGen.scala:51:29
+  wire       _instructionTypeWire_T_37 = io_opcode == 7'h17;	// src/main/scala/idu/ContrGen.scala:52:29
+  wire       _instructionTypeWire_T_73 = io_func7 == 7'h0;	// src/main/scala/idu/ContrGen.scala:54:28
+  wire       _instructionTypeWire_T_86 = io_opcode == 7'h33;	// src/main/scala/idu/ContrGen.scala:54:85
+  wire       _instructionTypeWire_T_83 = io_func7 == 7'h20;	// src/main/scala/idu/ContrGen.scala:62:28
+  wire       _instructionTypeWire_T_88 = io_opcode == 7'h6F;	// src/main/scala/idu/ContrGen.scala:67:29
+  wire       _instructionTypeWire_T_90 = io_opcode == 7'h67;	// src/main/scala/idu/ContrGen.scala:68:54
+  wire       _instructionTypeWire_T_108 = io_opcode == 7'h63;	// src/main/scala/idu/ContrGen.scala:70:54
+  wire       _instructionTypeWire_T_123 = io_opcode == 7'h3;	// src/main/scala/idu/ContrGen.scala:78:55
+  wire       _instructionTypeWire_T_132 = io_opcode == 7'h23;	// src/main/scala/idu/ContrGen.scala:84:54
+  wire [5:0] instructionFormatWire =
     io_cmd[19:0] == 20'h8067
-      ? 4'h0
-      : _instructionTypeWire_T & _instructionTypeWire_T_20 & _instructionTypeWire_T_3
-          ? 4'h1
-          : _instructionTypeWire_T_20 & _instructionTypeWire_T_11
-              ? 4'h2
-              : _instructionTypeWire_T_8
-                  ? 4'h3
-                  : _instructionTypeWire_T_9
-                      ? 4'h4
-                      : _instructionTypeWire_T_17 & _instructionTypeWire_T_11
-                          ? 4'h5
-                          : _instructionTypeWire_T_13
-                              ? 4'h6
-                              : _instructionTypeWire_T_20 & _instructionTypeWire_T_15
-                                  ? 4'h7
-                                  : _instructionTypeWire_T_17 & _instructionTypeWire_T_18
-                                      ? 4'h9
-                                      : {2'h2,
-                                         ~(_instructionTypeWire_T_20
-                                           & _instructionTypeWire_T_21),
-                                         1'h0};	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:32:{24,31}, :34:{28,58,71,85}, :35:{41,55}, :36:29, :37:29, :38:{28,41}, :39:29, :40:{41,54}, :41:{41,54}, :42:{41,54}
-  wire       _GEN = instructionFormatWire == 4'h0;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:68:39
-  wire       _GEN_0 = instructionFormatWire == 4'h1;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:68:39
-  wire       _GEN_1 = instructionFormatWire == 4'h2;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:68:39
-  wire       _GEN_2 = instructionFormatWire == 4'h3;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:68:39
-  wire       _GEN_3 = instructionFormatWire == 4'h4;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:68:39
-  wire       _GEN_4 = instructionFormatWire == 4'h6;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:68:39
-  wire       _GEN_5 = instructionFormatWire == 4'h7;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:68:39
-  wire       _GEN_6 = instructionFormatWire == 4'h8;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:68:39
-  wire       _GEN_7 = instructionFormatWire == 4'h9;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:68:39
-  wire       _GEN_8 = _GEN_3 | _GEN_4;	// src/main/scala/idu/ContrGen.scala:68:39, :114:41, :125:41
-  wire       _GEN_9 = _GEN_1 | _GEN_2 | _GEN_3;	// src/main/scala/idu/ContrGen.scala:68:39, :94:41, :105:41, :116:41
-  wire       _GEN_10 = _GEN_5 | _GEN_6;	// src/main/scala/idu/ContrGen.scala:68:39, :139:41, :150:41
-  wire       _GEN_11 = _GEN | _GEN_0 | _GEN_1 | _GEN_2 | _GEN_3 | _GEN_4 | _GEN_10;	// src/main/scala/idu/ContrGen.scala:68:39, :76:41, :87:41, :98:41, :109:41, :120:41, :131:41, :139:41, :142:41, :150:41, :153:41
-  wire       io_memWR_0 = ~_GEN_11 & _GEN_7;	// src/main/scala/idu/ContrGen.scala:68:39, :76:41, :87:41, :98:41, :109:41, :120:41, :131:41, :142:41, :153:41
-  CGDPIC cgDPIC (	// src/main/scala/idu/ContrGen.scala:181:28
+      ? 6'h0
+      : io_cmd[31:15] == 17'h0 & io_cmd[11:7] == 5'h0 & _instructionTypeWire_T_131
+        & _instructionTypeWire_T_34
+          ? 6'h30
+          : _instructionTypeWire_T_131 & _instructionTypeWire_T_34
+              ? 6'h13
+              : _instructionTypeWire_T_125 & _instructionTypeWire_T_34
+                  ? 6'h14
+                  : _instructionTypeWire_T_49 & _instructionTypeWire_T_34
+                      ? 6'h15
+                      : (&io_func3) & _instructionTypeWire_T_34
+                          ? 6'h18
+                          : _instructionTypeWire_T_101 & _instructionTypeWire_T_34
+                              ? 6'h17
+                              : _instructionTypeWire_T_122 & _instructionTypeWire_T_34
+                                  ? 6'h16
+                                  : ~(|(io_cmd[31:26])) & _instructionTypeWire_T_128
+                                    & _instructionTypeWire_T_34
+                                      ? 6'h19
+                                      : ~(|(io_cmd[31:26])) & _instructionTypeWire_T_116
+                                        & _instructionTypeWire_T_34
+                                          ? 6'h1A
+                                          : io_cmd[31:26] == 6'h10
+                                            & _instructionTypeWire_T_116
+                                            & _instructionTypeWire_T_34
+                                              ? 6'h1B
+                                              : _instructionTypeWire_T_36
+                                                  ? 6'h1
+                                                  : _instructionTypeWire_T_37
+                                                      ? 6'h2
+                                                      : _instructionTypeWire_T_73
+                                                        & _instructionTypeWire_T_131
+                                                        & _instructionTypeWire_T_86
+                                                          ? 6'h1C
+                                                          : _instructionTypeWire_T_73
+                                                            & _instructionTypeWire_T_125
+                                                            & _instructionTypeWire_T_86
+                                                              ? 6'h1F
+                                                              : _instructionTypeWire_T_73
+                                                                & _instructionTypeWire_T_49
+                                                                & _instructionTypeWire_T_86
+                                                                  ? 6'h20
+                                                                  : _instructionTypeWire_T_73
+                                                                    & (&io_func3)
+                                                                    & _instructionTypeWire_T_86
+                                                                      ? 6'h25
+                                                                      : _instructionTypeWire_T_73
+                                                                        & _instructionTypeWire_T_101
+                                                                        & _instructionTypeWire_T_86
+                                                                          ? 6'h24
+                                                                          : _instructionTypeWire_T_73
+                                                                            & _instructionTypeWire_T_122
+                                                                            & _instructionTypeWire_T_86
+                                                                              ? 6'h21
+                                                                              : _instructionTypeWire_T_73
+                                                                                & _instructionTypeWire_T_128
+                                                                                & _instructionTypeWire_T_86
+                                                                                  ? 6'h1E
+                                                                                  : _instructionTypeWire_T_73
+                                                                                    & _instructionTypeWire_T_116
+                                                                                    & _instructionTypeWire_T_86
+                                                                                      ? 6'h22
+                                                                                      : _instructionTypeWire_T_83
+                                                                                        & _instructionTypeWire_T_131
+                                                                                        & _instructionTypeWire_T_86
+                                                                                          ? 6'h1D
+                                                                                          : _instructionTypeWire_T_83
+                                                                                            & _instructionTypeWire_T_116
+                                                                                            & _instructionTypeWire_T_86
+                                                                                              ? 6'h23
+                                                                                              : _instructionTypeWire_T_88
+                                                                                                  ? 6'h3
+                                                                                                  : _instructionTypeWire_T_131
+                                                                                                    & _instructionTypeWire_T_90
+                                                                                                      ? 6'h4
+                                                                                                      : _instructionTypeWire_T_131
+                                                                                                        & _instructionTypeWire_T_108
+                                                                                                          ? 6'h5
+                                                                                                          : _instructionTypeWire_T_128
+                                                                                                            & _instructionTypeWire_T_108
+                                                                                                              ? 6'h6
+                                                                                                              : _instructionTypeWire_T_122
+                                                                                                                & _instructionTypeWire_T_108
+                                                                                                                  ? 6'h7
+                                                                                                                  : _instructionTypeWire_T_101
+                                                                                                                    & _instructionTypeWire_T_108
+                                                                                                                      ? 6'h9
+                                                                                                                      : _instructionTypeWire_T_116
+                                                                                                                        & _instructionTypeWire_T_108
+                                                                                                                          ? 6'h8
+                                                                                                                          : (&io_func3)
+                                                                                                                            & _instructionTypeWire_T_108
+                                                                                                                              ? 6'hA
+                                                                                                                              : _instructionTypeWire_T_125
+                                                                                                                                & _instructionTypeWire_T_123
+                                                                                                                                  ? 6'hD
+                                                                                                                                  : _instructionTypeWire_T_128
+                                                                                                                                    & _instructionTypeWire_T_123
+                                                                                                                                      ? 6'hC
+                                                                                                                                      : _instructionTypeWire_T_116
+                                                                                                                                        & _instructionTypeWire_T_123
+                                                                                                                                          ? 6'hF
+                                                                                                                                          : _instructionTypeWire_T_131
+                                                                                                                                            & _instructionTypeWire_T_123
+                                                                                                                                              ? 6'hB
+                                                                                                                                              : _instructionTypeWire_T_122
+                                                                                                                                                & _instructionTypeWire_T_123
+                                                                                                                                                  ? 6'hE
+                                                                                                                                                  : _instructionTypeWire_T_125
+                                                                                                                                                    & _instructionTypeWire_T_132
+                                                                                                                                                      ? 6'h12
+                                                                                                                                                      : _instructionTypeWire_T_128
+                                                                                                                                                        & _instructionTypeWire_T_132
+                                                                                                                                                          ? 6'h11
+                                                                                                                                                          : {~(_instructionTypeWire_T_131
+                                                                                                                                                               & _instructionTypeWire_T_132),
+                                                                                                                                                             5'h10};	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:35:{24,31}, :36:{25,33,51,58,79,92,106}, :42:41, :43:{28,41}, :44:{28,41}, :45:{28,41}, :46:{28,41}, :47:{28,41}, :48:{25,33,61,74}, :49:{33,61,74}, :50:{33,74}, :51:29, :52:29, :54:{28,71,85}, :55:71, :56:71, :57:71, :58:71, :59:71, :60:71, :61:71, :62:{28,71}, :63:71, :67:29, :68:{41,54}, :70:{41,54}, :71:41, :72:41, :73:41, :74:41, :75:41, :78:{41,55}, :79:41, :80:41, :81:41, :82:41, :84:{41,54}, :85:41, :86:41
+  wire       _GEN = instructionFormatWire == 6'h0;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_0 = instructionFormatWire == 6'h30;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_1 = instructionFormatWire == 6'h13;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_2 = instructionFormatWire == 6'h14;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_3 = instructionFormatWire == 6'h15;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_4 = instructionFormatWire == 6'h18;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_5 = instructionFormatWire == 6'h17;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_6 = instructionFormatWire == 6'h16;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_7 = instructionFormatWire == 6'h19;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_8 = instructionFormatWire == 6'h1A;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_9 = instructionFormatWire == 6'h1B;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_10 = instructionFormatWire == 6'h1;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_11 = instructionFormatWire == 6'h2;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_12 = instructionFormatWire == 6'h1C;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_13 = instructionFormatWire == 6'h1F;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_14 = instructionFormatWire == 6'h25;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_15 = instructionFormatWire == 6'h24;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_16 = instructionFormatWire == 6'h21;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_17 = instructionFormatWire == 6'h1E;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_18 = instructionFormatWire == 6'h22;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_19 = instructionFormatWire == 6'h1D;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_20 = instructionFormatWire == 6'h23;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:84:54, :153:39
+  wire       _GEN_21 = instructionFormatWire == 6'h3;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_22 = instructionFormatWire == 6'h4;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_23 = instructionFormatWire == 6'h5;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_24 = instructionFormatWire == 6'h6;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_25 = instructionFormatWire == 6'h7;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_26 = instructionFormatWire == 6'h9;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_27 = instructionFormatWire == 6'h8;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_28 = instructionFormatWire == 6'hA;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_29 = instructionFormatWire == 6'hD;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_30 = instructionFormatWire == 6'hC;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_31 = instructionFormatWire == 6'hF;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_32 = instructionFormatWire == 6'hB;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_33 = instructionFormatWire == 6'hE;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_34 = instructionFormatWire == 6'h12;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_35 = instructionFormatWire == 6'h11;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_36 = instructionFormatWire == 6'h10;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:153:39
+  wire       _GEN_37 = _GEN_29 | _GEN_30 | _GEN_31 | _GEN_32 | _GEN_33;	// src/main/scala/idu/ContrGen.scala:153:39, :498:41, :509:41, :520:41, :531:41
+  wire       _GEN_38 = _GEN_27 | _GEN_28;	// src/main/scala/idu/ContrGen.scala:153:39, :474:41, :485:41
+  wire       _GEN_39 = _GEN_23 | _GEN_24 | _GEN_25 | _GEN_26 | _GEN_38;	// src/main/scala/idu/ContrGen.scala:153:39, :430:41, :441:41, :452:41, :463:41, :474:41, :485:41
+  wire       _GEN_40 = _GEN_21 | _GEN_22;	// src/main/scala/idu/ContrGen.scala:153:39, :407:41, :418:41
+  wire       _GEN_41 =
+    _GEN_12 | _GEN_13 | _GEN_14 | _GEN_15 | _GEN_16 | _GEN_17 | _GEN_18 | _GEN_19
+    | _GEN_20;	// src/main/scala/idu/ContrGen.scala:153:39, :306:41, :317:41, :328:41, :339:41, :350:41, :361:41, :372:41, :383:41, :394:41
+  wire       _GEN_42 =
+    _GEN | _GEN_0 | _GEN_1 | _GEN_2 | _GEN_3 | _GEN_4 | _GEN_5 | _GEN_6 | _GEN_7 | _GEN_8
+    | _GEN_9 | _GEN_10 | _GEN_11 | _GEN_12 | _GEN_13 | _GEN_14 | _GEN_15 | _GEN_16
+    | _GEN_17 | _GEN_18 | _GEN_19 | _GEN_20 | _GEN_21 | _GEN_22 | _GEN_39;	// src/main/scala/idu/ContrGen.scala:153:39, :161:37, :172:37, :188:37, :199:37, :210:37, :221:37, :232:37, :243:37, :254:37, :265:37, :276:37, :287:37, :298:37, :310:37, :321:37, :332:37, :343:37, :354:37, :365:37, :376:37, :387:37, :398:37, :412:37, :423:37, :430:41, :435:37, :441:41, :446:37, :452:41, :457:37, :463:41, :468:37, :474:41, :479:37, :485:41, :490:37
+  wire       _GEN_43 = _GEN_34 | _GEN_35;	// src/main/scala/idu/ContrGen.scala:153:39, :560:41, :571:41
+  CGDPIC cgDPIC (	// src/main/scala/idu/ContrGen.scala:589:28
     .cmd                   (io_cmd),
-    .instructionFormat     ({28'h0, instructionFormatWire}),	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:183:41
-    .instructionFormatJAL  (32'h6),	// src/main/scala/idu/ContrGen.scala:184:41
-    .instructionFormatJALR (32'h7),	// src/main/scala/idu/ContrGen.scala:185:41
-    .instructionFormatRET  (32'h0)	// src/main/scala/idu/ContrGen.scala:186:41
+    .instructionFormat     ({26'h0, instructionFormatWire}),	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:591:41
+    .instructionFormatJAL  (32'h3),	// src/main/scala/idu/ContrGen.scala:592:41
+    .instructionFormatJALR (32'h4),	// src/main/scala/idu/ContrGen.scala:593:41
+    .instructionFormatRET  (32'h0)	// src/main/scala/idu/ContrGen.scala:594:41
   );
   assign io_immType =
-    _instructionTypeWire_T & _instructionTypeWire_T_20 & _instructionTypeWire_T_3
-      ? 3'h0
-      : _instructionTypeWire_T_20 & _instructionTypeWire_T_11
-          ? 3'h1
-          : _instructionTypeWire_T_8 | _instructionTypeWire_T_9
-              ? 3'h4
-              : _instructionTypeWire_T_17 & _instructionTypeWire_T_11
-                  ? 3'h1
-                  : _instructionTypeWire_T_13
-                      ? 3'h5
-                      : _instructionTypeWire_T_20 & _instructionTypeWire_T_15
-                          ? 3'h1
-                          : _instructionTypeWire_T_17 & _instructionTypeWire_T_18
-                              ? 3'h2
-                              : _instructionTypeWire_T_20 & _instructionTypeWire_T_21
-                                  ? 3'h3
-                                  : 3'h6;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:8:7, :34:{28,58,85}, :35:55, :36:29, :37:29, :38:28, :39:29, :40:54, :41:54, :42:54, :46:71, :47:41, :50:41, :52:41, :53:41, :54:41
-  assign io_regWR = _GEN | _GEN_0 | _GEN_1 | _GEN_2 | _GEN_8 | _GEN_5;	// src/main/scala/idu/ContrGen.scala:8:7, :68:39, :70:41, :81:41, :92:41, :103:41, :114:41, :125:41
-  assign io_srcAALU = _GEN | ~(_GEN_0 | _GEN_1 | _GEN_2) & (_GEN_8 | _GEN_5);	// src/main/scala/idu/ContrGen.scala:8:7, :68:39, :71:41, :82:41, :93:41, :104:41, :114:41, :115:41, :125:41, :126:41
+    _instructionTypeWire_T_131 & _instructionTypeWire_T_34 | _instructionTypeWire_T_125
+    & _instructionTypeWire_T_34 | _instructionTypeWire_T_49 & _instructionTypeWire_T_34
+    | (&io_func3) & _instructionTypeWire_T_34 | _instructionTypeWire_T_101
+    & _instructionTypeWire_T_34 | _instructionTypeWire_T_122 & _instructionTypeWire_T_34
+    | ~(|(io_cmd[31:26])) & _instructionTypeWire_T_128 & _instructionTypeWire_T_34
+    | ~(|(io_cmd[31:26])) & _instructionTypeWire_T_116 & _instructionTypeWire_T_34
+    | io_cmd[31:26] == 6'h10 & _instructionTypeWire_T_116 & _instructionTypeWire_T_34
+      ? 3'h1
+      : _instructionTypeWire_T_36 | _instructionTypeWire_T_37
+          ? 3'h4
+          : _instructionTypeWire_T_73 & _instructionTypeWire_T_131
+            & _instructionTypeWire_T_86 | _instructionTypeWire_T_73
+            & _instructionTypeWire_T_125 & _instructionTypeWire_T_86
+            | _instructionTypeWire_T_73 & _instructionTypeWire_T_49
+            & _instructionTypeWire_T_86 | _instructionTypeWire_T_73 & (&io_func3)
+            & _instructionTypeWire_T_86 | _instructionTypeWire_T_73
+            & _instructionTypeWire_T_101 & _instructionTypeWire_T_86
+            | _instructionTypeWire_T_73 & _instructionTypeWire_T_122
+            & _instructionTypeWire_T_86 | _instructionTypeWire_T_73
+            & _instructionTypeWire_T_128 & _instructionTypeWire_T_86
+            | _instructionTypeWire_T_73 & _instructionTypeWire_T_116
+            & _instructionTypeWire_T_86 | _instructionTypeWire_T_83
+            & _instructionTypeWire_T_131 & _instructionTypeWire_T_86
+            | _instructionTypeWire_T_83 & _instructionTypeWire_T_116
+            & _instructionTypeWire_T_86
+              ? 3'h0
+              : _instructionTypeWire_T_88
+                  ? 3'h5
+                  : _instructionTypeWire_T_131 & _instructionTypeWire_T_90
+                      ? 3'h1
+                      : _instructionTypeWire_T_131 & _instructionTypeWire_T_108
+                        | _instructionTypeWire_T_128 & _instructionTypeWire_T_108
+                        | _instructionTypeWire_T_122 & _instructionTypeWire_T_108
+                        | _instructionTypeWire_T_101 & _instructionTypeWire_T_108
+                        | _instructionTypeWire_T_116 & _instructionTypeWire_T_108
+                        | (&io_func3) & _instructionTypeWire_T_108
+                          ? 3'h3
+                          : _instructionTypeWire_T_125 & _instructionTypeWire_T_123
+                            | _instructionTypeWire_T_128 & _instructionTypeWire_T_123
+                            | _instructionTypeWire_T_116 & _instructionTypeWire_T_123
+                            | _instructionTypeWire_T_131 & _instructionTypeWire_T_123
+                            | _instructionTypeWire_T_122 & _instructionTypeWire_T_123
+                              ? 3'h1
+                              : {~(_instructionTypeWire_T_125 & _instructionTypeWire_T_132
+                                   | _instructionTypeWire_T_128
+                                   & _instructionTypeWire_T_132
+                                   | _instructionTypeWire_T_131
+                                   & _instructionTypeWire_T_132),
+                                 2'h2};	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:9:7, :36:{79,106}, :43:28, :44:28, :45:28, :46:28, :47:28, :48:{25,33,61}, :49:61, :51:29, :52:29, :54:{28,85}, :62:28, :67:29, :68:54, :70:54, :78:55, :84:54, :95:41, :96:41, :97:41, :98:41, :99:41, :100:41, :101:{33,74}, :102:{33,74}, :103:{33,74}, :107:71, :108:71, :109:71, :110:71, :111:71, :112:71, :113:71, :114:71, :115:71, :116:71, :121:41, :123:41, :124:41, :125:41, :126:41, :127:41, :128:41, :131:41, :132:41, :133:41, :134:41, :135:41, :137:41, :138:41, :139:41
+  assign io_regWR =
+    _GEN | _GEN_0 | _GEN_1 | _GEN_2 | _GEN_3 | _GEN_4 | _GEN_5 | _GEN_6 | _GEN_7 | _GEN_8
+    | _GEN_9 | _GEN_10 | _GEN_11 | _GEN_12 | _GEN_13 | _GEN_14 | _GEN_15 | _GEN_16
+    | _GEN_17 | _GEN_18 | _GEN_19 | _GEN_20 | _GEN_40 | ~_GEN_39 & _GEN_37;	// src/main/scala/idu/ContrGen.scala:9:7, :153:39, :156:41, :167:41, :183:41, :194:41, :205:41, :216:41, :227:41, :238:41, :249:41, :260:41, :271:41, :282:41, :293:41, :305:41, :316:41, :327:41, :338:41, :349:41, :360:41, :371:41, :382:41, :393:41, :407:41, :418:41, :430:41, :441:41, :452:41, :463:41, :474:41, :485:41, :498:41, :509:41, :520:41, :531:41
+  assign io_srcAALU =
+    _GEN
+    | ~(_GEN_0 | _GEN_1 | _GEN_2 | _GEN_3 | _GEN_4 | _GEN_5 | _GEN_6 | _GEN_7 | _GEN_8
+        | _GEN_9 | _GEN_10) & (_GEN_11 | ~_GEN_41 & (_GEN_21 | _GEN_22));	// src/main/scala/idu/ContrGen.scala:9:7, :153:39, :157:41, :168:41, :184:41, :195:41, :206:41, :217:41, :228:41, :239:41, :250:41, :261:41, :272:41, :283:41, :294:41, :306:41, :317:41, :328:41, :339:41, :350:41, :361:41, :372:41, :383:41, :394:41, :408:41
   assign io_srcBALU =
     _GEN
       ? 2'h2
-      : _GEN_0
-          ? 2'h0
-          : _GEN_9 ? 2'h1 : _GEN_4 | _GEN_5 ? 2'h2 : _GEN_6 ? 2'h0 : {1'h0, _GEN_7};	// src/main/scala/idu/ContrGen.scala:8:7, :34:28, :38:28, :59:21, :68:39, :72:41, :83:41, :94:41, :105:41, :116:41, :127:41, :138:41, :149:41, :160:41
+      : _GEN_0 | _GEN_1 | _GEN_2 | _GEN_3 | _GEN_4 | _GEN_5 | _GEN_6 | _GEN_7 | _GEN_8
+        | _GEN_9 | _GEN_10 | _GEN_11
+          ? 2'h1
+          : _GEN_41
+              ? 2'h0
+              : _GEN_40
+                  ? 2'h2
+                  : _GEN_39
+                      ? 2'h0
+                      : {1'h0,
+                         _GEN_29 | _GEN_30 | _GEN_31 | _GEN_32 | _GEN_33 | _GEN_34
+                           | _GEN_35 | _GEN_36};	// src/main/scala/idu/ContrGen.scala:9:7, :36:33, :43:28, :144:21, :153:39, :158:41, :169:41, :185:41, :196:41, :207:41, :218:41, :229:41, :240:41, :251:41, :262:41, :273:41, :284:41, :295:41, :306:41, :307:41, :317:41, :318:41, :328:41, :329:41, :339:41, :340:41, :350:41, :351:41, :361:41, :362:41, :372:41, :373:41, :383:41, :384:41, :394:41, :395:41, :407:41, :409:41, :418:41, :420:41, :430:41, :432:41, :441:41, :443:41, :452:41, :454:41, :463:41, :465:41, :474:41, :476:41, :485:41, :487:41, :500:41, :511:41, :522:41, :533:41, :544:41, :556:41, :567:41, :578:41
   assign io_ctrALU =
     _GEN
       ? 4'h2
-      : _GEN_0 | _GEN_1 ? 4'h0 : _GEN_2 ? 4'h3 : _GEN_8 ? 4'h0 : {2'h0, _GEN_10, 1'h0};	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:8:7, :34:28, :59:21, :68:39, :73:41, :84:41, :95:41, :106:41, :114:41, :117:41, :125:41, :128:41, :139:41, :150:41
+      : _GEN_0 | _GEN_1
+          ? 4'h0
+          : _GEN_2
+              ? 4'h2
+              : _GEN_3
+                  ? 4'hA
+                  : _GEN_4
+                      ? 4'h7
+                      : _GEN_5
+                          ? 4'h6
+                          : _GEN_6
+                              ? 4'h4
+                              : _GEN_7
+                                  ? 4'h1
+                                  : _GEN_8
+                                      ? 4'h5
+                                      : _GEN_9
+                                          ? 4'hD
+                                          : _GEN_10
+                                              ? 4'h3
+                                              : _GEN_11 | _GEN_12
+                                                  ? 4'h0
+                                                  : _GEN_13
+                                                      ? 4'h2
+                                                      : _GEN_14
+                                                          ? 4'h7
+                                                          : _GEN_15
+                                                              ? 4'h6
+                                                              : _GEN_16
+                                                                  ? 4'h4
+                                                                  : _GEN_17
+                                                                      ? 4'h1
+                                                                      : _GEN_18
+                                                                          ? 4'h5
+                                                                          : _GEN_19
+                                                                              ? 4'h8
+                                                                              : _GEN_20
+                                                                                  ? 4'hD
+                                                                                  : _GEN_21
+                                                                                      ? 4'h0
+                                                                                      : _GEN_22
+                                                                                        | _GEN_23
+                                                                                        | _GEN_24
+                                                                                        | _GEN_25
+                                                                                          ? 4'h2
+                                                                                          : _GEN_26
+                                                                                              ? 4'hA
+                                                                                              : _GEN_27
+                                                                                                  ? 4'h2
+                                                                                                  : _GEN_28
+                                                                                                      ? 4'hA
+                                                                                                      : 4'h0;	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:9:7, :145:21, :153:39, :159:41, :170:41, :186:41, :197:41, :208:41, :219:41, :230:41, :241:41, :252:41, :263:41, :274:41, :285:41, :296:41, :308:41, :319:41, :330:41, :341:41, :352:41, :363:41, :374:41, :385:41, :396:41, :410:41, :421:41, :433:41, :444:41, :455:41, :466:41, :477:41, :488:41
   assign io_branch =
-    _GEN ? 3'h2 : _GEN_0 | _GEN_9 ? 3'h0 : _GEN_4 ? 3'h1 : _GEN_5 ? 3'h2 : {_GEN_6, 2'h0};	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:8:7, :59:21, :68:39, :74:41, :85:41, :94:41, :96:41, :105:41, :107:41, :116:41, :118:41, :129:41, :140:41, :151:41
-  assign io_memWR = io_memWR_0;	// src/main/scala/idu/ContrGen.scala:8:7, :68:39, :76:41, :87:41, :98:41, :109:41, :120:41, :131:41, :142:41, :153:41
-  assign io_memValid = io_memWR_0;	// src/main/scala/idu/ContrGen.scala:8:7, :68:39, :76:41, :87:41, :98:41, :109:41, :120:41, :131:41, :142:41, :153:41
-  assign io_memOP = _GEN_11 ? 3'h0 : {1'h0, _GEN_7, 1'h0};	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:8:7, :34:28, :68:39, :76:41, :78:41, :87:41, :89:41, :98:41, :100:41, :109:41, :111:41, :120:41, :122:41, :131:41, :133:41, :142:41, :144:41, :153:41, :155:41, :166:41
+    _GEN
+      ? 3'h2
+      : _GEN_0 | _GEN_1 | _GEN_2 | _GEN_3 | _GEN_4 | _GEN_5 | _GEN_6 | _GEN_7 | _GEN_8
+        | _GEN_9 | _GEN_10 | _GEN_11 | _GEN_41
+          ? 3'h0
+          : _GEN_21
+              ? 3'h1
+              : _GEN_22
+                  ? 3'h2
+                  : _GEN_23
+                      ? 3'h4
+                      : _GEN_24 ? 3'h5 : _GEN_25 | _GEN_26 ? 3'h6 : {3{_GEN_38}};	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:9:7, :46:28, :47:28, :49:61, :153:39, :160:41, :171:41, :187:41, :198:41, :209:41, :220:41, :231:41, :242:41, :253:41, :264:41, :275:41, :286:41, :297:41, :306:41, :309:41, :317:41, :320:41, :328:41, :331:41, :339:41, :342:41, :350:41, :353:41, :361:41, :364:41, :372:41, :375:41, :383:41, :386:41, :394:41, :397:41, :411:41, :422:41, :434:41, :445:41, :456:41, :467:41, :474:41, :478:41, :485:41, :489:41
+  assign io_memToReg = ~_GEN_42 & _GEN_37;	// src/main/scala/idu/ContrGen.scala:9:7, :153:39, :161:37, :172:37, :188:37, :199:37, :210:37, :221:37, :232:37, :243:37, :254:37, :265:37, :276:37, :287:37, :298:37, :310:37, :321:37, :332:37, :343:37, :354:37, :365:37, :376:37, :387:37, :398:37, :412:37, :423:37, :435:37, :446:37, :457:37, :468:37, :479:37, :490:37, :498:41, :509:41, :520:41, :531:41
+  assign io_memWR =
+    ~(_GEN | _GEN_0 | _GEN_1 | _GEN_2 | _GEN_3 | _GEN_4 | _GEN_5 | _GEN_6 | _GEN_7
+      | _GEN_8 | _GEN_9 | _GEN_10 | _GEN_11 | _GEN_12 | _GEN_13 | _GEN_14 | _GEN_15
+      | _GEN_16 | _GEN_17 | _GEN_18 | _GEN_19 | _GEN_20 | _GEN_21 | _GEN_22 | _GEN_23
+      | _GEN_24 | _GEN_25 | _GEN_26 | _GEN_27 | _GEN_28 | _GEN_29 | _GEN_30 | _GEN_31
+      | _GEN_32 | _GEN_33) & (_GEN_43 | _GEN_36);	// src/main/scala/idu/ContrGen.scala:9:7, :153:39, :162:41, :173:41, :189:41, :200:41, :211:41, :222:41, :233:41, :244:41, :255:41, :266:41, :277:41, :288:41, :299:41, :311:41, :322:41, :333:41, :344:41, :355:41, :366:41, :377:41, :388:41, :399:41, :413:41, :424:41, :436:41, :447:41, :458:41, :469:41, :480:41, :491:41, :504:41, :515:41, :526:41, :537:41, :548:41, :560:41, :571:41
+  assign io_memValid =
+    ~_GEN_42 & (_GEN_29 | _GEN_30 | _GEN_31 | _GEN_32 | _GEN_33 | _GEN_43 | _GEN_36);	// src/main/scala/idu/ContrGen.scala:9:7, :153:39, :161:37, :163:37, :172:37, :174:37, :188:37, :190:37, :199:37, :201:37, :210:37, :212:37, :221:37, :223:37, :232:37, :234:37, :243:37, :245:37, :254:37, :256:37, :265:37, :267:37, :276:37, :278:37, :287:37, :289:37, :298:37, :300:37, :310:37, :312:37, :321:37, :323:37, :332:37, :334:37, :343:37, :345:37, :354:37, :356:37, :365:37, :367:37, :376:37, :378:37, :387:37, :389:37, :398:37, :400:37, :412:37, :414:37, :423:37, :425:37, :435:37, :437:37, :446:37, :448:37, :457:37, :459:37, :468:37, :470:37, :479:37, :481:37, :490:37, :492:37, :505:37, :516:37, :527:37, :538:37, :549:37, :560:41, :561:37, :571:41, :572:37
+  assign io_memOP =
+    _GEN_42
+      ? 3'h0
+      : _GEN_29
+          ? 3'h2
+          : _GEN_30
+              ? 3'h1
+              : _GEN_31
+                  ? 3'h5
+                  : _GEN_32 ? 3'h0 : _GEN_33 ? 3'h4 : _GEN_34 ? 3'h2 : {2'h0, _GEN_35};	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/idu/ContrGen.scala:9:7, :47:28, :49:61, :144:21, :153:39, :161:37, :164:41, :172:37, :175:41, :188:37, :191:41, :199:37, :202:41, :210:37, :213:41, :221:37, :224:41, :232:37, :235:41, :243:37, :246:41, :254:37, :257:41, :265:37, :268:41, :276:37, :279:41, :287:37, :290:41, :298:37, :301:41, :310:37, :313:41, :321:37, :324:41, :332:37, :335:41, :343:37, :346:41, :354:37, :357:41, :365:37, :368:41, :376:37, :379:41, :387:37, :390:41, :398:37, :401:41, :412:37, :415:41, :423:37, :426:41, :435:37, :438:41, :446:37, :449:41, :457:37, :460:41, :468:37, :471:41, :479:37, :482:41, :490:37, :493:41, :506:41, :517:41, :528:41, :539:41, :550:41, :562:41, :573:41
 endmodule
 

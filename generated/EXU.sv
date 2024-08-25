@@ -62,10 +62,12 @@ module EXU(	// src/main/scala/exu/EXU.scala:13:7
   input         io_memWRCtr,	// src/main/scala/exu/EXU.scala:14:20
                 io_memValidCtr,	// src/main/scala/exu/EXU.scala:14:20
   input  [2:0]  io_branchCtr,	// src/main/scala/exu/EXU.scala:14:20
+  input         io_memToRegCtr,	// src/main/scala/exu/EXU.scala:14:20
   output [31:0] io_nextPC,	// src/main/scala/exu/EXU.scala:14:20
                 io_rdData	// src/main/scala/exu/EXU.scala:14:20
 );
 
+  wire [31:0] _dataMem_io_dataOut;	// src/main/scala/exu/EXU.scala:79:41
   wire        _branchCond_io_pcASrc;	// src/main/scala/exu/EXU.scala:69:41
   wire        _branchCond_io_pcBSrc;	// src/main/scala/exu/EXU.scala:69:41
   wire        _alu_io_less;	// src/main/scala/exu/EXU.scala:58:25
@@ -90,15 +92,16 @@ module EXU(	// src/main/scala/exu/EXU.scala:13:7
     .io_pcBSrc (_branchCond_io_pcBSrc)
   );
   DataMem dataMem (	// src/main/scala/exu/EXU.scala:79:41
-    .io_addr   (_alu_io_aluOut),	// src/main/scala/exu/EXU.scala:58:25
-    .io_memOP  (io_memOPCtr),
-    .io_dataIn (io_rs2Data),
-    .io_wrEn   (io_memWRCtr),
-    .io_valid  (io_memValidCtr)
+    .io_addr    (_alu_io_aluOut),	// src/main/scala/exu/EXU.scala:58:25
+    .io_memOP   (io_memOPCtr),
+    .io_dataIn  (io_rs2Data),
+    .io_wrEn    (io_memWRCtr),
+    .io_valid   (io_memValidCtr),
+    .io_dataOut (_dataMem_io_dataOut)
   );
   assign io_nextPC =
     (_branchCond_io_pcASrc ? io_immData : 32'h4)
     + (_branchCond_io_pcBSrc ? io_rs1Data : io_pc);	// src/main/scala/chisel3/util/Mux.scala:126:16, src/main/scala/exu/EXU.scala:13:7, :69:41, :90:{31,69}, :91:12
-  assign io_rdData = _alu_io_aluOut;	// src/main/scala/exu/EXU.scala:13:7, :58:25
+  assign io_rdData = io_memToRegCtr ? _dataMem_io_dataOut : _alu_io_aluOut;	// src/main/scala/exu/EXU.scala:13:7, :58:25, :79:41, :92:31
 endmodule
 

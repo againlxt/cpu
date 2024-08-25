@@ -57,7 +57,8 @@ module IDU(	// src/main/scala/idu/IDU.scala:10:7
   output [1:0]  io_srcBALU,	// src/main/scala/idu/IDU.scala:11:16
   output [3:0]  io_ctrALU,	// src/main/scala/idu/IDU.scala:11:16
   output [2:0]  io_branch,	// src/main/scala/idu/IDU.scala:11:16
-  output        io_memWR,	// src/main/scala/idu/IDU.scala:11:16
+  output        io_memToReg,	// src/main/scala/idu/IDU.scala:11:16
+                io_memWR,	// src/main/scala/idu/IDU.scala:11:16
                 io_memValid,	// src/main/scala/idu/IDU.scala:11:16
   output [2:0]  io_memOP,	// src/main/scala/idu/IDU.scala:11:16
   output [4:0]  io_rs1Index,	// src/main/scala/idu/IDU.scala:11:16
@@ -78,6 +79,7 @@ module IDU(	// src/main/scala/idu/IDU.scala:10:7
     .io_srcBALU  (io_srcBALU),
     .io_ctrALU   (io_ctrALU),
     .io_branch   (io_branch),
+    .io_memToReg (io_memToReg),
     .io_memWR    (io_memWR),
     .io_memValid (io_memValid),
     .io_memOP    (io_memOP)

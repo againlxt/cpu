@@ -66,6 +66,7 @@ module top(	// src/main/scala/Main.scala:38:7
   wire [1:0]  _idu_io_srcBALU;	// src/main/scala/Main.scala:48:49
   wire [3:0]  _idu_io_ctrALU;	// src/main/scala/Main.scala:48:49
   wire [2:0]  _idu_io_branch;	// src/main/scala/Main.scala:48:49
+  wire        _idu_io_memToReg;	// src/main/scala/Main.scala:48:49
   wire        _idu_io_memWR;	// src/main/scala/Main.scala:48:49
   wire        _idu_io_memValid;	// src/main/scala/Main.scala:48:49
   wire [2:0]  _idu_io_memOP;	// src/main/scala/Main.scala:48:49
@@ -106,6 +107,7 @@ module top(	// src/main/scala/Main.scala:38:7
     .io_srcBALU  (_idu_io_srcBALU),
     .io_ctrALU   (_idu_io_ctrALU),
     .io_branch   (_idu_io_branch),
+    .io_memToReg (_idu_io_memToReg),
     .io_memWR    (_idu_io_memWR),
     .io_memValid (_idu_io_memValid),
     .io_memOP    (_idu_io_memOP),
@@ -126,6 +128,7 @@ module top(	// src/main/scala/Main.scala:38:7
     .io_memWRCtr    (_idu_io_memWR),	// src/main/scala/Main.scala:48:49
     .io_memValidCtr (_idu_io_memValid),	// src/main/scala/Main.scala:48:49
     .io_branchCtr   (_idu_io_branch),	// src/main/scala/Main.scala:48:49
+    .io_memToRegCtr (_idu_io_memToReg),	// src/main/scala/Main.scala:48:49
     .io_nextPC      (_exu_io_nextPC),
     .io_rdData      (_exu_io_rdData)
   );
