@@ -129,6 +129,7 @@ class DataMem extends Module {
 	dataMem.io.clk 		:= this.clock.asUInt
 	dataMem.io.addr 	:= addrWire
 	dataMem.io.wmask 	:= wMaskWire
+	dataMem.io.sOrU 	:= sOrUWire
 	dataMem.io.dataIn 	:= dataInWire
 	dataMem.io.wrEn 	:= wrEnWire
 	dataMem.io.valid 	:= validWire
@@ -146,6 +147,7 @@ class DataMemV extends BlackBox with HasBlackBoxInline {
 		val clk 	= Input(UInt(1.W))
 		val addr 	= Input(UInt(32.W))
 		val wmask 	= Input(UInt(8.W))
+		val sOrU 	= Input(Bool())
 		val dataIn 	= Input(UInt(32.W))
 		val wrEn 	= Input(Bool())
 		val valid  	= Input(Bool())
@@ -158,6 +160,7 @@ class DataMemV extends BlackBox with HasBlackBoxInline {
 	   |	input 		clk,
 	   |	input [31:0] addr,
 	   |	input [7:0]  wmask,
+	   |	input 		 sOrU,
 	   |	input [31:0] dataIn,
 	   |	input 		 wrEn,
 	   |	input 		 valid,
@@ -176,7 +179,20 @@ class DataMemV extends BlackBox with HasBlackBoxInline {
 	   |assign dataOut = rdata;
 	   |always @(*) begin
 	   |	if(valid) begin
-	   |		rdata = pmem_read(addr);
+	   |		case(wmask)
+	   |			8'b00000001: begin
+	   |				rdata = pmem_read(addr) & 32'h000000FF;
+	   |				if(sOrU == 1) 	rdata[31:8] = {24{rdata[7]}};
+	   |				else 			rdata = rdata;
+	   |			end	
+	   |			8'b00000011: begin
+	   |				rdata = pmem_read(addr) & 32'h0000FFFF;
+	   |				if(sOrU == 1) 	rdata[31:16] = {16{rdata[15]}};
+	   |				else 			rdata = rdata;
+	   |			end	
+	   |			8'b00001111:	rdata = pmem_read(addr) & 32'hFFFFFFFF;
+	   |			default: 		rdata = 32'd0;
+	   |		endcase
 	   |	end
 	   |	else begin
 	   |		rdata = 32'd0;

@@ -430,7 +430,7 @@ class ContrGen extends Module {
 			io.regWR 	:= 1.U
 			io.srcAALU 	:= 1.U
 			io.srcBALU 	:= 2.U
-			io.ctrALU 	:= 2.U
+			io.ctrALU 	:= 0.U
 			io.branch 	:= 2.U
 			io.memToReg := 0.U
 			io.memWR 	:= 0.U

@@ -85,13 +85,16 @@ class ALUAdder extends Module {
 	val subOrAddWire= Cat(Fill(31, io.subOrAdd), io.subOrAdd)
 	val aAddWire 	= io.srcAData
 	val bAddWire 	= io.srcBData
+	val bXorCIn 	= bAddWire ^ subOrAddWire
 
 	cla32Add.io.a 	:= aAddWire
 	cla32Add.io.b 	:= bAddWire ^ subOrAddWire
 	cla32Add.io.cin := io.subOrAdd
 	io.carry 		:= cla32Add.io.cout
 	io.zero			:= Mux(cla32Add.io.sum === 0.U, 1.U, 0.U)
-	io.overflow		:= (aAddWire(31) === bAddWire(31)) && (cla32Add.io.sum(31) =/= aAddWire(31))
+	val aOverflow	= (aAddWire(31) === bAddWire(31)) && (cla32Add.io.sum(31) =/= aAddWire(31))
+	val sOverflow  	= (aAddWire(31) === bXorCIn(31)) && (cla32Add.io.sum(31) =/= aAddWire(31))
+	io.overflow		:= Mux(io.subOrAdd.asBool, sOverflow, aOverflow)
 	io.result 		:= cla32Add.io.sum
 }
 
