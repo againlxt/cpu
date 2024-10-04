@@ -21,14 +21,14 @@ class EXU extends Module {
 		val pc 			= Input(UInt(32.W))
 
 		// Contral Data
-		val aluASrcCtr 	= Input(UInt(1.W))
+		val aluASrcCtr 	= Input(UInt(2.W))
 		val aluBSrcCtr 	= Input(UInt(2.W))
 		val aluCtr 		= Input(UInt(4.W))
 		val memOPCtr 	= Input(UInt(3.W))
 		val memWRCtr	= Input(UInt(1.W))
 		val memValidCtr	= Input(UInt(1.W))
-		val branchCtr 	= Input(UInt(3.W))
-		val memToRegCtr = Input(UInt(1.W))
+		val branchCtr 	= Input(UInt(4.W))
+		val memToRegCtr = Input(UInt(2.W))
 
 		// Output
 		val nextPC 		= Output(UInt(32.W))
@@ -210,13 +210,13 @@ class DataMemV extends BlackBox with HasBlackBoxInline {
 class BranchCond extends Module {
 	val io = IO(new Bundle {
 		// Input
-		val branch 	= Input(UInt(3.W))
+		val branch 	= Input(UInt(4.W))
 		val less 	= Input(Bool())
 		val zero 	= Input(Bool())
 
 		// Output
-		val pcASrc 	= Output(Bool())
-		val pcBSrc 	= Output(Bool())
+		val pcASrc 	= Output(UInt(2.W))
+		val pcBSrc 	= Output(UInt(2.W))
 	})
 
 	val branchWire 	= io.branch
@@ -224,30 +224,31 @@ class BranchCond extends Module {
 	val zeroWire 	= io.zero
 
 	io.pcASrc 	:= MuxCase (0.B, Seq(
-		(branchWire === "b000".U).asBool -> 0.B,
-		(branchWire === "b001".U).asBool -> 1.B,
-		(branchWire === "b010".U).asBool -> 1.B,
-		(branchWire === "b100".U & !zeroWire).asBool -> 0.B,
-		(branchWire === "b100".U & zeroWire).asBool -> 1.B,
-		(branchWire === "b101".U & !zeroWire).asBool -> 1.B,
-		(branchWire === "b101".U & zeroWire).asBool -> 0.B,
-		(branchWire === "b110".U & !lessWire).asBool -> 0.B,
-		(branchWire === "b110".U & lessWire).asBool -> 1.B,
-		(branchWire === "b111".U & !lessWire).asBool -> 1.B,
-		(branchWire === "b111".U & lessWire).asBool -> 0.B
+		(branchWire === "b0000".U).asBool -> 0.B,
+		(branchWire === "b0001".U).asBool -> 1.B,
+		(branchWire === "b0010".U).asBool -> 1.B,
+		(branchWire === "b0100".U & !zeroWire).asBool -> 0.B,
+		(branchWire === "b0100".U & zeroWire).asBool -> 1.B,
+		(branchWire === "b0101".U & !zeroWire).asBool -> 1.B,
+		(branchWire === "b0101".U & zeroWire).asBool -> 0.B,
+		(branchWire === "b0110".U & !lessWire).asBool -> 0.B,
+		(branchWire === "b0110".U & lessWire).asBool -> 1.B,
+		(branchWire === "b0111".U & !lessWire).asBool -> 1.B,
+		(branchWire === "b0111".U & lessWire).asBool -> 0.B,
+		(branchWire === "b1000".U).asBool -> 2.B
 	))
 
 	io.pcBSrc 	:= MuxCase (0.B, Seq(
-		(branchWire === "b000".U).asBool -> 0.B,
-		(branchWire === "b001".U).asBool -> 0.B,
-		(branchWire === "b010".U).asBool -> 1.B,
-		(branchWire === "b100".U & !zeroWire).asBool -> 0.B,
-		(branchWire === "b100".U & zeroWire).asBool -> 0.B,
-		(branchWire === "b101".U & !zeroWire).asBool -> 0.B,
-		(branchWire === "b101".U & zeroWire).asBool -> 0.B,
-		(branchWire === "b110".U & !lessWire).asBool -> 0.B,
-		(branchWire === "b110".U & lessWire).asBool -> 0.B,
-		(branchWire === "b111".U & !lessWire).asBool -> 0.B,
-		(branchWire === "b111".U & lessWire).asBool -> 0.B
+		(branchWire === "b0000".U).asBool -> 0.B,
+		(branchWire === "b0001".U).asBool -> 0.B,
+		(branchWire === "b0010".U).asBool -> 1.B,
+		(branchWire === "b0100".U & !zeroWire).asBool -> 0.B,
+		(branchWire === "b0100".U & zeroWire).asBool -> 0.B,
+		(branchWire === "b0101".U & !zeroWire).asBool -> 0.B,
+		(branchWire === "b0101".U & zeroWire).asBool -> 0.B,
+		(branchWire === "b0110".U & !lessWire).asBool -> 0.B,
+		(branchWire === "b0110".U & lessWire).asBool -> 0.B,
+		(branchWire === "b0111".U & !lessWire).asBool -> 0.B,
+		(branchWire === "b1000".U).asBool -> 2.B
 	))
 }
