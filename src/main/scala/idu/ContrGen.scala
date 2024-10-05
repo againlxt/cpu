@@ -232,7 +232,7 @@ class ContrGen extends Module {
             io.csrOP    := 0.U
             io.ecall    := 1.U
             io.mret     := 0.U
-            io.csrEn    := 0.U
+            io.csrEn    := 1.U
             io.csrALUOP := 0.U
         }
 		is(InstructionFormat.MRET) {
@@ -249,7 +249,7 @@ class ContrGen extends Module {
             io.csrOP    := 0.U
             io.ecall    := 0.U
             io.mret     := 1.U
-            io.csrEn    := 0.U
+            io.csrEn    := 1.U
             io.csrALUOP := 0.U
         }
 
@@ -260,7 +260,7 @@ class ContrGen extends Module {
 			io.srcAALU 	:= 0.U
 			io.srcBALU 	:= 0.U
 			io.ctrALU 	:= 0.U
-			io.branch 	:= 8.U
+			io.branch 	:= 0.U
 			io.memToReg := 2.U
 			io.memWR 	:= 0.U
 			io.memValid := 0.U
@@ -277,7 +277,7 @@ class ContrGen extends Module {
 			io.srcAALU 	:= 0.U
 			io.srcBALU 	:= 0.U
 			io.ctrALU 	:= 0.U
-			io.branch 	:= 8.U
+			io.branch 	:= 0.U
 			io.memToReg := 2.U
 			io.memWR 	:= 0.U
 			io.memValid := 0.U
@@ -294,7 +294,7 @@ class ContrGen extends Module {
 			io.srcAALU 	:= 0.U
 			io.srcBALU 	:= 0.U
 			io.ctrALU 	:= 0.U
-			io.branch 	:= 8.U
+			io.branch 	:= 0.U
 			io.memToReg := 2.U
 			io.memWR 	:= 0.U
 			io.memValid := 0.U
@@ -311,7 +311,7 @@ class ContrGen extends Module {
 			io.srcAALU 	:= 0.U
 			io.srcBALU 	:= 0.U
 			io.ctrALU 	:= 0.U
-			io.branch 	:= 8.U
+			io.branch 	:= 0.U
 			io.memToReg := 2.U
 			io.memWR 	:= 0.U
 			io.memValid := 0.U
@@ -328,7 +328,7 @@ class ContrGen extends Module {
 			io.srcAALU 	:= 0.U
 			io.srcBALU 	:= 0.U
 			io.ctrALU 	:= 0.U
-			io.branch 	:= 8.U
+			io.branch 	:= 0.U
 			io.memToReg := 2.U
 			io.memWR 	:= 0.U
 			io.memValid := 0.U
@@ -345,7 +345,7 @@ class ContrGen extends Module {
 			io.srcAALU 	:= 0.U
 			io.srcBALU 	:= 0.U
 			io.ctrALU 	:= 0.U
-			io.branch 	:= 8.U
+			io.branch 	:= 0.U
 			io.memToReg := 2.U
 			io.memWR 	:= 0.U
 			io.memValid := 0.U

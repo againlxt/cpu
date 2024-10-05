@@ -32,7 +32,7 @@ class CSRReg extends Module {
             }.elsewhen(io.csr === "h305".U) {
                 mtvecReg    := io.dataIn
             }
-        }.elsewhen(io.ecall) {
+        }.elsewhen(io.ecall === 1.B) {
             mepcReg     := io.pc
             mcauseReg   := 11.U
         }
