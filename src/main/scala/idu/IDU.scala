@@ -25,8 +25,12 @@ class IDU extends Module {
 		val memWR 	= Output(UInt(1.W))
 		val memValid= Output(UInt(1.W))
 		val memOP 	= Output(UInt(3.W))
-        val csrWr   = Output(UInt(1.W))
-        val csrOP   = Output(UInt(1.W))
+        val ecall 	= Output(UInt(1.W))
+		val mret 	= Output(UInt(1.W))
+		val csrEn 	= Output(UInt(1.W))
+		val csrWr 	= Output(UInt(1.W))
+		val csrOP 	= Output(UInt(1.W)) 
+        val csrALUOP= Output(UInt(2.W))
 
 		// Output to Riscv32BaseReg
 		val rs1Index 	= Output(UInt(5.W))
@@ -69,8 +73,12 @@ class IDU extends Module {
     val memWRWire 	= contrGen.io.memWR
     val memValidWire= contrGen.io.memValid
     val memOPWire 	= contrGen.io.memOP
+    val ecallWire   = contrGen.io.ecall
+    val mretWire    = contrGen.io.mret
+    val csrEnWire   = contrGen.io.csrEn
     val csrWrWire   = contrGen.io.csrWr
     val csrOPWire   = contrGen.io.csrOP
+    val csrALUOPWire= contrGen.io.csrALUOP
 
 	// Instantitate ImmGen
     val immGen 		= Module(new ImmGen)
@@ -95,8 +103,12 @@ class IDU extends Module {
     io.memWR 		:= memWRWire
 	io.memValid 	:= memValidWire 
     io.memOP 		:= memOPWire
+    io.ecall        := ecallWire
+    io.mret         := mretWire
+    io.csrEn        := csrEnWire
     io.csrWr        := csrWrWire
-    io.csrOPWire    := csrOPWire
+    io.csrOP        := csrOPWire
+    io.csrALUOP     := csrALUOPWire
 
     io.rs1Index 	:= rs1IndexWire
     io.rs2Index 	:= rs2IndexWire

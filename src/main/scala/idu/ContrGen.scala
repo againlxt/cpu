@@ -28,6 +28,7 @@ class ContrGen extends Module {
 		val csrEn 	= Output(UInt(1.W))
 		val csrWr 	= Output(UInt(1.W))
 		val csrOP 	= Output(UInt(1.W))
+		val csrALUOP= Output(UInt(2.W))
 	})
 
 	val cmdWire 	= io.cmd
@@ -40,7 +41,7 @@ class ContrGen extends Module {
 		(io.cmd(19,0) === "b00001000000001100111".U).asBool -> InstructionFormat.RET,
 		(cmdWire(31,15) === 0.U && cmdWire(11,7) === 0.U && func3Wire === "b000".U && opcodeWire === "b0010011".U).asBool -> InstructionFormat.NOP,
 		(io.cmd(31,0) === "b00000000000000000000000001110011".U).asBool -> InstructionFormat.ECALL,
-		(io.cmd(31,0) === "b00110000001000000000000001110011".U).asBool -> InstructionFormat.Mret,
+		(io.cmd(31,0) === "b00110000001000000000000001110011".U).asBool -> InstructionFormat.MRET,
 
 		// CSR Instructions
 		(func3Wire === "b011".U & opcodeWire === "b1110011".U).asBool -> InstructionFormat.CSRRC,
@@ -104,6 +105,16 @@ class ContrGen extends Module {
 	val instructionTypeWire = MuxCase(InstructionType.NOP, Seq(
 
 		// Normal-Instructions
+		(io.cmd(31,0) === "b00000000000000000000000001110011".U).asBool -> InstructionType.I,
+		(io.cmd(31,0) === "b00110000001000000000000001110011".U).asBool -> InstructionType.R,
+
+		// CSR Instructions
+		(func3Wire === "b011".U & opcodeWire === "b1110011".U).asBool -> InstructionType.I,
+		(func3Wire === "b111".U & opcodeWire === "b1110011".U).asBool -> InstructionType.I,
+		(func3Wire === "b010".U & opcodeWire === "b1110011".U).asBool -> InstructionType.I,
+		(func3Wire === "b110".U & opcodeWire === "b1110011".U).asBool -> InstructionType.I,
+		(func3Wire === "b001".U & opcodeWire === "b1110011".U).asBool -> InstructionType.I,
+		(func3Wire === "b101".U & opcodeWire === "b1110011".U).asBool -> InstructionType.I,
 		
 		/* Integer Computational Instructions */
 		// Integer Register-Immediate Instructions
@@ -163,7 +174,12 @@ class ContrGen extends Module {
 	io.memWR    := 0.U
 	io.memValid := 0.U
 	io.memOP    := 0.U
+	io.ecall	:= 0.U
+	io.mret		:= 0.U
+	io.csrEn	:= 0.U
 	io.csrWr	:= 0.U
+	io.csrOP	:= 0.U
+	io.csrALUOP := 0.U
 
 	io.immType 	:= instructionTypeWire.asUInt
 	switch(instructionFormatWire) {
@@ -183,6 +199,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.NOP) {
 			io.regWR 	:= 1.U
@@ -199,8 +216,148 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
-		
+		is(InstructionFormat.ECALL) {
+			io.regWR 	:= 0.U
+			io.srcAALU 	:= 0.U
+			io.srcBALU 	:= 0.U
+			io.ctrALU 	:= 0.U
+			io.branch 	:= 8.U
+			io.memToReg := 0.U
+			io.memWR 	:= 0.U
+			io.memValid := 0.U
+			io.memOP 	:= 0.U
+		    io.csrWr    := 0.U
+            io.csrOP    := 0.U
+            io.ecall    := 1.U
+            io.mret     := 0.U
+            io.csrEn    := 0.U
+            io.csrALUOP := 0.U
+        }
+		is(InstructionFormat.MRET) {
+			io.regWR 	:= 0.U
+			io.srcAALU 	:= 0.U
+			io.srcBALU 	:= 0.U
+			io.ctrALU 	:= 0.U
+			io.branch 	:= 8.U
+			io.memToReg := 0.U
+			io.memWR 	:= 0.U
+			io.memValid := 0.U
+			io.memOP 	:= 0.U
+		    io.csrWr    := 0.U
+            io.csrOP    := 0.U
+            io.ecall    := 0.U
+            io.mret     := 1.U
+            io.csrEn    := 0.U
+            io.csrALUOP := 0.U
+        }
+
+
+		/* CSR Instructions */
+		is(InstructionFormat.CSRRC) {
+			io.regWR 	:= 1.U
+			io.srcAALU 	:= 0.U
+			io.srcBALU 	:= 0.U
+			io.ctrALU 	:= 0.U
+			io.branch 	:= 8.U
+			io.memToReg := 2.U
+			io.memWR 	:= 0.U
+			io.memValid := 0.U
+			io.memOP 	:= 0.U
+		    io.csrWr    := 1.U
+            io.csrOP    := 0.U
+            io.ecall    := 0.U
+            io.mret     := 0.U
+            io.csrEn    := 1.U
+            io.csrALUOP := 0.U
+        }
+		is(InstructionFormat.CSRRCI) {
+			io.regWR 	:= 1.U
+			io.srcAALU 	:= 0.U
+			io.srcBALU 	:= 0.U
+			io.ctrALU 	:= 0.U
+			io.branch 	:= 8.U
+			io.memToReg := 2.U
+			io.memWR 	:= 0.U
+			io.memValid := 0.U
+			io.memOP 	:= 0.U
+		    io.csrWr    := 1.U
+            io.csrOP    := 1.U
+            io.ecall    := 0.U
+            io.mret     := 0.U
+            io.csrEn    := 1.U
+            io.csrALUOP := 0.U
+        }
+		is(InstructionFormat.CSRRS) {
+			io.regWR 	:= 1.U
+			io.srcAALU 	:= 0.U
+			io.srcBALU 	:= 0.U
+			io.ctrALU 	:= 0.U
+			io.branch 	:= 8.U
+			io.memToReg := 2.U
+			io.memWR 	:= 0.U
+			io.memValid := 0.U
+			io.memOP 	:= 0.U
+		    io.csrWr    := 1.U
+            io.csrOP    := 0.U
+            io.ecall    := 0.U
+            io.mret     := 0.U
+            io.csrEn    := 1.U
+            io.csrALUOP := 1.U
+        }
+		is(InstructionFormat.CSRRSI) {
+			io.regWR 	:= 1.U
+			io.srcAALU 	:= 0.U
+			io.srcBALU 	:= 0.U
+			io.ctrALU 	:= 0.U
+			io.branch 	:= 8.U
+			io.memToReg := 2.U
+			io.memWR 	:= 0.U
+			io.memValid := 0.U
+			io.memOP 	:= 0.U
+		    io.csrWr    := 1.U
+            io.csrOP    := 1.U
+            io.ecall    := 0.U
+            io.mret     := 0.U
+            io.csrEn    := 1.U
+            io.csrALUOP := 1.U
+        }
+		is(InstructionFormat.CSRRW) {
+			io.regWR 	:= 1.U
+			io.srcAALU 	:= 0.U
+			io.srcBALU 	:= 0.U
+			io.ctrALU 	:= 0.U
+			io.branch 	:= 8.U
+			io.memToReg := 2.U
+			io.memWR 	:= 0.U
+			io.memValid := 0.U
+			io.memOP 	:= 0.U
+		    io.csrWr    := 1.U
+            io.csrOP    := 0.U
+            io.ecall    := 0.U
+            io.mret     := 0.U
+            io.csrEn    := 1.U
+            io.csrALUOP := 2.U
+        }
+		is(InstructionFormat.CSRRWI) {
+			io.regWR 	:= 1.U
+			io.srcAALU 	:= 0.U
+			io.srcBALU 	:= 0.U
+			io.ctrALU 	:= 0.U
+			io.branch 	:= 8.U
+			io.memToReg := 2.U
+			io.memWR 	:= 0.U
+			io.memValid := 0.U
+			io.memOP 	:= 0.U
+		    io.csrWr    := 1.U
+            io.csrOP    := 1.U
+            io.ecall    := 0.U
+            io.mret     := 0.U
+            io.csrEn    := 1.U
+            io.csrALUOP := 2.U
+        }
+
 
 		// Normal-Instructions
 		/* Integer Computational Instructions */
@@ -220,6 +377,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.SLTI) {
 			io.regWR 	:= 1.U
@@ -236,6 +394,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }		
 		is(InstructionFormat.SLTIU) {
 			io.regWR 	:= 1.U
@@ -252,6 +411,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.ANDI) {
 			io.regWR 	:= 1.U
@@ -268,6 +428,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }	
 		is(InstructionFormat.ORI) {
 			io.regWR 	:= 1.U
@@ -284,6 +445,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }	
 		is(InstructionFormat.XORI) {
 			io.regWR 	:= 1.U
@@ -300,6 +462,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }	
 		is(InstructionFormat.SLLI) {
 			io.regWR 	:= 1.U
@@ -316,6 +479,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }	
 		is(InstructionFormat.SRLI) {
 			io.regWR 	:= 1.U
@@ -332,6 +496,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }	
 		is(InstructionFormat.SRAI) {
 			io.regWR 	:= 1.U
@@ -348,6 +513,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }	
 		is(InstructionFormat.LUI) {
 			io.regWR 	:= 1.U
@@ -364,6 +530,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.AUIPC) {
 			io.regWR 	:= 1.U
@@ -380,6 +547,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		// Integer Register-Register Operations
 		is(InstructionFormat.ADD) {
@@ -397,6 +565,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.SLT) {
 			io.regWR 	:= 1.U
@@ -413,6 +582,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.SLTU) {
 			io.regWR 	:= 1.U
@@ -429,6 +599,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		
 		is(InstructionFormat.AND) {
@@ -446,6 +617,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.OR) {
 			io.regWR 	:= 1.U
@@ -462,6 +634,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.XOR) {
 			io.regWR 	:= 1.U
@@ -478,6 +651,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.SLL) {
 			io.regWR 	:= 1.U
@@ -494,6 +668,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.SRL) {
 			io.regWR 	:= 1.U
@@ -510,6 +685,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.SUB) {
 			io.regWR 	:= 1.U
@@ -526,6 +702,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.SRA) {
 			io.regWR 	:= 1.U
@@ -542,6 +719,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 
 		/* Control Transfer Instructions */
@@ -561,6 +739,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.JALR) {
 			io.regWR 	:= 1.U
@@ -577,6 +756,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		// Conditional Branches
 		is(InstructionFormat.BEQ) {
@@ -594,6 +774,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.BNE) {
 			io.regWR 	:= 0.U
@@ -610,6 +791,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.BLT) {
 			io.regWR 	:= 0.U
@@ -626,6 +808,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.BLTU) {
 			io.regWR 	:= 0.U
@@ -642,6 +825,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.BGE) {
 			io.regWR 	:= 0.U
@@ -658,6 +842,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.BGEU) {
 			io.regWR 	:= 0.U
@@ -674,6 +859,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		
 		// Load and Store Instructions
@@ -692,6 +878,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.LH) {
 			io.regWR 	:= 1.U
@@ -708,6 +895,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.LHU) {
 			io.regWR 	:= 1.U
@@ -724,6 +912,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.LB) {
 			io.regWR 	:= 1.U
@@ -740,6 +929,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.LBU) {
 			io.regWR 	:= 1.U
@@ -756,6 +946,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		
 		is(InstructionFormat.SW) {
@@ -773,6 +964,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.SH) {
 			io.regWR 	:= 0.U
@@ -789,6 +981,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		is(InstructionFormat.SB) {
 			io.regWR 	:= 0.U
@@ -805,6 +998,7 @@ class ContrGen extends Module {
             io.ecall    := 0.U
             io.mret     := 0.U
             io.csrEn    := 0.U
+            io.csrALUOP := 0.U
         }
 		
 	}

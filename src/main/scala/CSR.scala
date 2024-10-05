@@ -4,7 +4,7 @@ import chisel3._
 import chisel3.util._
 import scala.collection.immutable.ArraySeq
 
-class CSR extends Module {
+class CSRReg extends Module {
     val io = IO(new Bundle {
         val csr     = Input(UInt(12.W))
         val dataIn  = Input(UInt(32.W))

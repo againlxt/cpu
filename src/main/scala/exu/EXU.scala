@@ -20,8 +20,11 @@ class EXU extends Module {
 		val immData 	= Input(UInt(32.W))
 		val pc 			= Input(UInt(32.W))
 
+		val csrAData 	= Input(UInt(32.W))
+		val csrBData 	= Input(UInt(32.W))
+
 		// Contral Data
-		val aluASrcCtr 	= Input(UInt(2.W))
+		val aluASrcCtr 	= Input(UInt(1.W))
 		val aluBSrcCtr 	= Input(UInt(2.W))
 		val aluCtr 		= Input(UInt(4.W))
 		val memOPCtr 	= Input(UInt(3.W))
@@ -29,10 +32,12 @@ class EXU extends Module {
 		val memValidCtr	= Input(UInt(1.W))
 		val branchCtr 	= Input(UInt(4.W))
 		val memToRegCtr = Input(UInt(2.W))
+		val csrALUOP 	= Input(UInt(2.W))
 
 		// Output
 		val nextPC 		= Output(UInt(32.W))
 		val rdData 		= Output(UInt(32.W))
+		val csrData 	= Output(UInt(32.W))
 	})
 
 	// Wire
@@ -40,6 +45,8 @@ class EXU extends Module {
 	val rs2DataWire 	= io.rs2Data
 	val immDataWire 	= io.immData
 	val pcWire			= io.pc
+	val csrADataWire 	= io.csrAData
+	val csrBDataWire 	= io.csrBData
 	val aluASrcCtrWire 	= io.aluASrcCtr
 	val aluBSrcCtrWire 	= io.aluBSrcCtr
 	val aluCtrWire 		= io.aluCtr
@@ -48,9 +55,13 @@ class EXU extends Module {
 	val memValidCtrWire = io.memValidCtr
 	val branchCtrWire 	= io.branchCtr
 	val memToRegCtrWire = io.memToRegCtr
+	val csrALUOPWire 	= io.csrALUOP
 
 	// ALU
-	val srcADataWire 	= Mux(aluASrcCtrWire.asBool, pcWire, rs1DataWire)
+	val srcADataWire 	= MuxCase(0.U(32.W), Seq(
+		(aluASrcCtrWire === 0.U).asBool -> rs1DataWire,
+		(aluASrcCtrWire === 1.U).asBool -> pcWire,
+	))
 	val srcBDataWire 	= MuxCase(0.U(32.W), Seq(
 		(aluBSrcCtrWire === 0.U).asBool -> rs2DataWire,
 		(aluBSrcCtrWire === 1.U).asBool -> immDataWire,
@@ -65,6 +76,13 @@ class EXU extends Module {
 	val lessWire 	= alu.io.less
 	val zeroWire 	= alu.io.zero
 	val resultWire 	= alu.io.aluOut
+
+	val csrALU 		= Module(new CSRALU)
+	// Input
+	csrALU.io.srcAData	:= csrADataWire
+	csrALU.io.srcBData 	:= csrBDataWire
+	csrALU.io.csrALUOP 	:= csrALUOPWire
+	val csrODataWire= csrALU.io.oData 
 
 	// Branch Cond
 	val branchCond 		= Module(new BranchCond)
@@ -88,9 +106,21 @@ class EXU extends Module {
 	val dataOutWire 	= dataMem.io.dataOut
 
 	// Output
-	io.nextPC 	:= Mux(pcASrcWire.asBool, immDataWire, 4.U) +
-	Mux(pcBSrcWire.asBool, rs1DataWire, pcWire)
-	io.rdData 	:= Mux(memToRegCtrWire.asBool, dataOutWire, resultWire)
+	io.nextPC	:= MuxCase(	0.U(32.W), Seq(	
+        (pcASrcWire === "b00".U).asBool	-> 4.U,
+		(pcASrcWire === "b01".U).asBool -> immDataWire,
+		(pcASrcWire === "b10".U).asBool -> 0.U
+    )) + MuxCase(	0.U(32.W), Seq(	
+        (pcBSrcWire === "b00".U).asBool	-> pcWire,
+		(pcBSrcWire === "b01".U).asBool -> rs1DataWire,
+		(pcBSrcWire === "b10".U).asBool -> csrADataWire
+    ))
+	io.rdData 	:= MuxCase(	0.U(32.W), Seq(	
+        (memToRegCtrWire === "b00".U).asBool -> resultWire,
+		(memToRegCtrWire === "b01".U).asBool -> dataOutWire,
+		(memToRegCtrWire === "b10".U).asBool -> csrADataWire
+    ))
+	io.csrData := csrODataWire
 }
 
 class DataMem extends Module {
@@ -223,32 +253,32 @@ class BranchCond extends Module {
 	val lessWire 	= io.less
 	val zeroWire 	= io.zero
 
-	io.pcASrc 	:= MuxCase (0.B, Seq(
-		(branchWire === "b0000".U).asBool -> 0.B,
-		(branchWire === "b0001".U).asBool -> 1.B,
-		(branchWire === "b0010".U).asBool -> 1.B,
-		(branchWire === "b0100".U & !zeroWire).asBool -> 0.B,
-		(branchWire === "b0100".U & zeroWire).asBool -> 1.B,
-		(branchWire === "b0101".U & !zeroWire).asBool -> 1.B,
-		(branchWire === "b0101".U & zeroWire).asBool -> 0.B,
-		(branchWire === "b0110".U & !lessWire).asBool -> 0.B,
-		(branchWire === "b0110".U & lessWire).asBool -> 1.B,
-		(branchWire === "b0111".U & !lessWire).asBool -> 1.B,
-		(branchWire === "b0111".U & lessWire).asBool -> 0.B,
-		(branchWire === "b1000".U).asBool -> 2.B
+	io.pcASrc 	:= MuxCase (0.U, Seq(
+		(branchWire === "b0000".U).asBool -> 0.U,
+		(branchWire === "b0001".U).asBool -> 1.U,
+		(branchWire === "b0010".U).asBool -> 1.U,
+		(branchWire === "b0100".U & !zeroWire).asBool -> 0.U,
+		(branchWire === "b0100".U & zeroWire).asBool -> 1.U,
+		(branchWire === "b0101".U & !zeroWire).asBool -> 1.U,
+		(branchWire === "b0101".U & zeroWire).asBool -> 0.U,
+		(branchWire === "b0110".U & !lessWire).asBool -> 0.U,
+		(branchWire === "b0110".U & lessWire).asBool -> 1.U,
+		(branchWire === "b0111".U & !lessWire).asBool -> 1.U,
+		(branchWire === "b0111".U & lessWire).asBool -> 0.U,
+		(branchWire === "b1000".U).asBool -> 2.U
 	))
 
-	io.pcBSrc 	:= MuxCase (0.B, Seq(
-		(branchWire === "b0000".U).asBool -> 0.B,
-		(branchWire === "b0001".U).asBool -> 0.B,
-		(branchWire === "b0010".U).asBool -> 1.B,
-		(branchWire === "b0100".U & !zeroWire).asBool -> 0.B,
-		(branchWire === "b0100".U & zeroWire).asBool -> 0.B,
-		(branchWire === "b0101".U & !zeroWire).asBool -> 0.B,
-		(branchWire === "b0101".U & zeroWire).asBool -> 0.B,
-		(branchWire === "b0110".U & !lessWire).asBool -> 0.B,
-		(branchWire === "b0110".U & lessWire).asBool -> 0.B,
-		(branchWire === "b0111".U & !lessWire).asBool -> 0.B,
-		(branchWire === "b1000".U).asBool -> 2.B
+	io.pcBSrc 	:= MuxCase (0.U, Seq(
+		(branchWire === "b0000".U).asBool -> 0.U,
+		(branchWire === "b0001".U).asBool -> 0.U,
+		(branchWire === "b0010".U).asBool -> 1.U,
+		(branchWire === "b0100".U & !zeroWire).asBool -> 0.U,
+		(branchWire === "b0100".U & zeroWire).asBool -> 0.U,
+		(branchWire === "b0101".U & !zeroWire).asBool -> 0.U,
+		(branchWire === "b0101".U & zeroWire).asBool -> 0.U,
+		(branchWire === "b0110".U & !lessWire).asBool -> 0.U,
+		(branchWire === "b0110".U & lessWire).asBool -> 0.U,
+		(branchWire === "b0111".U & !lessWire).asBool -> 0.U,
+		(branchWire === "b1000".U).asBool -> 2.U
 	))
 }

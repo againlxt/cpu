@@ -45,6 +45,7 @@ class top extends Module {
 	val pc 				= Module(new PC)
 	val ifu 			= Module(new IFU)
 	val riscv32BaseReg 	= Module(new Riscv32BaseReg)
+	val csrReg 			= Module(new CSRReg)
 	val idu 			= Module(new IDU)
 	val exu 			= Module(new EXU)
 	val memDataWire 	= io.memData
@@ -78,6 +79,12 @@ class top extends Module {
 	val memWRWire 	= idu.io.memWR
 	val memValidWire= idu.io.memValid
 	val memOPWire 	= idu.io.memOP
+	val ecallWire 	= idu.io.ecall
+	val mretWire 	= idu.io.mret
+	val csrEnWire 	= idu.io.csrEn
+	val csrWrWire 	= idu.io.csrWr
+	val csrOPWire 	= idu.io.csrOP
+	val csrALUOPWire= idu.io.csrALUOP
 	val rs1IndexWire= idu.io.rs1Index
 	val rs2IndexWire= idu.io.rs2Index
 	val rdIndexWire = idu.io.rdIndex
@@ -96,6 +103,17 @@ class top extends Module {
 	rs1DataWire 				:= riscv32BaseReg.io.rs1Data
 	rs2DataWire 				:= riscv32BaseReg.io.rs2Data
 
+	// CSR Reg
+	// Input
+	csrReg.io.csr		:= immWire
+	val csrDataInWire 	= Wire(UInt(32.W))
+	csrReg.io.pc 		:= pcWire
+	csrReg.io.mret 		:= mretWire
+	csrReg.io.ecall 	:= ecallWire
+	csrReg.io.csrEn 	:= csrEnWire
+	csrReg.io.csrWr		:= csrWrWire
+	val csrDataWire		= csrReg.io.csrData
+
 	// EXU
 	// Input
 	exu.io.npcState 		:= io.npcState
@@ -103,6 +121,8 @@ class top extends Module {
 	exu.io.rs2Data 			:= rs2DataWire
 	exu.io.immData 			:= immWire
 	exu.io.pc 				:= pcWire
+	exu.io.csrAData 		:= csrDataWire
+	exu.io.csrBData 		:= Mux(csrOPWire.asBool, rs1IndexWire, rs1DataWire)
 	exu.io.aluASrcCtr 		:= srcAALUWire
 	exu.io.aluBSrcCtr 		:= srcBALUWire
 	exu.io.aluCtr 			:= ctrALUWire
@@ -111,11 +131,14 @@ class top extends Module {
 	exu.io.memValidCtr 		:= memValidWire
 	exu.io.branchCtr 		:= branchWire
 	exu.io.memToRegCtr		:= memToRegWire
+	exu.io.csrALUOP 		:= csrALUOPWire
 	// Output
 	io.nextPC 				:= exu.io.nextPC
 	dataInWire 				:= exu.io.rdData
+	csrDataInWire 			:= exu.io.csrData
 
 	idu.io.rs1Data 	:= rs1DataWire
 	idu.io.rs2Data 	:= rs2DataWire
 	riscv32BaseReg.io.dataIn 	:= dataInWire
+	csrReg.io.dataIn 	:= csrDataInWire
 }
