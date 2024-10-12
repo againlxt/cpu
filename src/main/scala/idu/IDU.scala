@@ -4,61 +4,34 @@ import chisel3._
 import chisel3.util._
 import chisel3.util.HasBlackBoxResource
 import scala.collection.immutable.ArraySeq
+import interface._
 
 import idu._
+import _root_.interface._
 
 class IDU extends Module {
     val io = IO(new Bundle{
-		val cmd 	 = Input(UInt(32.W))
-
-		// Input from Riscv32BaseReg
-		val rs1Data = Input(UInt(32.W))
-		val rs2Data = Input(UInt(32.W))
-
-		val immType = Output(UInt(3.W))
-		val regWR 	= Output(UInt(1.W))
-		val srcAALU = Output(UInt(2.W))
-		val srcBALU = Output(UInt(2.W))
-		val ctrALU 	= Output(UInt(4.W))
-		val branch 	= Output(UInt(4.W))
-		val memToReg= Output(UInt(2.W))
-		val memWR 	= Output(UInt(1.W))
-		val memValid= Output(UInt(1.W))
-		val memOP 	= Output(UInt(3.W))
-        val ecall 	= Output(UInt(1.W))
-		val mret 	= Output(UInt(1.W))
-		val csrEn 	= Output(UInt(1.W))
-		val csrWr 	= Output(UInt(1.W))
-		val csrOP 	= Output(UInt(1.W)) 
-        val csrALUOP= Output(UInt(2.W))
-
-		// Output to Riscv32BaseReg
-		val rs1Index 	= Output(UInt(5.W))
-		val rs2Index 	= Output(UInt(5.W))
-		val rdIndex  	= Output(UInt(5.W))
-		
-		// Output to EXU
-		val rs1 	 	= Output(UInt(32.W))
-		val rs2 	 	= Output(UInt(32.W))
-		val imm 	 	= Output(UInt(32.W))
+		val inst 			= Flipped(Decoupled(new IFU2IDU))
+		val idu2IDU			= Decoupled(new IDU2EXU)
+		val idu2BaseReg 	= Decoupled(new IDU2BaseReg)
 	})
 
-    val func7Wire  	= io.cmd(31, 25)
-    val rs2IndexWire    	= io.cmd(24, 20)
-    val rs1IndexWire    	= io.cmd(19, 15)
-    val func3Wire  	= io.cmd(14, 12)
-    val rdIndexWire     	= io.cmd(11, 7)
-    val opcodeWire 	= io.cmd(6, 0)
-    val iImmWire   	= io.cmd(31, 20)
-    val sImmWire   	= Cat(io.cmd(31, 25), io.cmd(11, 7))
-    val bImmWire   	= Cat(io.cmd(31), io.cmd(7), io.cmd(30, 25), io.cmd(11, 8), 0.U(1.W))
-    val uImmWire   	= Cat(io.cmd(31, 12), 0.U(12.W))
-    val jImmWire   	= Cat(io.cmd(31), io.cmd(19, 12), io.cmd(20), io.cmd(30, 21), 0.U(1.W))
+    val func7Wire  	= io.inst.bits.inst(31, 25)
+    val rs2IndexWire= io.inst.bits.inst(24, 20)
+    val rs1IndexWire= io.inst.bits.inst(19, 15)
+    val func3Wire  	= io.inst.bits.inst(14, 12)
+    val rdIndexWire = io.inst.bits.inst(11, 7)
+    val opcodeWire 	= io.inst.bits.inst(6, 0)
+    val iImmWire   	= io.inst.bits.inst(31, 20)
+    val sImmWire   	= Cat(io.inst.bits.inst(31, 25), io.inst.bits.inst(11, 7))
+    val bImmWire   	= Cat(io.inst.bits.inst(31), io.inst.bits.inst(7), io.inst.bits.inst(30, 25), io.inst.bits.inst(11, 8), 0.U(1.W))
+    val uImmWire   	= Cat(io.inst.bits.inst(31, 12), 0.U(12.W))
+    val jImmWire   	= Cat(io.inst.bits.inst(31), io.inst.bits.inst(19, 12), io.inst.bits.inst(20), io.inst.bits.inst(30, 21), 0.U(1.W))
 
 	// Instantitate ContrGen
     val contrGen 	= Module(new ContrGen())
 	// Input
-    contrGen.io.cmd 	:= io.cmd
+    contrGen.io.cmd 	:= io.inst.bits.inst
     contrGen.io.opcode  := opcodeWire
     contrGen.io.func3 	:= func3Wire
     contrGen.io.func7 	:= func7Wire
@@ -90,31 +63,32 @@ class IDU extends Module {
     immGen.io.jImm 	:= jImmWire
     immGen.io.immType 	:= immTypewire
 	// Output
-    val immWire 	= immGen.io.imm	
+    val immWire 	= immGen.io.imm
+
+	// 
 
 	// Output
-    io.immType 		:= immTypewire
-    io.regWR 	 	:= regWRWire
-    io.srcAALU 		:= srcAALUWire
-    io.srcBALU 		:= srcBALUWire
-    io.ctrALU 		:= ctrALUWire
-    io.branch 		:= branchWire
-    io.memToReg 	:= memToRegWire
-    io.memWR 		:= memWRWire
-	io.memValid 	:= memValidWire 
-    io.memOP 		:= memOPWire
-    io.ecall        := ecallWire
-    io.mret         := mretWire
-    io.csrEn        := csrEnWire
-    io.csrWr        := csrWrWire
-    io.csrOP        := csrOPWire
-    io.csrALUOP     := csrALUOPWire
+    io.idu2IDU.bits.regWR 	 	:= regWRWire
+    io.idu2IDU.bits.srcAALU 	:= srcAALUWire
+    io.idu2IDU.bits.srcBALU 	:= srcBALUWire
+    io.idu2IDU.bits.ctrALU 		:= ctrALUWire
+    io.idu2IDU.bits.branch 		:= branchWire
+    io.idu2IDU.bits.toReg 		:= memToRegWire
+    io.idu2IDU.bits.memWR 		:= memWRWire
+	io.idu2IDU.bits.memValid 	:= memValidWire 
+    io.idu2IDU.bits.memOP 		:= memOPWire
+    io.idu2IDU.bits.ecall       := ecallWire
+    io.idu2IDU.bits.mret        := mretWire
+    io.idu2IDU.bits.csrEn       := csrEnWire
+    io.idu2IDU.bits.csrWr       := csrWrWire
+    io.idu2IDU.bits.csrOP       := csrOPWire
+    io.idu2IDU.bits.csrALUOP    := csrALUOPWire
 
-    io.rs1Index 	:= rs1IndexWire
-    io.rs2Index 	:= rs2IndexWire
-    io.rdIndex 		:= rdIndexWire
+    io.idu2BaseReg.bits.rs1Index := rs1IndexWire
+    io.idu2BaseReg.bits.rs2Index := rs2IndexWire
+    io.idu2BaseReg.bits.rdIndex := rdIndexWire
 
-    io.rs1 			:= io.rs1Data
-    io.rs2 			:= io.rs2Data
-    io.imm 			:= immWire
+    io.idu2IDU.bits.rs1Data 	:= io.idu2BaseReg.bits.rs1Data
+    io.idu2IDU.bits.rs2Data 	:= io.idu2BaseReg.bits.rs2Data
+    io.idu2IDU.bits.imm 		:= immWire
 }

@@ -3,16 +3,25 @@ package ifu
 import chisel3._
 import chisel3.util._
 import interface._
+import _root_.interface._
 //import singlecyclecpu._
 
 class IFU extends Module {
     val io = IO(new Bundle {
-        val memData  = Input(new CBIFU)
-        val inst     = Output(new IFUBIDU)
+		val pc  	 = Input(UInt(32.W))
+        val memData  = Input(new C2IFU)
+        val inst     = Decoupled(new IFU2IDU)
     })
 
-    val pcWire      = io.pc
-    val memDataWire = io.memData
+	val pcReg 		= RegInit(0.U(32.W))
+	val memDataReg 	= RegInit(0.U(32.W))
+	pcReg 			:= io.pc
+    memDataReg 		:= io.memData.memData
+	when(pcReg =/= io.pc) {
+		io.inst.valid := 1.B
+	} .otherwise {
+		io.inst.valid := 0.B
+	}
 
-    io.cmd  := memDataWire
+    io.inst.bits.inst  := memDataReg
 }
