@@ -9,14 +9,14 @@ import _root_.interface._
 class IFU extends Module {
     val io = IO(new Bundle {
 		val pc  	 = Input(UInt(32.W))
-        val memData  = Input(new C2IFU)
+        val memData  = Input(UInt(32.W))
         val inst     = Decoupled(new IFU2IDU)
     })
 
 	val pcReg 		= RegInit(0.U(32.W))
 	val memDataReg 	= RegInit(0.U(32.W))
 	pcReg 			:= io.pc
-    memDataReg 		:= io.memData.memData
+    memDataReg 		:= io.memData
 	when(pcReg =/= io.pc) {
 		io.inst.valid := 1.B
 	} .otherwise {

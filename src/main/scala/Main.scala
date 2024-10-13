@@ -57,6 +57,7 @@ class top extends Module {
 	pc.io.wbu2PC 	:= wbu.io.wbu2PC
 	val pcWire 		= pc.io.pc
 	io.curPC     	:= pcWire
+	io.nextPC 		:= wbu.io.wbu2PC.nextPC
 
 	// IFU
 	// Input

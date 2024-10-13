@@ -67,8 +67,8 @@ class IDU2BaseReg extends Bundle {
 	val rs1Data = Input(UInt(32.W))
 	val rs2Data = Input(UInt(32.W))
 
-	val rs1Index = Output(UInt(5.W))
-	val rs2Index = Output(UInt(5.W))
+	val rs1Index = Output(UInt(4.W))
+	val rs2Index = Output(UInt(4.W))
 }
 
 class EXU2CSR extends Bundle {
@@ -88,7 +88,7 @@ class WBU2CSR extends Bundle {
 }
 
 class WBU2BaseReg extends Bundle {
-	val rdIndex = Output(UInt(5.W))
+	val rdIndex = Output(UInt(4.W))
 	val data 	= Output(UInt(32.W))
 	val regWR 	= Output(UInt(1.W))
 }
