@@ -13,7 +13,7 @@ class IFU extends Module {
         val inst     = Decoupled(new IFU2IDU)
     })
 
-	val pcReg 		= RegInit(0.U(32.W))
+	val pcReg 		= RegInit(BigInt("80000000", 16).U(32.W))
 	val memDataReg 	= RegInit(0.U(32.W))
 	pcReg 			:= io.pc
     memDataReg 		:= io.memData

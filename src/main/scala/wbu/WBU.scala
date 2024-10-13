@@ -16,7 +16,7 @@ class WBU extends Module {
         val wbu2PC      = new WBU2PC
 	})
 
-    val pcReg 			= RegInit(0.U(32.W))
+    val pcReg 			= RegInit(BigInt("80000000", 16).U(32.W))
 	val memDataReg		= RegInit(0.U(32.W))
 	val aluDataReg		= RegInit(0.U(32.W))
 	val csrWDataReg		= RegInit(0.U(32.W))

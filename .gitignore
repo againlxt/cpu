@@ -5,6 +5,7 @@ test_run_dir/*
 .metals/**
 .metals/metals.lock.db
 .bloop/**
+*.bin
 *.bgn
 *.bit
 *.bld
