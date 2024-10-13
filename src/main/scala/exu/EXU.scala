@@ -2,60 +2,120 @@ package exu
 
 import chisel3._
 import chisel3.util._
-import memory._
 import exu._
 import alu._
 import common._
 import singlecyclecpu._
-import memory.ReadWriteSmem
 import chisel3.util.HasBlackBoxResource
 import java.time.Clock
+import _root_.interface.IDU2EXU
+import _root_.interface.EXU2WBU
+import _root_.interface.EXU2CSR
 
 class EXU extends Module {
 	val io = IO(new Bundle {
-		// Input
-		val npcState    = Input(UInt(3.W))
-		val rs1Data 	= Input(UInt(32.W))
-		val rs2Data 	= Input(UInt(32.W))
-		val immData 	= Input(UInt(32.W))
-		val pc 			= Input(UInt(32.W))
-
-		val csrAData 	= Input(UInt(32.W))
-		val csrBData 	= Input(UInt(32.W))
-
-		// Contral Data
-		val aluASrcCtr 	= Input(UInt(1.W))
-		val aluBSrcCtr 	= Input(UInt(2.W))
-		val aluCtr 		= Input(UInt(4.W))
-		val memOPCtr 	= Input(UInt(3.W))
-		val memWRCtr	= Input(UInt(1.W))
-		val memValidCtr	= Input(UInt(1.W))
-		val branchCtr 	= Input(UInt(4.W))
-		val memToRegCtr = Input(UInt(2.W))
-		val csrALUOP 	= Input(UInt(2.W))
-
-		// Output
-		val nextPC 		= Output(UInt(32.W))
-		val rdData 		= Output(UInt(32.W))
-		val csrData 	= Output(UInt(32.W))
+		val idu2EXU 	= Flipped(Decoupled(new IDU2EXU))
+		val exu2WBU 	= Decoupled(new EXU2WBU)
+		val exu2CSR 	= new EXU2CSR
 	})
 
+	val pcReg 		= RegInit(0.U(32.W))
+	val rs1DataReg 	= RegInit(0.U(32.W))
+	val rs2DataReg 	= RegInit(0.U(32.W))
+	val immReg 		= RegInit(0.U(32.W))
+	val instReg 	= RegInit(0.U(32.W))
+
+	val regWRReg 	= RegInit(0.U(1.W))
+	val srcAALUReg 	= RegInit(0.U(2.W))
+	val srcBALUReg 	= RegInit(0.U(2.W))
+	val ctrALUReg 	= RegInit(0.U(4.W))
+	val branchReg 	= RegInit(0.U(4.W))
+	val toRegReg 	= RegInit(0.U(2.W))
+	val memWRReg 	= RegInit(0.U(1.W))
+	val memValidReg	= RegInit(0.U(1.W))
+	val memOPReg 	= RegInit(0.U(3.W))
+	val rs1IndexReg	= RegInit(0.U(5.W))
+	val ecallReg 	= RegInit(0.U(1.W))
+	val mretReg 	= RegInit(0.U(1.W))
+	val csrEnReg 	= RegInit(0.U(1.W))
+	val csrWrReg 	= RegInit(0.U(1.W))
+	val csrOPReg 	= RegInit(0.U(1.W))
+	val csrALUOPReg	= RegInit(0.U(2.W))
+
+	val ready2IDUReg= RegInit(1.U(1.W))
+    io.idu2EXU.ready   := ready2IDUReg.asBool
+    val valid2WBUReg= RegInit(0.U(1.W))
+    io.exu2WBU.valid:= valid2WBUReg.asBool
+
+	// handshake signals control
+    when(ready2IDUReg === 0.U) {
+        when(io.exu2WBU.valid && io.exu2WBU.ready) {
+            ready2IDUReg := 1.U;
+        }
+    } .otherwise {
+        when(io.idu2EXU.valid && io.idu2EXU.ready) {
+            ready2IDUReg := 0.U
+        }
+    }
+    when(valid2WBUReg === 0.U) {
+        when(io.idu2EXU.valid && io.idu2EXU.ready) {
+            valid2WBUReg := 1.U
+        }
+    } .otherwise {
+        when(io.exu2WBU.valid && io.exu2WBU.ready) {
+            valid2WBUReg := 0.U;
+        }
+    }
+
+	// Data signal storage
+	when(io.idu2EXU.ready && io.idu2EXU.valid) {
+        pcReg 		:= io.idu2EXU.bits.pc
+		rs1DataReg 	:= io.idu2EXU.bits.rs1Data
+		rs2DataReg 	:= io.idu2EXU.bits.rs2Data
+		immReg 		:= io.idu2EXU.bits.imm
+		instReg 	:= io.idu2EXU.bits.inst
+
+		regWRReg 	:= io.idu2EXU.bits.regWR
+		srcAALUReg 	:= io.idu2EXU.bits.srcAALU
+		srcBALUReg 	:= io.idu2EXU.bits.srcBALU
+		ctrALUReg 	:= io.idu2EXU.bits.ctrALU
+		branchReg 	:= io.idu2EXU.bits.branch
+		toRegReg 	:= io.idu2EXU.bits.toReg
+		memWRReg 	:= io.idu2EXU.bits.memWR
+		memValidReg	:= io.idu2EXU.bits.memValid
+		memOPReg 	:= io.idu2EXU.bits.memOP
+		rs1IndexReg	:= io.idu2EXU.bits.rs1Index
+		ecallReg 	:= io.idu2EXU.bits.ecall
+		mretReg 	:= io.idu2EXU.bits.mret
+		csrEnReg 	:= io.idu2EXU.bits.csrEn
+		csrWrReg 	:= io.idu2EXU.bits.csrWr
+		csrOPReg 	:= io.idu2EXU.bits.csrOP
+		csrALUOPReg	:= io.idu2EXU.bits.csrALUOP
+    }
+
 	// Wire
-	val rs1DataWire 	= io.rs1Data
-	val rs2DataWire 	= io.rs2Data
-	val immDataWire 	= io.immData
-	val pcWire			= io.pc
-	val csrADataWire 	= io.csrAData
-	val csrBDataWire 	= io.csrBData
-	val aluASrcCtrWire 	= io.aluASrcCtr
-	val aluBSrcCtrWire 	= io.aluBSrcCtr
-	val aluCtrWire 		= io.aluCtr
-	val memOPCtrWire 	= io.memOPCtr
-	val memWRCtrWire	= io.memWRCtr
-	val memValidCtrWire = io.memValidCtr
-	val branchCtrWire 	= io.branchCtr
-	val memToRegCtrWire = io.memToRegCtr
-	val csrALUOPWire 	= io.csrALUOP
+	val pcWire			= pcReg
+	val rs1DataWire 	= rs1DataReg
+	val rs2DataWire 	= rs2DataReg
+	val immDataWire 	= immReg
+	val instWire 		= instReg
+	val regWRWire 		= regWRReg
+	val aluASrcCtrWire 	= srcAALUReg
+	val aluBSrcCtrWire 	= srcBALUReg
+	val aluCtrWire 		= ctrALUReg
+	val branchCtrWire 	= branchReg
+	val memToRegCtrWire = toRegReg
+	val memOPCtrWire 	= memOPReg
+	val memWRCtrWire	= memWRReg
+	val memValidCtrWire = memValidReg
+	val rs1IndexWire 	= rs1IndexReg
+	val ecallWire 		= ecallReg
+	val mretWire 		= mretReg
+	val csrEnWire 		= csrEnReg
+	val csrWrWire 		= csrWrReg
+	val csrOPWire 		= csrOPReg
+	val csrALUOPWire 	= csrALUOPReg
+	val csrDataWire 	= io.exu2CSR.csrData
 
 	// ALU
 	val srcADataWire 	= MuxCase(0.U(32.W), Seq(
@@ -79,206 +139,33 @@ class EXU extends Module {
 
 	val csrALU 		= Module(new CSRALU)
 	// Input
-	csrALU.io.srcAData	:= csrADataWire
-	csrALU.io.srcBData 	:= csrBDataWire
+	csrALU.io.srcAData	:= csrDataWire
+	csrALU.io.srcBData 	:= Mux(csrOPWire.asBool, rs1IndexWire, rs1DataWire)
 	csrALU.io.csrALUOP 	:= csrALUOPWire
 	val csrODataWire= csrALU.io.oData 
 
-	// Branch Cond
-	val branchCond 		= Module(new BranchCond)
-	// Input
-	branchCond.io.branch 	:= branchCtrWire
-	branchCond.io.less 	:= lessWire
-	branchCond.io.zero 	:= zeroWire
-	// Output
-	val pcASrcWire 		= branchCond.io.pcASrc
-	val pcBSrcWire 		= branchCond.io.pcBSrc
+	io.exu2WBU.bits.pc 			:= pcWire
+	io.exu2WBU.bits.memData		:= rs2DataWire
+	io.exu2WBU.bits.aluData 	:= resultWire
+	io.exu2WBU.bits.csrWData 	:= csrODataWire
+	io.exu2WBU.bits.csrData 	:= csrDataWire
+	io.exu2WBU.bits.immData 	:= immDataWire
+	io.exu2WBU.bits.rs1Data 	:= rs1DataWire
+	io.exu2WBU.bits.inst 		:= instWire
 
-	// Data Memory
-	val dataMem 		= Module(new DataMem)
-	// Input
-	dataMem.io.addr 		:= resultWire
-	dataMem.io.memOP 		:= memOPCtrWire
-	dataMem.io.dataIn 		:= rs2DataWire
-	dataMem.io.wrEn 		:= memWRCtrWire
-	dataMem.io.valid 		:= memValidCtrWire
-	// Output
-	val dataOutWire 	= dataMem.io.dataOut
+	io.exu2WBU.bits.regWR 		:= regWRWire
+	io.exu2WBU.bits.memWR 		:= memWRCtrWire
+	io.exu2WBU.bits.memValid	:= memValidCtrWire
+	io.exu2WBU.bits.memOP		:= memOPCtrWire
+	io.exu2WBU.bits.toReg 		:= memToRegCtrWire
+	io.exu2WBU.bits.branchCtr	:= branchCtrWire
+	io.exu2WBU.bits.less 		:= lessWire
+	io.exu2WBU.bits.zero 		:= zeroWire
+	io.exu2WBU.bits.ecall 		:= ecallWire
+	io.exu2WBU.bits.csrEn 		:= csrEnWire
+	io.exu2WBU.bits.csrWr		:= csrWrWire
 
-	// Output
-	io.nextPC	:= MuxCase(	0.U(32.W), Seq(	
-        (pcASrcWire === "b00".U).asBool	-> 4.U,
-		(pcASrcWire === "b01".U).asBool -> immDataWire,
-		(pcASrcWire === "b10".U).asBool -> 0.U
-    )) + MuxCase(	0.U(32.W), Seq(	
-        (pcBSrcWire === "b00".U).asBool	-> pcWire,
-		(pcBSrcWire === "b01".U).asBool -> rs1DataWire,
-		(pcBSrcWire === "b10".U).asBool -> csrADataWire
-    ))
-	io.rdData 	:= MuxCase(	0.U(32.W), Seq(	
-        (memToRegCtrWire === "b00".U).asBool -> resultWire,
-		(memToRegCtrWire === "b01".U).asBool -> dataOutWire,
-		(memToRegCtrWire === "b10".U).asBool -> csrADataWire
-    ))
-	io.csrData := csrODataWire
-}
-
-class DataMem extends Module {
-	val io = IO(new Bundle{
-		// Input
-		val addr 	= Input(UInt(32.W))
-		val memOP 	= Input(UInt(3.W))
-		val dataIn 	= Input(UInt(32.W))
-		val wrEn 	= Input(Bool())
-		val valid  	= Input(Bool())
-
-		val dataOut = Output(UInt(32.W))
-	})
-	val addrWire 	= io.addr
-	val memOPWire 	= io.memOP
-	val dataInWire 	= io.dataIn
-	val wrEnWire 	= io.wrEn
-	val validWire 	= io.valid
-
-	val wMaskWire 	= MuxCase (1.U(8.W), Seq(
-		(memOPWire === "b000".U).asBool -> "b00000001".U,
-		(memOPWire === "b001".U).asBool -> "b00000011".U,
-		(memOPWire === "b010".U).asBool -> "b00001111".U,
-		(memOPWire === "b101".U).asBool -> "b00000011".U,
-		(memOPWire === "b100".U).asBool -> "b00000001".U
-	))
-	val sOrUWire 	= MuxCase (0.U(1.W), Seq(
-		(memOPWire === "b000".U).asBool -> 1.U(1.W),
-		(memOPWire === "b001".U).asBool -> 1.U(1.W),
-		(memOPWire === "b010".U).asBool -> 1.U(1.W),
-		(memOPWire === "b101".U).asBool -> 0.U(1.W),
-		(memOPWire === "b100".U).asBool -> 0.U(1.W)
-	))
-	
-	val dataMem 		= Module(new DataMemV())
-	dataMem.io.clk 		:= this.clock.asUInt
-	dataMem.io.addr 	:= addrWire
-	dataMem.io.wmask 	:= wMaskWire
-	dataMem.io.sOrU 	:= sOrUWire
-	dataMem.io.dataIn 	:= dataInWire
-	dataMem.io.wrEn 	:= wrEnWire
-	dataMem.io.valid 	:= validWire
-	val signdataWire 	= Wire(SInt(32.W))
-	val unsigndataWire  = Wire(UInt(32.W))
-	signdataWire 		:= dataMem.io.dataOut.asSInt
-	unsigndataWire		:= dataMem.io.dataOut
-
-	io.dataOut 			:= Mux(sOrUWire.asBool, signdataWire.asUInt, unsigndataWire)
-}
-
-class DataMemV extends BlackBox with HasBlackBoxInline {
-	val io = IO(new Bundle{
-		// Input
-		val clk 	= Input(UInt(1.W))
-		val addr 	= Input(UInt(32.W))
-		val wmask 	= Input(UInt(8.W))
-		val sOrU 	= Input(Bool())
-		val dataIn 	= Input(UInt(32.W))
-		val wrEn 	= Input(Bool())
-		val valid  	= Input(Bool())
-
-		val dataOut = Output(UInt(32.W))
-	})
-
-	setInline("DataMemV.sv",
-	"""module DataMemV(
-	   |	input 		clk,
-	   |	input [31:0] addr,
-	   |	input [7:0]  wmask,
-	   |	input 		 sOrU,
-	   |	input [31:0] dataIn,
-	   |	input 		 wrEn,
-	   |	input 		 valid,
-	   |
-	   |	output [31:0] dataOut
-	   |);
-	   |reg[31:0] rdata;
-	   |reg wr_flag;
-	   |always@(negedge clk) begin
-	   |	wr_flag = 0;
-	   |end
-	   |import "DPI-C" function int unsigned pmem_read(input int unsigned raddr);
-	   |import "DPI-C" function void pmem_write(
-	   |	input int unsigned waddr, input int unsigned wdata, input byte wmask);	
-	   |always @(posedge clk) begin
-	   |	if(wrEn & valid) begin
-	   |		if(wr_flag == 0) pmem_write(addr, dataIn, wmask);
-	   |		wr_flag = 1;
-	   |	end
-	   |end
-	   |assign dataOut = rdata;
-	   |always @(*) begin
-	   |	if(valid) begin
-	   |		case(wmask)
-	   |			8'b00000001: begin
-	   |				rdata = pmem_read(addr) & 32'h000000FF;
-	   |				if(sOrU == 1) 	rdata[31:8] = {24{rdata[7]}};
-	   |				else 			rdata = rdata;
-	   |			end	
-	   |			8'b00000011: begin
-	   |				rdata = pmem_read(addr) & 32'h0000FFFF;
-	   |				if(sOrU == 1) 	rdata[31:16] = {16{rdata[15]}};
-	   |				else 			rdata = rdata;
-	   |			end	
-	   |			8'b00001111:	rdata = pmem_read(addr) & 32'hFFFFFFFF;
-	   |			default: 		rdata = 32'd0;
-	   |		endcase
-	   |	end
-	   |	else begin
-	   |		rdata = 32'd0;
-	   |	end
-	   |end
-	   |endmodule
-	""".stripMargin)
-}
-
-class BranchCond extends Module {
-	val io = IO(new Bundle {
-		// Input
-		val branch 	= Input(UInt(4.W))
-		val less 	= Input(Bool())
-		val zero 	= Input(Bool())
-
-		// Output
-		val pcASrc 	= Output(UInt(2.W))
-		val pcBSrc 	= Output(UInt(2.W))
-	})
-
-	val branchWire 	= io.branch
-	val lessWire 	= io.less
-	val zeroWire 	= io.zero
-
-	io.pcASrc 	:= MuxCase (0.U, Seq(
-		(branchWire === "b0000".U).asBool -> 0.U,
-		(branchWire === "b0001".U).asBool -> 1.U,
-		(branchWire === "b0010".U).asBool -> 1.U,
-		(branchWire === "b0100".U & !zeroWire).asBool -> 0.U,
-		(branchWire === "b0100".U & zeroWire).asBool -> 1.U,
-		(branchWire === "b0101".U & !zeroWire).asBool -> 1.U,
-		(branchWire === "b0101".U & zeroWire).asBool -> 0.U,
-		(branchWire === "b0110".U & !lessWire).asBool -> 0.U,
-		(branchWire === "b0110".U & lessWire).asBool -> 1.U,
-		(branchWire === "b0111".U & !lessWire).asBool -> 1.U,
-		(branchWire === "b0111".U & lessWire).asBool -> 0.U,
-		(branchWire === "b1000".U).asBool -> 2.U
-	))
-
-	io.pcBSrc 	:= MuxCase (0.U, Seq(
-		(branchWire === "b0000".U).asBool -> 0.U,
-		(branchWire === "b0001".U).asBool -> 0.U,
-		(branchWire === "b0010".U).asBool -> 1.U,
-		(branchWire === "b0100".U & !zeroWire).asBool -> 0.U,
-		(branchWire === "b0100".U & zeroWire).asBool -> 0.U,
-		(branchWire === "b0101".U & !zeroWire).asBool -> 0.U,
-		(branchWire === "b0101".U & zeroWire).asBool -> 0.U,
-		(branchWire === "b0110".U & !lessWire).asBool -> 0.U,
-		(branchWire === "b0110".U & lessWire).asBool -> 0.U,
-		(branchWire === "b0111".U & !lessWire).asBool -> 0.U,
-		(branchWire === "b1000".U).asBool -> 2.U
-	))
+	io.exu2CSR.csr 				:= instWire(31,20)
+	io.exu2CSR.mret 			:= mretWire
+	io.exu2CSR.ecall 			:= ecallWire
 }

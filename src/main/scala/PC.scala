@@ -3,11 +3,12 @@ package singlecyclecpu
 import chisel3._
 import chisel3.util._
 import common._
+import _root_.interface.WBU2PC
 
 class PC extends Module {
 	val io = IO(new Bundle {
 		val npcState    = Input(UInt(32.W))
-		val dnpc 		= Input(UInt(32.W))
+		val wbu2PC 		= Flipped(new WBU2PC)
 		val pc			= Output(UInt(32.W))
 	})
 
@@ -16,7 +17,7 @@ class PC extends Module {
 
 	// 使用 RegNext 更新 PC 值
 	pcReg := MuxCase(BigInt("80000000", 16).U(32.W), Seq(
-		(io.npcState === NpcState.RUNNING.asUInt).asBool -> io.dnpc.asUInt,
+		(io.npcState === NpcState.RUNNING.asUInt).asBool -> io.wbu2PC.nextPC.asUInt,
 		(io.npcState =/= NpcState.RUNNING.asUInt).asBool -> pcReg.asUInt
 	))
 

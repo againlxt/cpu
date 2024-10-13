@@ -24,4 +24,5 @@ class IFU extends Module {
 	}
 
     io.inst.bits.inst  := memDataReg
+    io.inst.bits.pc    := pcReg
 }

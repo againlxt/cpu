@@ -8,6 +8,7 @@ import idu._
 import exu._
 import alu._
 import common._
+import wbu.WBU
 
 /* 
 import "DPI-C" function void sim_exit();
@@ -48,11 +49,12 @@ class top extends Module {
 	val csrReg 			= Module(new CSRReg)
 	val idu 			= Module(new IDU)
 	val exu 			= Module(new EXU)
+	val wbu 			= Module(new WBU)
 	val memDataWire 	= io.memData
 
 	// PC Reg
 	pc.io.npcState 	:= io.npcState
-	pc.io.dnpc 		:= io.nextPC
+	pc.io.wbu2PC 	:= wbu.io.wbu2PC
 	val pcWire 		= pc.io.pc
 	io.curPC     	:= pcWire
 
@@ -61,84 +63,17 @@ class top extends Module {
 	ifu.io.pc 		:= pcWire
 	ifu.io.memData 	:= memDataWire
 	// Output
-	val cmdWire 	= ifu.io.cmd
+	ifu.io.inst <> idu.io.inst
 
 	// IDU
-	// Input
-	idu.io.cmd 		:= cmdWire
-	val rs1DataWire = Wire(UInt(32.W))
-	val rs2DataWire = Wire(UInt(32.W))
-	// Output
-	val immTypeWire = idu.io.immType
-	val regWRWire 	= idu.io.regWR
-	val srcAALUWire = idu.io.srcAALU
-	val srcBALUWire = idu.io.srcBALU
-	val ctrALUWire 	= idu.io.ctrALU
-	val branchWire 	= idu.io.branch
-	val memToRegWire= idu.io.memToReg
-	val memWRWire 	= idu.io.memWR
-	val memValidWire= idu.io.memValid
-	val memOPWire 	= idu.io.memOP
-	val ecallWire 	= idu.io.ecall
-	val mretWire 	= idu.io.mret
-	val csrEnWire 	= idu.io.csrEn
-	val csrWrWire 	= idu.io.csrWr
-	val csrOPWire 	= idu.io.csrOP
-	val csrALUOPWire= idu.io.csrALUOP
-	val rs1IndexWire= idu.io.rs1Index
-	val rs2IndexWire= idu.io.rs2Index
-	val rdIndexWire = idu.io.rdIndex
-	val rs1Wire 	= idu.io.rs1
-	val rs2Wire 	= idu.io.rs2
-	val immWire 	= idu.io.imm
-
-	// Base Reg
-	// Input
-	riscv32BaseReg.io.rs1Index 	:= rs1IndexWire
-	riscv32BaseReg.io.rs2Index 	:= rs2IndexWire
-	riscv32BaseReg.io.rdIndex 	:= rdIndexWire
-	val dataInWire 	= Wire(UInt(32.W))
-	riscv32BaseReg.io.regWR 	:= regWRWire
-	// Output
-	rs1DataWire 				:= riscv32BaseReg.io.rs1Data
-	rs2DataWire 				:= riscv32BaseReg.io.rs2Data
-
-	// CSR Reg
-	// Input
-	csrReg.io.csr		:= immWire
-	val csrDataInWire 	= Wire(UInt(32.W))
-	csrReg.io.pc 		:= pcWire
-	csrReg.io.mret 		:= mretWire
-	csrReg.io.ecall 	:= ecallWire
-	csrReg.io.csrEn 	:= csrEnWire
-	csrReg.io.csrWr		:= csrWrWire
-	val csrDataWire		= csrReg.io.csrData
+	idu.io.idu2EXU 		<> exu.io.idu2EXU
+	idu.io.idu2BaseReg	<> riscv32BaseReg.io.idu2BaseReg
 
 	// EXU
-	// Input
-	exu.io.npcState 		:= io.npcState
-	exu.io.rs1Data 			:= rs1DataWire
-	exu.io.rs2Data 			:= rs2DataWire
-	exu.io.immData 			:= immWire
-	exu.io.pc 				:= pcWire
-	exu.io.csrAData 		:= csrDataWire
-	exu.io.csrBData 		:= Mux(csrOPWire.asBool, rs1IndexWire, rs1DataWire)
-	exu.io.aluASrcCtr 		:= srcAALUWire
-	exu.io.aluBSrcCtr 		:= srcBALUWire
-	exu.io.aluCtr 			:= ctrALUWire
-	exu.io.memOPCtr 		:= memOPWire
-	exu.io.memWRCtr 		:= memWRWire
-	exu.io.memValidCtr 		:= memValidWire
-	exu.io.branchCtr 		:= branchWire
-	exu.io.memToRegCtr		:= memToRegWire
-	exu.io.csrALUOP 		:= csrALUOPWire
-	// Output
-	io.nextPC 				:= exu.io.nextPC
-	dataInWire 				:= exu.io.rdData
-	csrDataInWire 			:= exu.io.csrData
+	exu.io.exu2WBU	<> wbu.io.exu2WBU
+	exu.io.exu2CSR 	<> csrReg.io.exu2CSR
 
-	idu.io.rs1Data 	:= rs1DataWire
-	idu.io.rs2Data 	:= rs2DataWire
-	riscv32BaseReg.io.dataIn 	:= dataInWire
-	csrReg.io.dataIn 	:= csrDataInWire
+	// WBU
+	wbu.io.wbu2CSR		<> csrReg.io.wbu2CSR
+	wbu.io.wbu2BaseReg	<> riscv32BaseReg.io.wbu2BaseReg
 }
