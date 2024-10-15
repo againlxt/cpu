@@ -13,7 +13,7 @@ class WBU extends Module {
 		val exu2WBU 	= Flipped(Decoupled(new EXU2WBU))
         val wbu2CSR     = new WBU2CSR
         val wbu2BaseReg = new WBU2BaseReg
-        val wbu2PC      = new WBU2PC
+        val wbu2PC      = Decoupled(new WBU2PC)
 	})
 
     val pcReg 			= RegInit(BigInt("80000000", 16).U(32.W))
@@ -59,6 +59,8 @@ class WBU extends Module {
 
     val ready2EXUReg= RegInit(1.U(1.W))
     io.exu2WBU.ready   := ready2EXUReg.asBool
+	val validPC2Reg	= RegInit(0.U(1.W))
+	io.wbu2PC.valid    := validPC2Reg.asBool
 
     // handshake signals control
     when(ready2EXUReg === 0.U) {
@@ -67,6 +69,14 @@ class WBU extends Module {
         when(io.exu2WBU.valid && io.exu2WBU.ready) {
             ready2EXUReg := 0.U
         }
+    }
+
+	when(validPC2Reg === 0.U) {
+        when(io.exu2WBU.valid && io.exu2WBU.ready) {
+            validPC2Reg := 1.U
+        }
+    } .otherwise {
+        validPC2Reg	:= 0.U
     }
 
     // Data signal storage
@@ -129,7 +139,7 @@ class WBU extends Module {
     io.wbu2BaseReg.rdIndex  := instWire(11,7)
     io.wbu2BaseReg.regWR    := regWRWire
 
-    io.wbu2PC.nextPC        := MuxCase(	0.U(32.W), Seq(	
+    io.wbu2PC.bits.nextPC   := MuxCase(	0.U(32.W), Seq(	
         (pcASrcWire === "b00".U).asBool	-> 4.U,
 		(pcASrcWire === "b01".U).asBool -> immDataWire,
 		(pcASrcWire === "b10".U).asBool -> 0.U

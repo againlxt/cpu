@@ -8,18 +8,21 @@ import _root_.interface.WBU2PC
 class PC extends Module {
 	val io = IO(new Bundle {
 		val npcState    = Input(UInt(32.W))
-		val wbu2PC 		= Flipped(new WBU2PC)
+		val wbu2PC 		= Flipped(Decoupled(new WBU2PC))
 		val pc			= Output(UInt(32.W))
 	})
 
 	// 使用 RegInit 设置 PC 的初始值为 0x80000000
 	val pcReg = RegInit(BigInt("80000000", 16).U(32.W))
+	io.wbu2PC.ready := 1.B;
 
 	// 使用 RegNext 更新 PC 值
-	pcReg := MuxCase(BigInt("80000000", 16).U(32.W), Seq(
-		(io.npcState === NpcState.RUNNING.asUInt).asBool -> io.wbu2PC.nextPC.asUInt,
-		(io.npcState =/= NpcState.RUNNING.asUInt).asBool -> pcReg.asUInt
-	))
+	when (io.wbu2PC.ready && io.wbu2PC.valid) {
+		pcReg := MuxCase(BigInt("80000000", 16).U(32.W), Seq(
+			(io.npcState === NpcState.RUNNING.asUInt).asBool -> io.wbu2PC.bits.nextPC.asUInt,
+			(io.npcState =/= NpcState.RUNNING.asUInt).asBool -> pcReg.asUInt
+		))
+	}
 
 	// 输出当前 PC 值
 	io.pc := pcReg

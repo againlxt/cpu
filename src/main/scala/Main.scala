@@ -54,10 +54,10 @@ class top extends Module {
 
 	// PC Reg
 	pc.io.npcState 	:= io.npcState
-	pc.io.wbu2PC 	:= wbu.io.wbu2PC
+	pc.io.wbu2PC 	<> wbu.io.wbu2PC
 	val pcWire 		= pc.io.pc
 	io.curPC     	:= pcWire
-	io.nextPC 		:= wbu.io.wbu2PC.nextPC
+	io.nextPC 		:= wbu.io.wbu2PC.bits.nextPC
 
 	// IFU
 	// Input
