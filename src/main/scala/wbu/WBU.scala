@@ -226,8 +226,15 @@ class DataMemV extends BlackBox with HasBlackBoxInline {
 	   |);
 	   |reg[31:0] rdata;
 	   |reg wr_flag;
+	   |reg[31:0] addr_reg;
 	   |always@(negedge clk) begin
-	   |	wr_flag = 0;
+	   |	if(addr != addr_reg)
+	   |		wr_flag = 0;
+	   |	else
+	   |		wr_flag = 1;
+	   |end
+	   |always@(posedge clk) begin
+	   |	addr_reg <= addr;
 	   |end
 	   |import "DPI-C" function int unsigned pmem_read(input int unsigned raddr);
 	   |import "DPI-C" function void pmem_write(
@@ -235,7 +242,6 @@ class DataMemV extends BlackBox with HasBlackBoxInline {
 	   |always @(posedge clk) begin
 	   |	if(wrEn & valid) begin
 	   |		if(wr_flag == 0) pmem_write(addr, dataIn, wmask);
-	   |		wr_flag = 1;
 	   |	end
 	   |end
 	   |assign dataOut = rdata;
