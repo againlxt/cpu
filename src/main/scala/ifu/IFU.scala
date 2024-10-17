@@ -28,3 +28,10 @@ class IFU extends Module {
     io.inst.bits.inst  := memDataReg
     io.inst.bits.pc    := pcReg
 }
+
+class InstroctionSRAM extends Module {
+	val io = IO(new Bundle {
+		val sramIO = new IFUSRAM
+	})
+	
+}

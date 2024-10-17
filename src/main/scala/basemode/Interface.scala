@@ -96,3 +96,10 @@ class WBU2BaseReg extends Bundle {
 class WBU2PC extends Bundle {
 	val nextPC	= Output(UInt(32.W))
 }
+
+class IFUSRAM extends Bundle {
+	val ren 	= Input(UInt(1.W))
+	val addr 	= Input(UInt(32.W))
+	val valid 	= Output(UInt(1.W))
+	val data 	= Output(UInt(32.W))
+}
