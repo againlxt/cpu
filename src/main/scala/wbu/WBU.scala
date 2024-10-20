@@ -225,14 +225,7 @@ class DataMemV extends BlackBox with HasBlackBoxInline {
 	   |	output [31:0] dataOut
 	   |);
 	   |reg[31:0] rdata;
-	   |reg wr_flag;
 	   |reg[31:0] addr_reg;
-	   |always@(negedge clk) begin
-	   |	if(addr != addr_reg)
-	   |		wr_flag = 0;
-	   |	else
-	   |		wr_flag = 1;
-	   |end
 	   |always@(posedge clk) begin
 	   |	addr_reg <= addr;
 	   |end
@@ -241,7 +234,7 @@ class DataMemV extends BlackBox with HasBlackBoxInline {
 	   |	input int unsigned waddr, input int unsigned wdata, input byte wmask);	
 	   |always @(posedge clk) begin
 	   |	if(wrEn & valid) begin
-	   |		if(wr_flag == 0) pmem_write(addr, dataIn, wmask);
+	   |		pmem_write(addr, dataIn, wmask);
 	   |	end
 	   |end
 	   |assign dataOut = rdata;
