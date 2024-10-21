@@ -39,7 +39,7 @@ object Main extends App {
 class top extends Module {
 	val io = IO(new Bundle {
 		val npcState 	= Input(UInt(3.W))
-		val memData 	= Input(UInt(32.W))
+		//val memData 	= Input(UInt(32.W))
 		val curPC 		= Output(UInt(32.W))
 		val nextPC 		= Output(UInt(32.W))
 	})
@@ -50,7 +50,7 @@ class top extends Module {
 	val idu 			= Module(new IDU)
 	val exu 			= Module(new EXU)
 	val wbu 			= Module(new WBU)
-	val memDataWire 	= io.memData
+	//val memDataWire 	= io.memData
 
 	// PC Reg
 	pc.io.npcState 	:= io.npcState
@@ -62,7 +62,7 @@ class top extends Module {
 	// IFU
 	// Input
 	ifu.io.pc 		:= pcWire
-	ifu.io.memData 	:= memDataWire
+	//ifu.io.memData 	:= memDataWire
 	// Output
 	ifu.io.inst <> idu.io.inst
 

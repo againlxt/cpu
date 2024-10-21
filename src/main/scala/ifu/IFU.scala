@@ -9,23 +9,25 @@ import _root_.interface._
 class IFU extends Module {
     val io = IO(new Bundle {
 		val pc  	 = Input(UInt(32.W))
-        val memData  = Input(UInt(32.W))
+        //val memData  = Input(UInt(32.W))
         val inst     = Decoupled(new IFU2IDU)
     })
+	val instroctionSRAM = Module(new InstroctionSRAM)
 
 	val pcReg 			= RegInit(BigInt("80000000", 16).U(32.W))
-	val memDataReg 		= RegInit(0.U(32.W))
-	val validIFU2IDUReg	= RegInit(1.U(1.W))
 	pcReg 			:= io.pc
-    memDataReg 		:= io.memData
-	when(pcReg =/= io.pc && io.inst.ready) {
-		validIFU2IDUReg := 1.B
+
+	instroctionSRAM.io.sramIO.addr 	:= pcReg
+	val renReg = RegInit(1.U(1.W))
+	instroctionSRAM.io.sramIO.ren 	:= renReg
+	when(pcReg =/= io.pc) {
+		renReg := 1.U
 	} .otherwise {
-		validIFU2IDUReg := 0.B
+		renReg := 0.U
 	}
 
-	io.inst.valid 	   := validIFU2IDUReg
-    io.inst.bits.inst  := memDataReg
+	io.inst.valid 	   := instroctionSRAM.io.sramIO.valid
+    io.inst.bits.inst  := instroctionSRAM.io.sramIO.data
     io.inst.bits.pc    := pcReg
 }
 
@@ -35,6 +37,7 @@ class InstroctionSRAM extends Module {
 	})
 
 	val instroctionSRAMV	= Module(new InstroctionSRAMV)
+	instroctionSRAMV.io.clk := this.clock.asUInt
 	instroctionSRAMV.io.ren	:= io.sramIO.ren
 	instroctionSRAMV.io.addr:= io.sramIO.addr
 	io.sramIO.valid	:= instroctionSRAMV.io.valid
