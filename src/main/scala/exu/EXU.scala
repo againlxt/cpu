@@ -96,6 +96,7 @@ class EXU extends Module {
 
 	// Data Memory
 	val dataMem 		= Module(new DataMem)
+
 	// Input
 	dataMem.io.addr 		:= resultWire
 	dataMem.io.memOP 		:= memOPCtrWire
@@ -154,7 +155,7 @@ class DataMem extends Module {
 		(memOPWire === "b101".U).asBool -> 0.U(1.W),
 		(memOPWire === "b100".U).asBool -> 0.U(1.W)
 	))
-	
+	/*
 	val dataMem 		= Module(new DataMemV())
 	dataMem.io.clk 		:= this.clock.asUInt
 	dataMem.io.addr 	:= addrWire
@@ -163,9 +164,29 @@ class DataMem extends Module {
 	dataMem.io.dataIn 	:= dataInWire
 	dataMem.io.wrEn 	:= wrEnWire
 	dataMem.io.valid 	:= validWire
+	*/
+
+	val dataMem 		= Module(new RegistMem())
+	dataMem.io.enable 	:= validWire
+	dataMem.io.write 	:= wrEnWire
+	dataMem.io.addr 	:= addrWire
+	dataMem.io.baseAddr	:= "h80000000".U(32.W)
+	dataMem.io.len 		:= MuxCase (1.U(3.W), Seq(
+		(wMaskWire === "b00000001").asBool	-> 1.U,
+		(wMaskWire === "b00000011").asBool	-> 2.U,
+		(wMaskWire === "b00001111").asBool 	-> 4.U
+	))
+	dataMem.io.dataIn 	:= dataInWire
+	val dataWire 		= dataMem.io.dataOut
+	
 	val signdataWire 	= Wire(SInt(32.W))
+	signdataWire 		:= MuxCase (dataWire, Seq(
+		(wMaskWire === "b00000001").asBool	-> Cat(Seq.fill(24)(dataWire(7)), dataWire(7, 0)),
+		(wMaskWire === "b00000011").asBool	-> Cat(Seq.fill(16)(dataWire(15)), dataWire(15, 0)),
+		(wMaskWire === "b00001111").asBool 	-> dataWire.asSInt
+	))
+
 	val unsigndataWire  = Wire(UInt(32.W))
-	signdataWire 		:= dataMem.io.dataOut.asSInt
 	unsigndataWire		:= dataMem.io.dataOut
 
 	io.dataOut 			:= Mux(sOrUWire.asBool, signdataWire.asUInt, unsigndataWire)
