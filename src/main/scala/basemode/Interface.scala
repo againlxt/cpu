@@ -103,3 +103,14 @@ class IFUSRAM extends Bundle {
 	val valid 	= Output(UInt(1.W))
 	val data 	= Output(UInt(32.W))
 }
+
+class WBUSRAM extends Bundle {
+	val clk 	= Output(UInt(1.W))
+	val raddr	= Output(UInt(32.W))
+	val ren		= Output(UInt(1.W))
+	val rdata	= Input(UInt(32.W))
+	val waddr	= Output(UInt(32.W))
+	val wdata 	= Output(UInt(32.W))
+	val wen 	= Output(UInt(1.W))
+	val wmask 	= Output(UInt(4.W))
+}
