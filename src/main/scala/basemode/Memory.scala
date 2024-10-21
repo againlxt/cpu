@@ -51,7 +51,7 @@ class ReadWriteSmem(dataWidth: Int, addrWidth: Int, memorySize: Int) extends Mod
 }
 
 class RegistMem(dataWidth: Int, addrWidth: Int, memorySize: Int) extends Module {
-  val io = IO(new Bundle {} {
+  val io = IO(new Bundle {
     val enable  = Input(Bool())
     val write   = Input(Bool())
     val addr    = Input(UInt(addrWidth.W))
@@ -61,7 +61,7 @@ class RegistMem(dataWidth: Int, addrWidth: Int, memorySize: Int) extends Module 
     val dataOut = Output(UInt(dataWidth.W))
   })
 
-  val mem = RegInit(VecInit(Seq.fill(256)(0.U(32.W))))
+  val mem = RegInit(VecInit(Seq.fill(memorySize)(0.U(32.W))))
 
   io.dataOut := 0.U
 
@@ -71,14 +71,14 @@ class RegistMem(dataWidth: Int, addrWidth: Int, memorySize: Int) extends Module 
   when(io.enable) {
     when(io.write) {
       when(io.len === 1.U) {
-        mem(addrWire) := dataWire(7, 0)
+        mem(addrWire(7, 0)) := dataWire(7, 0)
       } .elsewhen (io.len === 2.U) {
-        mem(addrWire) := dataWire(15, 0)
+        mem(addrWire(7, 0)) := dataWire(15, 0)
       } .elsewhen (io.len === 4.U) {
-        mem(addrWire) := dataWire(31, 0)
+        mem(addrWire(7, 0)) := dataWire(31, 0)
       }
     } .otherwise {
-      val memDataWire  = mem(addrWire)
+      val memDataWire  = mem(addrWire(7, 0))
       when(io.len === 1.U) {
         io.dataOut  := memDataWire(7, 0)
       } .elsewhen (io.len === 2.U) {
