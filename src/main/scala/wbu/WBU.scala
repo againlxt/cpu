@@ -7,6 +7,8 @@ import _root_.interface.EXU2WBU
 import _root_.interface.WBU2CSR
 import _root_.interface.WBU2BaseReg
 import _root_.interface.WBU2PC
+import _root_.interface._
+import dataclass.data
 
 class WBU extends Module {
 	val io = IO(new Bundle {
@@ -181,7 +183,8 @@ class DataMem extends Module {
 		(memOPWire === "b101".U).asBool -> 0.U(1.W),
 		(memOPWire === "b100".U).asBool -> 0.U(1.W)
 	))
-	
+
+	/*	
 	val dataMem 		= Module(new DataMemV())
 	dataMem.io.clk 		:= this.clock.asUInt
 	dataMem.io.addr 	:= addrWire
@@ -194,10 +197,91 @@ class DataMem extends Module {
 	val unsigndataWire  = Wire(UInt(32.W))
 	signdataWire 		:= dataMem.io.dataOut.asSInt
 	unsigndataWire		:= dataMem.io.dataOut
+	*/
 
-	io.dataOut 			:= Mux(sOrUWire.asBool, signdataWire.asUInt, unsigndataWire)
+	val dataSRAM 		= Module(new DataSRAM)
+	dataSRAM.io.wbuSRAM.clk 	:= this.clock.asUInt
+	dataSRAM.io.wbuSRAM.raddr 	:= addrWire
+	dataSRAM.io.wbuSRAM.ren 	:= validWire
+	val sramData 				= dataSRAM.io.wbuSRAM.rdata
+	dataSRAM.io.wbuSRAM.waddr 	:= addrWire
+	dataSRAM.io.wbuSRAM.wdata 	:= dataInWire
+	dataSRAM.io.wbuSRAM.wen 	:= validWire && wrEnWire
+	dataSRAM.io.wbuSRAM.wmask 	:= wMaskWire(3,0)
+	val signdataWire 			= Wire(UInt(32.W))
+	signdataWire := MuxCase(sramData, Seq(
+		(wMaskWire === "b0001".U).asBool 	-> Cat(Fill(24, sramData(7)), sramData(7, 0)),
+		(wMaskWire === "b0011".U).asBool 	-> Cat(Fill(16, sramData(15)), sramData(15, 0)),
+		(wMaskWire === "b1111".U).asBool 	-> sramData
+	))
+
+	io.dataOut 			:= Mux(sOrUWire.asBool, signdataWire, sramData)
 }
 
+class DataSRAM extends Module {
+	val io = IO(new Bundle {
+		val wbuSRAM = Flipped(new WBUSRAM)
+	})
+
+	val dataSRAMV = Module(new DataSRAMV)
+	dataSRAMV.io.clk 	:= io.wbuSRAM.clk
+	dataSRAMV.io.raddr 	:= io.wbuSRAM.raddr
+	dataSRAMV.io.ren 	:= io.wbuSRAM.ren
+	io.wbuSRAM.rdata 	:= dataSRAMV.io.rdata
+	dataSRAMV.io.waddr 	:= io.wbuSRAM.waddr
+	dataSRAMV.io.wdata 	:= io.wbuSRAM.wdata
+	dataSRAMV.io.wen 	:= io.wbuSRAM.wen
+	dataSRAMV.io.wmask 	:= io.wbuSRAM.wmask
+}
+
+class DataSRAMV extends BlackBox with HasBlackBoxInline {
+	val io = IO(new Bundle {
+		val clk 	= Input(UInt(1.W))
+		val raddr	= Input(UInt(32.W))
+		val ren		= Input(UInt(1.W))
+		val rdata	= Output(UInt(32.W))
+		val waddr	= Input(UInt(32.W))
+		val wdata 	= Input(UInt(32.W))
+		val wen 	= Input(UInt(1.W))
+		val wmask 	= Input(UInt(4.W))
+	})
+
+	setInline("DataSRAMV.sv",
+	"""module DataSRAMV(
+	   |	input 		 clk,
+	   |	input [31:0] raddr,
+	   |	input 		 ren,
+	   |	output[31:0] rdata,
+	   |	input [31:0] waddr,
+	   |	input [31:0] wdata,
+	   |	input 		 wen,
+	   |	input [3:0]  wmask
+	   |);
+	   |
+	   |import "DPI-C" function int unsigned pmem_read(input int unsigned raddr);
+	   |import "DPI-C" function void pmem_write(
+	   |	input int unsigned waddr, input int unsigned wdata, input byte wmask);
+	   |
+	   |reg[31:0] rdataReg;
+	   |wire[7:0] wmaskWire;
+	   |assign wmaskWire = {4'b0, wmask};
+	   |// Memory Read
+	   |assign rdata = rdataReg;
+	   |always@(posedge clk) begin
+	   |	if(ren) rdataReg <= pmem_read(raddr);
+	   |	else 	rdataReg <= rdataReg;
+	   |end
+	   |
+	   |// Memory Write
+	   |always@(posedge clk) begin
+	   |	if(wen) pmem_write(waddr, wdata, wmaskWire);
+	   |end
+	   |
+	   |endmodule
+	""".stripMargin)
+}
+
+/*
 class DataMemV extends BlackBox with HasBlackBoxInline {
 	val io = IO(new Bundle{
 		// Input
@@ -262,6 +346,7 @@ class DataMemV extends BlackBox with HasBlackBoxInline {
 	   |endmodule
 	""".stripMargin)
 }
+*/
 
 class BranchCond extends Module {
 	val io = IO(new Bundle {
