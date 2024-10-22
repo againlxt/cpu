@@ -121,7 +121,7 @@ class WBU extends Module {
 	))
 	// handshake signals control
 	when(state === s_idle) {
-		ready2EXUReg 	:= 0.U
+		ready2EXUReg 	:= 1.U
 		validPC2Reg 	:= 0.U
 	} .elsewhen(state === s_wait_exu_valid) {
 		ready2EXUReg 	:= 1.U

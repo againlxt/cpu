@@ -52,12 +52,12 @@ class EXU extends Module {
 	val state = RegInit(s_idle)
 	state := MuxLookup(state, s_idle)(List(
 		s_idle				-> Mux(reset.asBool, s_idle, s_wait_idu_valid),
-		s_wait_idu_valid	-> Mux(io.idu2EXU.valid, s_wait_wbu_ready, s_wait_idu_valid),
-		s_wait_wbu_ready	-> Mux(io.exu2WBU.ready, s_idle, s_wait_wbu_ready)
+		s_wait_idu_valid	-> Mux(reset.asBool, s_idle, Mux(io.idu2EXU.valid, s_wait_wbu_ready, s_wait_idu_valid)),
+		s_wait_wbu_ready	-> Mux(reset.asBool, s_idle, Mux(io.exu2WBU.ready, s_idle, s_wait_wbu_ready))
 	))
 	// handshake signals control
 	when(state === s_idle) {
-		ready2IDUReg := 0.U
+		ready2IDUReg := 1.U
 		valid2WBUReg := 0.U
 	} .elsewhen(state === s_wait_idu_valid) {
 		ready2IDUReg := 1.U
