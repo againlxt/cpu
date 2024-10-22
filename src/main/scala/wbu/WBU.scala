@@ -115,9 +115,9 @@ class WBU extends Module {
 	val state = RegInit(s_idle)
 	state := MuxLookup(state, s_idle)(List(
 		s_idle				-> Mux(reset.asBool, s_idle, s_wait_exu_valid),
-		s_wait_exu_valid	-> Mux(io.exu2WBU.valid, Mux(memValidWire.asBool, s_sram_op, s_wait_pcReg_ready), s_wait_exu_valid),
-		s_sram_op 			-> Mux(rValidWire.asBool || wValidWire.asBool, s_wait_pcReg_ready, s_sram_op),
-		s_wait_pcReg_ready	-> Mux(io.wbu2PC.ready, s_idle, s_wait_pcReg_ready)
+		s_wait_exu_valid	-> Mux(reset.asBool, s_idle, Mux(io.exu2WBU.valid, Mux(memValidWire.asBool, s_sram_op, s_wait_pcReg_ready), s_wait_exu_valid)),
+		s_sram_op 			-> Mux(reset.asBool, s_idle, Mux(rValidWire.asBool || wValidWire.asBool, s_wait_pcReg_ready, s_sram_op)),
+		s_wait_pcReg_ready	-> Mux(reset.asBool, s_idle, Mux(io.wbu2PC.ready, s_idle, s_wait_pcReg_ready))
 	))
 	// handshake signals control
 	when(state === s_idle) {
