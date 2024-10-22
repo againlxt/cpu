@@ -109,8 +109,10 @@ class WBUSRAM extends Bundle {
 	val raddr	= Output(UInt(32.W))
 	val ren		= Output(UInt(1.W))
 	val rdata	= Input(UInt(32.W))
+	val rValid 	= Input(UInt(1.W))
 	val waddr	= Output(UInt(32.W))
 	val wdata 	= Output(UInt(32.W))
 	val wen 	= Output(UInt(1.W))
 	val wmask 	= Output(UInt(4.W))
+	val wValid 	= Input(UInt(1.W))
 }

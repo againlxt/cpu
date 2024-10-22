@@ -62,24 +62,7 @@ class WBU extends Module {
     val ready2EXUReg= RegInit(1.U(1.W))
     io.exu2WBU.ready   := ready2EXUReg.asBool
 	val validPC2Reg	= RegInit(0.U(1.W))
-	io.wbu2PC.valid    := validPC2Reg.asBool
-
-    // handshake signals control
-    when(ready2EXUReg === 0.U) {
-        ready2EXUReg := 1.U;
-    } .otherwise {
-        when(io.exu2WBU.valid && io.exu2WBU.ready) {
-            ready2EXUReg := 0.U
-        }
-    }
-
-	when(validPC2Reg === 0.U) {
-        when(io.exu2WBU.valid && io.exu2WBU.ready) {
-            validPC2Reg := 1.U
-        }
-    } .otherwise {
-        validPC2Reg	:= 0.U
-    }
+	io.wbu2PC.valid    := validPC2Reg.asBool 
 
     // Data signal storage
 	when(io.exu2WBU.ready && io.exu2WBU.valid) {
@@ -124,6 +107,32 @@ class WBU extends Module {
 	dataMem.io.valid 		:= memValidWire
 	// Output
 	val dataOutWire 	= dataMem.io.dataOut
+	val rValidWire 		= dataMem.io.rValid
+	val wValidWire 		= dataMem.io.wValid
+
+	// State Machine
+	val s_idle :: s_wait_exu_valid :: s_sram_op :: s_wait_pcReg_ready :: Nil = Enum(4)
+	val state = RegInit(s_idle)
+	state := MuxLookup(state, s_idle)(List(
+		s_idle				-> Mux(reset.asBool, s_idle, s_wait_exu_valid),
+		s_wait_exu_valid	-> Mux(io.exu2WBU.valid, Mux(memValidWire.asBool, s_sram_op, s_wait_pcReg_ready), s_wait_exu_valid),
+		s_sram_op 			-> Mux(rValidWire.asBool || wValidWire.asBool, s_wait_pcReg_ready, s_sram_op),
+		s_wait_pcReg_ready	-> Mux(io.wbu2PC.ready, s_idle, s_wait_pcReg_ready)
+	))
+	// handshake signals control
+	when(state === s_idle) {
+		ready2EXUReg 	:= 0.U
+		validPC2Reg 	:= 0.U
+	} .elsewhen(state === s_wait_exu_valid) {
+		ready2EXUReg 	:= 1.U
+		validPC2Reg 	:= 0.U
+	} .elsewhen(state === s_sram_op) {
+		ready2EXUReg 	:= 0.U
+		validPC2Reg 	:= 0.U
+	} .elsewhen(state === s_wait_pcReg_ready) {
+		ready2EXUReg 	:= 0.U
+		validPC2Reg 	:= 1.U
+	}
 
 	// Output
     io.wbu2CSR.pc       := pcWire
@@ -162,6 +171,8 @@ class DataMem extends Module {
 		val valid  	= Input(Bool())
 
 		val dataOut = Output(UInt(32.W))
+		val rValid 	= Output(UInt(1.W))
+		val wValid 	= Output(UInt(1.W))
 	})
 	val addrWire 	= io.addr
 	val memOPWire 	= io.memOP
@@ -184,38 +195,27 @@ class DataMem extends Module {
 		(memOPWire === "b100".U).asBool -> 0.U(1.W)
 	))
 
-	/*	
-	val dataMem 		= Module(new DataMemV())
-	dataMem.io.clk 		:= this.clock.asUInt
-	dataMem.io.addr 	:= addrWire
-	dataMem.io.wmask 	:= wMaskWire
-	dataMem.io.sOrU 	:= sOrUWire
-	dataMem.io.dataIn 	:= dataInWire
-	dataMem.io.wrEn 	:= wrEnWire
-	dataMem.io.valid 	:= validWire
-	val signdataWire 	= Wire(SInt(32.W))
-	val unsigndataWire  = Wire(UInt(32.W))
-	signdataWire 		:= dataMem.io.dataOut.asSInt
-	unsigndataWire		:= dataMem.io.dataOut
-	*/
-
 	val dataSRAM 		= Module(new DataSRAM)
 	dataSRAM.io.wbuSRAM.clk 	:= this.clock.asUInt
 	dataSRAM.io.wbuSRAM.raddr 	:= addrWire
 	dataSRAM.io.wbuSRAM.ren 	:= validWire
 	val sramData 				= dataSRAM.io.wbuSRAM.rdata
+	val rValidWire				= dataSRAM.io.wbuSRAM.rValid
+	val wValidWire 				= dataSRAM.io.wbuSRAM.wValid
 	dataSRAM.io.wbuSRAM.waddr 	:= addrWire
 	dataSRAM.io.wbuSRAM.wdata 	:= dataInWire
 	dataSRAM.io.wbuSRAM.wen 	:= validWire && wrEnWire
 	dataSRAM.io.wbuSRAM.wmask 	:= wMaskWire(3,0)
-	val signdataWire 			= Wire(UInt(32.W))
-	signdataWire := MuxCase(sramData, Seq(
-		(wMaskWire === "b0001".U).asBool 	-> Cat(Fill(24, sramData(7)), sramData(7, 0)),
-		(wMaskWire === "b0011".U).asBool 	-> Cat(Fill(16, sramData(15)), sramData(15, 0)),
-		(wMaskWire === "b1111".U).asBool 	-> sramData
+	val signdataWire 			= Wire(SInt(32.W))
+	signdataWire := MuxCase(sramData.asSInt, Seq(
+		(wMaskWire === "b0001".U).asBool 	-> Cat(Fill(24, sramData(7)), sramData(7, 0)).asSInt,
+		(wMaskWire === "b0011".U).asBool 	-> Cat(Fill(16, sramData(15)), sramData(15, 0)).asSInt,
+		(wMaskWire === "b1111".U).asBool 	-> sramData.asSInt
 	))
 
-	io.dataOut 			:= Mux(sOrUWire.asBool, signdataWire, sramData)
+	io.dataOut 			:= Mux(sOrUWire.asBool, signdataWire.asUInt, sramData)
+	io.rValid 			:= rValidWire
+	io.wValid 			:= wValidWire
 }
 
 class DataSRAM extends Module {
@@ -228,10 +228,12 @@ class DataSRAM extends Module {
 	dataSRAMV.io.raddr 	:= io.wbuSRAM.raddr
 	dataSRAMV.io.ren 	:= io.wbuSRAM.ren
 	io.wbuSRAM.rdata 	:= dataSRAMV.io.rdata
+	io.wbuSRAM.rValid 	:= dataSRAMV.io.rValid
 	dataSRAMV.io.waddr 	:= io.wbuSRAM.waddr
 	dataSRAMV.io.wdata 	:= io.wbuSRAM.wdata
 	dataSRAMV.io.wen 	:= io.wbuSRAM.wen
 	dataSRAMV.io.wmask 	:= io.wbuSRAM.wmask
+	io.wbuSRAM.wValid 	:= dataSRAMV.io.wValid
 }
 
 class DataSRAMV extends BlackBox with HasBlackBoxInline {
@@ -240,10 +242,12 @@ class DataSRAMV extends BlackBox with HasBlackBoxInline {
 		val raddr	= Input(UInt(32.W))
 		val ren		= Input(UInt(1.W))
 		val rdata	= Output(UInt(32.W))
+		val rValid 	= Output(UInt(1.W))
 		val waddr	= Input(UInt(32.W))
 		val wdata 	= Input(UInt(32.W))
 		val wen 	= Input(UInt(1.W))
 		val wmask 	= Input(UInt(4.W))
+		val wValid 	= Output(UInt(1.W))
 	})
 
 	setInline("DataSRAMV.sv",
@@ -252,29 +256,47 @@ class DataSRAMV extends BlackBox with HasBlackBoxInline {
 	   |	input [31:0] raddr,
 	   |	input 		 ren,
 	   |	output[31:0] rdata,
+	   |	output 		 rValid,
 	   |	input [31:0] waddr,
 	   |	input [31:0] wdata,
 	   |	input 		 wen,
-	   |	input [3:0]  wmask
+	   |	input [3:0]  wmask,
+	   |	output 		 wValid
 	   |);
 	   |
-	   |import "DPI-C" function int unsigned pmem_read(input int unsigned raddr);
+	   |import "DPI-C" function int unsigned pmem_read(input int unsigned raddr, input byte rmask);
 	   |import "DPI-C" function void pmem_write(
 	   |	input int unsigned waddr, input int unsigned wdata, input byte wmask);
 	   |
 	   |reg[31:0] rdataReg;
+	   |reg 	  rValidReg;
+	   |reg 	  wValidReg;
 	   |wire[7:0] wmaskWire;
 	   |assign wmaskWire = {4'b0, wmask};
 	   |// Memory Read
 	   |assign rdata = rdataReg;
+	   |assign rValid= rValidReg;
+	   |assign wValid= wValidReg;
 	   |always@(posedge clk) begin
-	   |	if(ren) rdataReg <= pmem_read(raddr);
-	   |	else 	rdataReg <= rdataReg;
+	   |	if(ren) begin
+	   |		rdataReg <= pmem_read(raddr, wmaskWire);
+	   |		rValidReg<= 1'b1;
+	   |	end
+	   |	else begin
+	   | 		rdataReg <= rdataReg;
+	   |		rValidReg<= 1'b0;
+	   |	end
 	   |end
 	   |
 	   |// Memory Write
 	   |always@(posedge clk) begin
-	   |	if(wen) pmem_write(waddr, wdata, wmaskWire);
+	   |	if(wen) begin
+	   |		pmem_write(waddr, wdata, wmaskWire);
+	   |		wValidReg	<= 1'b1;
+	   |	end
+	   |	else begin
+	   |		wValidReg	<= 1'b0;
+	   |	end
 	   |end
 	   |
 	   |endmodule
