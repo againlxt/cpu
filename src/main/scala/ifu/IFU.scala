@@ -33,7 +33,7 @@ class IFU extends Module {
 
 class InstroctionSRAM extends Module {
 	val io = IO(new Bundle {
-		val sramIO = new IFUSRAM
+		val sramIO 		= new IFUSRAM
 	})
 
 	val instroctionSRAMV	= Module(new InstroctionSRAMV)

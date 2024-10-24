@@ -116,3 +116,35 @@ class WBUSRAM extends Bundle {
 	val wmask 	= Output(UInt(4.W))
 	val wValid 	= Input(UInt(1.W))
 }
+
+class AXILite extends Bundle {
+	val aclk 	= Input(UInt(1.W))
+	val aresetn	= Input(UInt(1.W))
+
+	/* AR */
+	val arAddr	= Output(UInt(32.W))
+	val arValid	= Output(Bool())
+	val arReady	= Input(Bool())
+
+	/* R */
+	val rData	= Input(UInt(32.W))
+	val rrEsp	= Input(UInt(2.W))
+	val rValid	= Input(Bool())
+	val rReady 	= Output(Bool())
+
+	/* AW */
+	val awAddr	= Output(UInt(32.W))
+	val awValid	= Output(Bool())
+	val awReady	= Input(Bool())
+
+	/* W */
+	val wData 	= Output(UInt(32.W))
+	val wStrb 	= Output(UInt(4.W))
+	val wValid 	= Output(Bool())
+	val wReady 	= Input(Bool())
+
+	/* B */
+	val bResp 	= Input(UInt(2.W))
+	val bValid 	= Input(Bool())
+	val bReady 	= Output(Bool())
+}
