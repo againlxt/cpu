@@ -47,25 +47,25 @@ class EXU extends Module {
     val valid2WBUReg= RegInit(0.U(1.W))
     io.exu2WBU.valid:= valid2WBUReg.asBool
 
+	// State Machine
+	val s_idle :: s_wait_idu_valid :: s_wait_wbu_ready :: Nil = Enum(3)
+	val state = RegInit(s_idle)
+	state := MuxLookup(state, s_idle)(List(
+		s_idle				-> Mux(reset.asBool, s_idle, s_wait_idu_valid),
+		s_wait_idu_valid	-> Mux(reset.asBool, s_idle, Mux(io.idu2EXU.valid, s_wait_wbu_ready, s_wait_idu_valid)),
+		s_wait_wbu_ready	-> Mux(reset.asBool, s_idle, Mux(io.exu2WBU.ready, s_idle, s_wait_wbu_ready))
+	))
 	// handshake signals control
-    when(ready2IDUReg === 0.U) {
-        when(io.exu2WBU.valid && io.exu2WBU.ready) {
-            ready2IDUReg := 1.U;
-        }
-    } .otherwise {
-        when(io.idu2EXU.valid && io.idu2EXU.ready) {
-            ready2IDUReg := 0.U
-        }
-    }
-    when(valid2WBUReg === 0.U) {
-        when(io.idu2EXU.valid && io.idu2EXU.ready) {
-            valid2WBUReg := 1.U
-        }
-    } .otherwise {
-        when(io.exu2WBU.valid && io.exu2WBU.ready) {
-            valid2WBUReg := 0.U;
-        }
-    }
+	when(state === s_idle) {
+		ready2IDUReg := 1.U
+		valid2WBUReg := 0.U
+	} .elsewhen(state === s_wait_idu_valid) {
+		ready2IDUReg := 1.U
+		valid2WBUReg := 0.U
+	} .elsewhen(state === s_wait_wbu_ready) {
+		ready2IDUReg := 0.U
+		valid2WBUReg := 1.U
+	}
 
 	// Data signal storage
 	when(io.idu2EXU.ready && io.idu2EXU.valid) {
