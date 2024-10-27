@@ -51,15 +51,202 @@ class ReadWriteSmem(dataWidth: Int, addrWidth: Int, memorySize: Int) extends Mod
   } .otherwise {}
 }
 
+class AXILiteInstSram extends Module {
+  val io = IO(new Bundle {
+    val axiLiteM = Flipped(new AXILite)
+  })
+
+  val axiLiteInstSramV  = Module(new AXILiteInstSramV)
+
+  axiLiteInstSramV.io.aclk      := io.axiLiteM.aclk
+  axiLiteInstSramV.io.aresetn   := io.axiLiteM.aresetn
+
+  /* AR */
+  axiLiteInstSramV.io.arAddr   := io.axiLiteM.arAddr
+  axiLiteInstSramV.io.arValid  := io.axiLiteM.arValid
+  io.axiLiteM.arReady      := axiLiteInstSramV.io.arReady
+
+  /* R */
+  io.axiLiteM.rData        := axiLiteInstSramV.io.rData
+  io.axiLiteM.rrEsp        := axiLiteInstSramV.io.rrEsp
+  io.axiLiteM.rValid       := axiLiteInstSramV.io.rValid
+  axiLiteInstSramV.io.rReady   := io.axiLiteM.rReady
+
+  /* AW */
+  axiLiteInstSramV.io.awAddr   := io.axiLiteM.awAddr
+  axiLiteInstSramV.io.awValid  := io.axiLiteM.awValid
+  io.axiLiteM.awReady      := axiLiteInstSramV.io.awReady
+
+  /* W */
+  axiLiteInstSramV.io.wData    := io.axiLiteM.wData
+  axiLiteInstSramV.io.wStrb    := io.axiLiteM.wStrb
+  axiLiteInstSramV.io.wValid   := io.axiLiteM.wValid
+  io.axiLiteM.wReady       := axiLiteInstSramV.io.wReady
+
+  /* B */
+  io.axiLiteM.bResp        := axiLiteInstSramV.io.bResp
+  io.axiLiteM.bValid       := axiLiteInstSramV.io.bValid
+  axiLiteInstSramV.io.bReady   := io.axiLiteM.bReady
+}
+
+class AXILiteInstSramV extends BlackBox with HasBlackBoxInline {
+  val io = IO(new Bundle {
+    val aclk    = Input(UInt(1.W))
+    val aresetn = Input(UInt(1.W))
+
+    /* AR */
+    val arAddr	= Input(UInt(32.W))
+    val arValid	= Input(Bool())
+    val arReady	= Output(Bool())
+
+    /* R */
+    val rData	  = Output(UInt(32.W))
+    val rrEsp	  = Output(UInt(2.W))
+    val rValid	= Output(Bool())
+    val rReady 	= Input(Bool())
+
+    /* AW */
+    val awAddr	= Input(UInt(32.W))
+    val awValid	= Input(Bool())
+    val awReady	= Output(Bool())
+
+    /* W */
+    val wData 	= Input(UInt(32.W))
+    val wStrb 	= Input(UInt(4.W))
+    val wValid 	= Input(Bool())
+    val wReady 	= Output(Bool())
+
+    /* B */
+    val bResp 	= Output(UInt(2.W))
+    val bValid 	= Output(Bool())
+    val bReady 	= Input(Bool())
+  })
+
+  setInline("AXILiteInstSramV.sv",
+	"""module AXILiteInstSramV(
+	   |  input   aclk,
+     |  input   aresetn,
+     |  
+     |  /* AR */
+     |  input [31:0]  arAddr,
+     |  input   arValid,
+     |  output  arReady,
+     |
+     |  /* R */
+     |  output[31:0]  rData,
+     |  output[1:0]   rrEsp,
+     |  output        rValid,
+     |  input         rReady,
+     |
+     |  /* AW */
+     |  input[31:0]   awAddr,
+     |  input         awValid,
+     |  output        awReady,
+     |
+     |  /* W */
+     |  input[31:0]   wData,
+     |  input[3:0]    wStrb,
+     |  input         wValid,
+     |  output        wReady,
+     |
+     |  /* B */
+     |  output[1:0]   bResp,
+     |  output        bValid,
+     |  input         bReady
+	   |);
+     |
+     |/* Headshake Signal Reg */
+     |reg       arReadyReg;
+     |reg[31:0] rDataReg;
+     |reg[1:0]  rrEspReg;
+     |reg       rValidReg;
+     |reg       awReadyReg;
+     |reg       wReadyReg;
+     |reg[1:0]  bRespReg;
+     |reg       bValidReg;
+     |
+     |assign arReady  = arReadyReg;
+     |assign rData    = rDataReg;
+     |assign rrEsp    = rrEspReg;
+     |assign rValid   = rValidReg;
+     |assign awReady  = awReadyReg;
+     |assign wReady   = wReadyReg;
+     |assign bResp    = bRespReg;
+     |assign bValid   = bValidReg;
+     |
+     |/* AW */
+     |always@(posedge aclk) begin
+     |  if(!aresetn)                    awReadyReg  <= 1'b1;
+     |  else if(awValid && wValid)      awReadyReg  <= 1'b1;
+     |  else if(awValid && awReady)     awReadyReg  <= 1'b0;
+     |  else                            awReadyReg  <= awReadyReg;
+     |end
+     |
+     |/* W */
+     |always@(posedge aclk) begin
+     |  if(!aresetn)                    wReadyReg <= 1'b1;
+     |  else if(wValid && awValid)      wReadyReg <= 1'b1;
+     |  else if(wValid && wReady)       wReadyReg <= 1'b0;
+     |  else                            wReadyReg <= wReadyReg;
+     |end
+     |
+     |/* B */
+     |always@(posedge aclk) begin
+     |  if(!aresetn)                                    bValidReg <= 1'b0;
+     |  else if(awValid && awReady && wValid && wReady) bValidReg <= 1'b1;
+     |  else if(bValid && bReady)                       bValidReg <= 1'b0;
+     |  else                                            bValidReg  <= bValidReg;
+     |end
+     |always@(posedge aclk) begin
+     |  if(!aresetn)                    bRespReg  <= 2'b0;
+     |  else if(bValid)                 bRespReg  <= 2'b0;
+     |  else                            bRespReg  <= bRespReg;
+     |end
+     |
+     |/* AR */
+     |always@(posedge aclk) begin
+     |  if(!aresetn)                    arReadyReg  <= 1'b1;
+     |  else if(arValid && arReady)     arReadyReg  <= 1'b0;
+     |  else if(arValid)                arReadyReg  <= 1'b1; 
+     |  else                            arReadyReg  <= arReadyReg;
+     |end
+     |
+     |/* R */
+     |import "DPI-C" function int unsigned iaddr_read(int unsigned iaddr);
+     |always@(posedge aclk) begin
+     |  if(!aresetn)                    rValidReg   <= 1'b0;
+     |  else if(arValid && arReady)     rValidReg   <= 1'b1;
+     |  else if(rValid && rReady)       rValidReg   <= 1'b0;
+     |  else                            rValidReg   <= rValidReg;
+     |end
+     |always@(posedge aclk) begin
+     |  if(!aresetn)begin
+     |    rDataReg    <= 32'd0;
+     |    rrEspReg    <= 2'd0;
+     |  end
+     |  else if(arValid && arReady) begin
+     |    rDataReg    <= iaddr_read(arAddr);
+     |    rrEspReg    <= 2'd0;
+     |  end
+     |  else begin
+     |    rDataReg    <= rDataReg;
+     |    rrEspReg    <= rrEspReg;
+     |  end
+     |end
+     |
+	   |endmodule
+	""".stripMargin)
+}
+
 class AXILiteSram extends Module {
   val io = IO(new Bundle {
-    val axiLiteM = new AXILite
+    val axiLiteM = Flipped(new AXILite)
   })
 
   val axiLiteSramV  = Module(new AXILiteSramV)
 
-  axiLiteSramV.io.clk      := this.clock.asUInt
-  axiLiteSramV.io.reset    := this.reset.asUInt
+  axiLiteSramV.io.aclk      := io.axiLiteM.aclk
+  axiLiteSramV.io.aresetn   := io.axiLiteM.aresetn
 
   /* AR */
   axiLiteSramV.io.arAddr   := io.axiLiteM.arAddr
@@ -155,6 +342,8 @@ class AXILiteSramV extends BlackBox with HasBlackBoxInline {
      |  input         bReady
 	   |);
      |
+     |/* Headshake Signal Reg */
+     |reg       arReadyReg;
      |reg[31:0] rDataReg;
      |reg[1:0]  rrEspReg;
      |reg       rValidReg;
@@ -163,6 +352,81 @@ class AXILiteSramV extends BlackBox with HasBlackBoxInline {
      |reg[1:0]  bRespReg;
      |reg       bValidReg;
      |
+     |assign arReady  = arReadyReg;
+     |assign rData    = rDataReg;
+     |assign rrEsp    = rrEspReg;
+     |assign rValid   = rValidReg;
+     |assign awReady  = awReadyReg;
+     |assign wReady   = wReadyReg;
+     |assign bResp    = bRespReg;
+     |assign bValid   = bValidReg;
+     |
+     |/* AW */
+     |always@(posedge aclk) begin
+     |  if(!aresetn)                    awReadyReg  <= 1'b1;
+     |  else if(awValid && wValid)      awReadyReg  <= 1'b1;
+     |  else if(awValid && awReady)     awReadyReg  <= 1'b0;
+     |  else                            awReadyReg  <= awReadyReg;
+     |end
+     |
+     |/* W */
+	   |import "DPI-C" function void pmem_write(
+	   |	input int unsigned waddr, input int unsigned wdata, input byte wmask);
+     |wire[7:0] wmask;
+     |assign wmask = {4'd0, wStrb};
+     |always@(posedge aclk) begin
+     |  if(!aresetn)                    wReadyReg <= 1'b1;
+     |  else if(wValid && awValid)      wReadyReg <= 1'b1;
+     |  else if(wValid && wReady)       wReadyReg <= 1'b0;
+     |  else                            wReadyReg <= wReadyReg;
+     |end
+     |always@(posedge aclk) begin
+     |  if(wValid && wReady && awValid && awReady)  pmem_write(awAddr, wData, wmask);                   
+     |end
+     |
+     |/* B */
+     |always@(posedge aclk) begin
+     |  if(!aresetn)                                    bValidReg <= 1'b0;
+     |  else if(awValid && awReady && wValid && wReady) bValidReg <= 1'b1;
+     |  else if(bValid && bReady)                       bValidReg <= 1'b0;
+     |  else                                            bValidReg  <= bValidReg;
+     |end
+     |always@(posedge aclk) begin
+     |  if(!aresetn)                    bRespReg  <= 2'b0;
+     |  else if(bValid)                 bRespReg  <= 2'b0;
+     |  else                            bRespReg  <= bRespReg;
+     |end
+     |
+     |/* AR */
+     |always@(posedge aclk) begin
+     |  if(!aresetn)                    arReadyReg  <= 1'b1;
+     |  else if(arValid)                arReadyReg  <= 1'b1;
+     |  else if(arValid && arReady)     arReadyReg  <= 1'b0;
+     |  else                            arReadyReg  <= arReadyReg;
+     |end
+     |
+     |/* R */
+     |import "DPI-C" function int unsigned pmem_read(input int unsigned raddr);
+     |always@(posedge aclk) begin
+     |  if(!aresetn)                    rValidReg   <= 1'b0;
+     |  if(arValid && arReady)          rValidReg   <= 1'b1;
+     |  if(rValid && rReady)            rValidReg   <= 1'b0;
+     |  else                            rValidReg   <= rValidReg;
+     |end
+     |always@(posedge aclk) begin
+     |  if(!aresetn)begin
+     |    rDataReg    <= 32'd0;
+     |    rrEspReg    <= 2'd0;
+     |  end
+     |  else if(arValid && arReady && rValid && rReady) begin
+     |    rDataReg    <= pmem_read(arAddr);
+     |    rrEspReg    <= 2'd0;
+     |  end
+     |  else begin
+     |    rDataReg    <= rDataReg;
+     |    rrEspReg    <= rrEspReg;
+     |  end
+     |end
      |
 	   |endmodule
 	""".stripMargin)
