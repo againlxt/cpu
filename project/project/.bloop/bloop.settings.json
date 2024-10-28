@@ -11,5 +11,6 @@
         "2.13.13",
         "2.13.14",
         "2.11.12"
-    ]
+    ],
+    "enableBestEffortMode": false
 }

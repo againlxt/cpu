@@ -364,8 +364,8 @@ class AXILiteSramV extends BlackBox with HasBlackBoxInline {
      |/* AW */
      |always@(posedge aclk) begin
      |  if(!aresetn)                    awReadyReg  <= 1'b1;
-     |  else if(awValid && wValid)      awReadyReg  <= 1'b1;
      |  else if(awValid && awReady)     awReadyReg  <= 1'b0;
+     |  else if(awValid && wValid)      awReadyReg  <= 1'b1; 
      |  else                            awReadyReg  <= awReadyReg;
      |end
      |
@@ -376,8 +376,8 @@ class AXILiteSramV extends BlackBox with HasBlackBoxInline {
      |assign wmask = {4'd0, wStrb};
      |always@(posedge aclk) begin
      |  if(!aresetn)                    wReadyReg <= 1'b1;
-     |  else if(wValid && awValid)      wReadyReg <= 1'b1;
      |  else if(wValid && wReady)       wReadyReg <= 1'b0;
+     |  else if(wValid && awValid)      wReadyReg <= 1'b1;
      |  else                            wReadyReg <= wReadyReg;
      |end
      |always@(posedge aclk) begin
@@ -400,17 +400,17 @@ class AXILiteSramV extends BlackBox with HasBlackBoxInline {
      |/* AR */
      |always@(posedge aclk) begin
      |  if(!aresetn)                    arReadyReg  <= 1'b1;
-     |  else if(arValid)                arReadyReg  <= 1'b1;
      |  else if(arValid && arReady)     arReadyReg  <= 1'b0;
+     |  else if(arValid)                arReadyReg  <= 1'b1;
      |  else                            arReadyReg  <= arReadyReg;
      |end
      |
      |/* R */
-     |import "DPI-C" function int unsigned pmem_read(input int unsigned raddr);
+     |import "DPI-C" function int unsigned pmem_read(input int unsigned raddr, input byte wmask);
      |always@(posedge aclk) begin
      |  if(!aresetn)                    rValidReg   <= 1'b0;
-     |  if(arValid && arReady)          rValidReg   <= 1'b1;
-     |  if(rValid && rReady)            rValidReg   <= 1'b0;
+     |  else if(arValid && arReady)          rValidReg   <= 1'b1;
+     |  else if(rValid && rReady)            rValidReg   <= 1'b0;
      |  else                            rValidReg   <= rValidReg;
      |end
      |always@(posedge aclk) begin
@@ -418,8 +418,8 @@ class AXILiteSramV extends BlackBox with HasBlackBoxInline {
      |    rDataReg    <= 32'd0;
      |    rrEspReg    <= 2'd0;
      |  end
-     |  else if(arValid && arReady && rValid && rReady) begin
-     |    rDataReg    <= pmem_read(arAddr);
+     |  else if(arValid && arReady) begin
+     |    rDataReg    <= pmem_read(arAddr, wmask);
      |    rrEspReg    <= 2'd0;
      |  end
      |  else begin

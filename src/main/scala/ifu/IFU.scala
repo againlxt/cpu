@@ -61,23 +61,19 @@ class IFU extends Module {
 	instSramAXILite.io.axiLiteM.bReady	:= bReadyReg
 	
 	/* HeadShake Signals */
-	when(clockWire.asBool) {
-		when(~resetnWire.asBool) {
-			arValidReg := 1.U
-		} .elsewhen(arAddrReg =/= io.pc) {
-			arValidReg := 1.U
-		} .elsewhen(arReadyWire.asBool) {
-			arValidReg := 0.U
-		}
+	when(~resetnWire.asBool) {
+		arValidReg := 1.U
+	} .elsewhen(arAddrReg =/= io.pc) {
+		arValidReg := 1.U
+	} .elsewhen(arReadyWire.asBool) {
+		arValidReg := 0.U
 	}
-	when(clockWire.asBool) {
-		when(~resetnWire.asBool) {
-			rReadyReg := 1.U
-		} .elsewhen(rValidWire.asBool && rReadyReg.asBool) {
-			rReadyReg := 0.U
-		} .elsewhen(rValidWire.asBool) {
-			rReadyReg := 1.U
-		}
+	when(~resetnWire.asBool) {
+		rReadyReg := 1.U
+	} .elsewhen(rValidWire.asBool && rReadyReg.asBool) {
+		rReadyReg := 0.U
+	} .elsewhen(rValidWire.asBool) {
+		rReadyReg := 1.U
 	}
 
 	io.inst.valid		:= rValidWire.asBool && rReadyReg.asBool
