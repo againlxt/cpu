@@ -17,6 +17,8 @@ class WBU extends Module {
         val wbu2BaseReg = new WBU2BaseReg
         val wbu2PC      = Decoupled(new WBU2PC)
 	})
+	val clockWire 		= this.clock.asBool
+	val resetnWire		= ~this.reset.asBool
 
     val pcReg 			= RegInit(BigInt("80000000", 16).U(32.W))
 	val memDataReg		= RegInit(0.U(32.W))
@@ -86,6 +88,20 @@ class WBU extends Module {
         csrEnReg 		:= io.exu2WBU.bits.csrEn
         csrWrReg 		:= io.exu2WBU.bits.csrWr
     }
+	val wMaskWire 	= MuxCase (1.U(4.W), Seq(
+		(memOPWire === "b000".U).asBool -> "b0001".U,
+		(memOPWire === "b001".U).asBool -> "b0011".U,
+		(memOPWire === "b010".U).asBool -> "b1111".U,
+		(memOPWire === "b101".U).asBool -> "b0011".U,
+		(memOPWire === "b100".U).asBool -> "b0001".U
+	))
+	val sOrUWire 	= MuxCase (0.U(1.W), Seq(
+		(memOPWire === "b000".U).asBool -> 1.U(1.W),
+		(memOPWire === "b001".U).asBool -> 1.U(1.W),
+		(memOPWire === "b010".U).asBool -> 1.U(1.W),
+		(memOPWire === "b101".U).asBool -> 0.U(1.W),
+		(memOPWire === "b100".U).asBool -> 0.U(1.W)
+	))
 
 	// Branch Cond
 	val branchCond 		= Module(new BranchCond)
@@ -97,26 +113,95 @@ class WBU extends Module {
 	val pcASrcWire 		= branchCond.io.pcASrc
 	val pcBSrcWire 		= branchCond.io.pcBSrc
 
-	// Data Memory
-	val dataMem 		= Module(new DataMem)
-	// Input
-	dataMem.io.addr 		:= aluDataWire
-	dataMem.io.memOP 		:= memOPWire
-	dataMem.io.dataIn 		:= memDataWire
-	dataMem.io.wrEn 		:= memWRWire
-	dataMem.io.valid 		:= memValidWire
-	// Output
-	val dataOutWire 	= dataMem.io.dataOut
-	val rValidWire 		= dataMem.io.rValid
-	val wValidWire 		= dataMem.io.wValid
+	/* Data Memory */
+	val dataSramAXILite					= Module(new AXILiteSram)
+	/* Clock And Reset */
+	dataSramAXILite.io.axiLiteM.aclk	:= this.clock.asBool
+	dataSramAXILite.io.axiLiteM.aresetn	:= resetnWire
+	/* AR */
+	dataSramAXILite.io.axiLiteM.arAddr	:= aluDataWire
+	val arValidReg 						= RegInit(0.U(1.W))
+	dataSramAXILite.io.axiLiteM.arValid	:= arValidReg
+	val arReadyWire 					= dataSramAXILite.io.axiLiteM.arReady
+	/* R */
+	val rDataWire 						= dataSramAXILite.io.axiLiteM.rData
+	val signDataWire					= MuxCase(rDataWire.asSInt, Seq(
+		(wMaskWire === "b0001".U).asBool 	-> Cat(Fill(24, rDataWire(7)), rDataWire(7, 0)).asSInt,
+		(wMaskWire === "b0011".U).asBool 	-> Cat(Fill(16, rDataWire(15)), rDataWire(15, 0)).asSInt,
+		(wMaskWire === "b1111".U).asBool 	-> rDataWire.asSInt
+	))
+	val memRdDataWire 					= Mux(sOrUWire.asBool, signDataWire.asUInt, rDataWire)
+	val rrEspWire 						= dataSramAXILite.io.axiLiteM.rrEsp
+	val rValidWire  					= dataSramAXILite.io.axiLiteM.rValid
+	val rReadyReg 						= RegInit(1.U(1.W))
+	dataSramAXILite.io.axiLiteM.rReady	:= rReadyReg
+	/* AW */
+	dataSramAXILite.io.axiLiteM.awAddr	:= aluDataWire
+	val awValidReg 						= RegInit(0.U(1.W))
+	dataSramAXILite.io.axiLiteM.awValid	:= awValidReg
+	val awReadyWire						= dataSramAXILite.io.axiLiteM.awReady
+	/* W */
+	dataSramAXILite.io.axiLiteM.wData	:= memDataWire
+	dataSramAXILite.io.axiLiteM.wStrb	:= wMaskWire
+	val wValidReg 						= RegInit(0.U(1.W))
+	dataSramAXILite.io.axiLiteM.wValid	:= wValidReg
+	val wReadyWire 						= dataSramAXILite.io.axiLiteM.wReady
+	/* B */
+	val bRespWire						= dataSramAXILite.io.axiLiteM.bResp
+	val bValidWire						= dataSramAXILite.io.axiLiteM.bValid
+	val bReadyReg						= RegInit(1.U(1.W))
+	dataSramAXILite.io.axiLiteM.bReady	:= bReadyReg
+	/* Data Memory Headshake */
+	/* AR */
+	when(~resetnWire.asBool) {
+		arValidReg	:= 0.U
+	} .elsewhen(io.exu2WBU.ready && io.exu2WBU.valid && io.exu2WBU.bits.memValid.asBool) {
+		arValidReg	:= 1.U
+	} .elsewhen(arValidReg.asBool && arReadyWire.asBool) {
+		arValidReg	:= 0.U
+	}
+	/* R */
+	when(~resetnWire.asBool) {
+		rReadyReg	:= 1.U(1.W)
+	} .elsewhen(rValidWire.asBool && rReadyReg.asBool && io.exu2WBU.bits.memValid.asBool) {
+		rReadyReg	:= 0.U(1.W)
+	} .elsewhen(rValidWire.asBool) {
+		rReadyReg	:= 1.U(1.W)
+	}
+	/* AW */
+	when(~resetnWire.asBool) {
+		awValidReg	:= 0.U
+	} .elsewhen(io.exu2WBU.ready && io.exu2WBU.valid && io.exu2WBU.bits.memValid.asBool && io.exu2WBU.bits.memWR.asBool) {
+		awValidReg	:= 1.U
+	} .elsewhen(awReadyWire.asBool && awValidReg.asBool) {
+		awValidReg	:= 0.U
+	}
+	/* W */
+	when(~resetnWire.asBool) {
+		wValidReg	:= 0.U
+	} .elsewhen(io.exu2WBU.ready && io.exu2WBU.valid && io.exu2WBU.bits.memValid.asBool && io.exu2WBU.bits.memWR.asBool) {
+		wValidReg	:= 1.U
+	} .elsewhen(wReadyWire.asBool && wValidReg.asBool) {
+		wValidReg	:= 0.U
+	}
+	/* B */
+	when(~resetnWire.asBool) {
+		bReadyReg	:= 1.U
+	} .elsewhen(bValidWire.asBool && bReadyReg.asBool) {
+		bReadyReg	:= 0.U
+	} .elsewhen(bValidWire.asBool) {
+		bReadyReg	:= 1.U
+	}
+	/* Data Memory End */
 
 	// State Machine
 	val s_idle :: s_wait_exu_valid :: s_sram_op :: s_wait_pcReg_ready :: Nil = Enum(4)
 	val state = RegInit(s_idle)
+	val memEnd = (wReadyWire.asBool && wValidReg.asBool) || (rReadyReg.asBool && rValidWire.asBool)
 	state := MuxLookup(state, s_idle)(List(
 		s_idle				-> Mux(reset.asBool, s_idle, s_wait_exu_valid),
-		s_wait_exu_valid	-> Mux(reset.asBool, s_idle, Mux(io.exu2WBU.valid, Mux(memValidWire.asBool, s_sram_op, s_wait_pcReg_ready), s_wait_exu_valid)),
-		s_sram_op 			-> Mux(reset.asBool, s_idle, Mux(rValidWire.asBool || wValidWire.asBool, s_wait_pcReg_ready, s_sram_op)),
+		s_wait_exu_valid	-> Mux(reset.asBool, s_idle, Mux(io.exu2WBU.valid, Mux(io.exu2WBU.bits.memValid.asBool, s_sram_op, s_wait_pcReg_ready), s_wait_exu_valid)),
+		s_sram_op 			-> Mux(reset.asBool, s_idle, Mux(memEnd, s_wait_pcReg_ready, s_sram_op)),
 		s_wait_pcReg_ready	-> Mux(reset.asBool, s_idle, Mux(io.wbu2PC.ready, s_idle, s_wait_pcReg_ready))
 	))
 	// handshake signals control
@@ -144,7 +229,7 @@ class WBU extends Module {
 
     io.wbu2BaseReg.data := MuxCase(	0.U(32.W), Seq(	
         (toRegWire === "b00".U).asBool -> aluDataWire,
-		(toRegWire === "b01".U).asBool -> dataOutWire,
+		(toRegWire === "b01".U).asBool -> memRdDataWire,
 		(toRegWire === "b10".U).asBool -> csrDataWire
     ))
     io.wbu2BaseReg.rdIndex  := instWire(11,7)
@@ -160,215 +245,6 @@ class WBU extends Module {
 		(pcBSrcWire === "b10".U).asBool -> csrWDataWire
     ))
 }
-
-class DataMem extends Module {
-	val io = IO(new Bundle{
-		// Input
-		val addr 	= Input(UInt(32.W))
-		val memOP 	= Input(UInt(3.W))
-		val dataIn 	= Input(UInt(32.W))
-		val wrEn 	= Input(Bool())
-		val valid  	= Input(Bool())
-
-		val dataOut = Output(UInt(32.W))
-		val rValid 	= Output(UInt(1.W))
-		val wValid 	= Output(UInt(1.W))
-	})
-	val addrWire 	= io.addr
-	val memOPWire 	= io.memOP
-	val dataInWire 	= io.dataIn
-	val wrEnWire 	= io.wrEn
-	val validWire 	= io.valid
-
-	val wMaskWire 	= MuxCase (1.U(8.W), Seq(
-		(memOPWire === "b000".U).asBool -> "b00000001".U,
-		(memOPWire === "b001".U).asBool -> "b00000011".U,
-		(memOPWire === "b010".U).asBool -> "b00001111".U,
-		(memOPWire === "b101".U).asBool -> "b00000011".U,
-		(memOPWire === "b100".U).asBool -> "b00000001".U
-	))
-	val sOrUWire 	= MuxCase (0.U(1.W), Seq(
-		(memOPWire === "b000".U).asBool -> 1.U(1.W),
-		(memOPWire === "b001".U).asBool -> 1.U(1.W),
-		(memOPWire === "b010".U).asBool -> 1.U(1.W),
-		(memOPWire === "b101".U).asBool -> 0.U(1.W),
-		(memOPWire === "b100".U).asBool -> 0.U(1.W)
-	))
-
-	val dataSRAM 		= Module(new DataSRAM)
-	dataSRAM.io.wbuSRAM.clk 	:= this.clock.asUInt
-	dataSRAM.io.wbuSRAM.raddr 	:= addrWire
-	dataSRAM.io.wbuSRAM.ren 	:= validWire
-	val sramData 				= dataSRAM.io.wbuSRAM.rdata
-	val rValidWire				= dataSRAM.io.wbuSRAM.rValid
-	val wValidWire 				= dataSRAM.io.wbuSRAM.wValid
-	dataSRAM.io.wbuSRAM.waddr 	:= addrWire
-	dataSRAM.io.wbuSRAM.wdata 	:= dataInWire
-	dataSRAM.io.wbuSRAM.wen 	:= validWire && wrEnWire
-	dataSRAM.io.wbuSRAM.wmask 	:= wMaskWire(3,0)
-	val signdataWire 			= Wire(SInt(32.W))
-	signdataWire := MuxCase(sramData.asSInt, Seq(
-		(wMaskWire === "b0001".U).asBool 	-> Cat(Fill(24, sramData(7)), sramData(7, 0)).asSInt,
-		(wMaskWire === "b0011".U).asBool 	-> Cat(Fill(16, sramData(15)), sramData(15, 0)).asSInt,
-		(wMaskWire === "b1111".U).asBool 	-> sramData.asSInt
-	))
-
-	io.dataOut 			:= Mux(sOrUWire.asBool, signdataWire.asUInt, sramData)
-	io.rValid 			:= rValidWire
-	io.wValid 			:= wValidWire
-}
-
-class DataSRAM extends Module {
-	val io = IO(new Bundle {
-		val wbuSRAM = Flipped(new WBUSRAM)
-	})
-
-	val dataSRAMV = Module(new DataSRAMV)
-	dataSRAMV.io.clk 	:= io.wbuSRAM.clk
-	dataSRAMV.io.raddr 	:= io.wbuSRAM.raddr
-	dataSRAMV.io.ren 	:= io.wbuSRAM.ren
-	io.wbuSRAM.rdata 	:= dataSRAMV.io.rdata
-	io.wbuSRAM.rValid 	:= dataSRAMV.io.rValid
-	dataSRAMV.io.waddr 	:= io.wbuSRAM.waddr
-	dataSRAMV.io.wdata 	:= io.wbuSRAM.wdata
-	dataSRAMV.io.wen 	:= io.wbuSRAM.wen
-	dataSRAMV.io.wmask 	:= io.wbuSRAM.wmask
-	io.wbuSRAM.wValid 	:= dataSRAMV.io.wValid
-}
-
-class DataSRAMV extends BlackBox with HasBlackBoxInline {
-	val io = IO(new Bundle {
-		val clk 	= Input(UInt(1.W))
-		val raddr	= Input(UInt(32.W))
-		val ren		= Input(UInt(1.W))
-		val rdata	= Output(UInt(32.W))
-		val rValid 	= Output(UInt(1.W))
-		val waddr	= Input(UInt(32.W))
-		val wdata 	= Input(UInt(32.W))
-		val wen 	= Input(UInt(1.W))
-		val wmask 	= Input(UInt(4.W))
-		val wValid 	= Output(UInt(1.W))
-	})
-
-	setInline("DataSRAMV.sv",
-	"""module DataSRAMV(
-	   |	input 		 clk,
-	   |	input [31:0] raddr,
-	   |	input 		 ren,
-	   |	output[31:0] rdata,
-	   |	output 		 rValid,
-	   |	input [31:0] waddr,
-	   |	input [31:0] wdata,
-	   |	input 		 wen,
-	   |	input [3:0]  wmask,
-	   |	output 		 wValid
-	   |);
-	   |
-	   |import "DPI-C" function int unsigned pmem_read(input int unsigned raddr, input byte rmask);
-	   |import "DPI-C" function void pmem_write(
-	   |	input int unsigned waddr, input int unsigned wdata, input byte wmask);
-	   |
-	   |reg[31:0] rdataReg;
-	   |reg 	  rValidReg;
-	   |reg 	  wValidReg;
-	   |wire[7:0] wmaskWire;
-	   |assign wmaskWire = {4'b0, wmask};
-	   |// Memory Read
-	   |assign rdata = rdataReg;
-	   |assign rValid= rValidReg;
-	   |assign wValid= wValidReg;
-	   |always@(posedge clk) begin
-	   |	if(ren) begin
-	   |		rdataReg <= pmem_read(raddr, wmaskWire);
-	   |		rValidReg<= 1'b1;
-	   |	end
-	   |	else begin
-	   | 		rdataReg <= rdataReg;
-	   |		rValidReg<= 1'b0;
-	   |	end
-	   |end
-	   |
-	   |// Memory Write
-	   |always@(posedge clk) begin
-	   |	if(wen) begin
-	   |		pmem_write(waddr, wdata, wmaskWire);
-	   |		wValidReg	<= 1'b1;
-	   |	end
-	   |	else begin
-	   |		wValidReg	<= 1'b0;
-	   |	end
-	   |end
-	   |
-	   |endmodule
-	""".stripMargin)
-}
-
-/*
-class DataMemV extends BlackBox with HasBlackBoxInline {
-	val io = IO(new Bundle{
-		// Input
-		val clk 	= Input(UInt(1.W))
-		val addr 	= Input(UInt(32.W))
-		val wmask 	= Input(UInt(8.W))
-		val sOrU 	= Input(Bool())
-		val dataIn 	= Input(UInt(32.W))
-		val wrEn 	= Input(Bool())
-		val valid  	= Input(Bool())
-
-		val dataOut = Output(UInt(32.W))
-	})
-
-	setInline("DataMemV.sv",
-	"""module DataMemV(
-	   |	input 		clk,
-	   |	input [31:0] addr,
-	   |	input [7:0]  wmask,
-	   |	input 		 sOrU,
-	   |	input [31:0] dataIn,
-	   |	input 		 wrEn,
-	   |	input 		 valid,
-	   |
-	   |	output [31:0] dataOut
-	   |);
-	   |reg[31:0] rdata;
-	   |reg[31:0] addr_reg;
-	   |always@(posedge clk) begin
-	   |	addr_reg <= addr;
-	   |end
-	   |import "DPI-C" function int unsigned pmem_read(input int unsigned raddr);
-	   |import "DPI-C" function void pmem_write(
-	   |	input int unsigned waddr, input int unsigned wdata, input byte wmask);	
-	   |always @(posedge clk) begin
-	   |	if(wrEn & valid) begin
-	   |		pmem_write(addr, dataIn, wmask);
-	   |	end
-	   |end
-	   |assign dataOut = rdata;
-	   |always @(*) begin
-	   |	if(valid) begin
-	   |		case(wmask)
-	   |			8'b00000001: begin
-	   |				rdata = pmem_read(addr) & 32'h000000FF;
-	   |				if(sOrU == 1) 	rdata[31:8] = {24{rdata[7]}};
-	   |				else 			rdata = rdata;
-	   |			end	
-	   |			8'b00000011: begin
-	   |				rdata = pmem_read(addr) & 32'h0000FFFF;
-	   |				if(sOrU == 1) 	rdata[31:16] = {16{rdata[15]}};
-	   |				else 			rdata = rdata;
-	   |			end	
-	   |			8'b00001111:	rdata = pmem_read(addr) & 32'hFFFFFFFF;
-	   |			default: 		rdata = 32'd0;
-	   |		endcase
-	   |	end
-	   |	else begin
-	   |		rdata = 32'd0;
-	   |	end
-	   |end
-	   |endmodule
-	""".stripMargin)
-}
-*/
 
 class BranchCond extends Module {
 	val io = IO(new Bundle {
