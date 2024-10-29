@@ -2,6 +2,7 @@ package memory
 import chisel3._
 import chisel3.util._
 import _root_.interface.AXILite
+import basemode.Delay
 
 class ReadWriteSmem(dataWidth: Int, addrWidth: Int, memorySize: Int) extends Module {
   val io = IO(new Bundle {
@@ -244,6 +245,7 @@ class AXILiteSram extends Module {
   })
 
   val axiLiteSramV  = Module(new AXILiteSramV)
+  val delayValid    = Module(new Delay(UInt(1.W), 30))
 
   axiLiteSramV.io.aclk      := io.axiLiteM.aclk
   axiLiteSramV.io.aresetn   := io.axiLiteM.aresetn
@@ -256,7 +258,8 @@ class AXILiteSram extends Module {
   /* R */
   io.axiLiteM.rData        := axiLiteSramV.io.rData
   io.axiLiteM.rrEsp        := axiLiteSramV.io.rrEsp
-  io.axiLiteM.rValid       := axiLiteSramV.io.rValid
+  delayValid.io.in         := axiLiteSramV.io.rValid
+  io.axiLiteM.rValid       := (delayValid.io.out).asBool
   axiLiteSramV.io.rReady   := io.axiLiteM.rReady
 
   /* AW */
@@ -409,8 +412,8 @@ class AXILiteSramV extends BlackBox with HasBlackBoxInline {
      |import "DPI-C" function int unsigned pmem_read(input int unsigned raddr, input byte wmask);
      |always@(posedge aclk) begin
      |  if(!aresetn)                    rValidReg   <= 1'b0;
-     |  else if(arValid && arReady)          rValidReg   <= 1'b1;
-     |  else if(rValid && rReady)            rValidReg   <= 1'b0;
+     |  else if(arValid && arReady)     rValidReg   <= 1'b1;
+     |  else if(rValid && rReady)       rValidReg   <= 1'b0;
      |  else                            rValidReg   <= rValidReg;
      |end
      |always@(posedge aclk) begin

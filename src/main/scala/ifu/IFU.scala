@@ -5,6 +5,8 @@ import chisel3.util._
 import interface._
 import _root_.interface._
 import memory._
+import javax.management.modelmbean.ModelMBean
+import basemode.Delay
 
 class IFU extends Module {
     val io = IO(new Bundle {
