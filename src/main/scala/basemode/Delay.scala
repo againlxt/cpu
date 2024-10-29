@@ -28,3 +28,39 @@ class Delay[T <: Data](gen: T, delayCycles: Int) extends Module {
   }
 }
 
+class LFSR extends Module {
+    val io = IO(new Bundle {
+        val clk     = Input(UInt(1.W))
+        val rstn    = Input(UInt(1.W))
+        val out     = Output(UInt(16.W))
+    })
+    val lfsrV       = Module(new LFSRV)
+    lfsrV.io.clk    := io.clk
+    lfsrV.io.rstn   := io.rstn
+    io.out          := lfsrV.io.out
+}
+
+class LFSRV extends BlackBox with  HasBlackBoxInline {
+    val io = IO(new Bundle {
+        val clk     = Input(UInt(1.W))
+        val rstn    = Input(UInt(1.W))
+        val out     = Output(UInt(16.W))
+    })
+
+    setInline("LFSRV.sv",
+	"""module LFSRV(
+	|   input           clk,
+    |   input           rstn,
+    |   output [15:0]    out
+	|);
+    |
+    |reg[15:0]   outputReg;
+    |assign out = outputReg;
+    |
+    |always@(posedge clk) begin
+    |   if(~rstn) outputReg <= 16'hffff;
+    |   else      outputReg <= {outputReg[14:0], (outputReg[10]^outputReg[1])};
+    |end
+	|endmodule
+	""".stripMargin)
+}

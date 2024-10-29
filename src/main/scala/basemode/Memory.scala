@@ -3,6 +3,7 @@ import chisel3._
 import chisel3.util._
 import _root_.interface.AXILite
 import basemode.Delay
+import basemode.LFSR
 
 class ReadWriteSmem(dataWidth: Int, addrWidth: Int, memorySize: Int) extends Module {
   val io = IO(new Bundle {
@@ -245,7 +246,10 @@ class AXILiteSram extends Module {
   })
 
   val axiLiteSramV  = Module(new AXILiteSramV)
-  val delayValid    = Module(new Delay(UInt(1.W), 30))
+  val lfsr          = Module(new LFSR)
+  lfsr.io.clk       := this.clock.asUInt
+  lfsr.io.rstn      := ~this.reset.asUInt
+  val lfsrDelay     = lfsr.io.out
 
   axiLiteSramV.io.aclk      := io.axiLiteM.aclk
   axiLiteSramV.io.aresetn   := io.axiLiteM.aresetn
@@ -258,8 +262,7 @@ class AXILiteSram extends Module {
   /* R */
   io.axiLiteM.rData        := axiLiteSramV.io.rData
   io.axiLiteM.rrEsp        := axiLiteSramV.io.rrEsp
-  delayValid.io.in         := axiLiteSramV.io.rValid
-  io.axiLiteM.rValid       := (delayValid.io.out).asBool
+  io.axiLiteM.rValid       := axiLiteSramV.io.rValid && lfsrDelay(7).asBool
   axiLiteSramV.io.rReady   := io.axiLiteM.rReady
 
   /* AW */

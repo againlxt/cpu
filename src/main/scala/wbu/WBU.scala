@@ -9,6 +9,7 @@ import _root_.interface.WBU2BaseReg
 import _root_.interface.WBU2PC
 import _root_.interface._
 import dataclass.data
+import basemode.LFSR
 
 class WBU extends Module {
 	val io = IO(new Bundle {
@@ -19,6 +20,10 @@ class WBU extends Module {
 	})
 	val clockWire 		= this.clock.asBool
 	val resetnWire		= ~this.reset.asBool
+	val lfsr          = Module(new LFSR)
+	lfsr.io.clk       := this.clock.asUInt
+	lfsr.io.rstn      := resetnWire
+	val lfsrDelay     = lfsr.io.out
 
     val pcReg 			= RegInit(BigInt("80000000", 16).U(32.W))
 	val memDataReg		= RegInit(0.U(32.W))
@@ -121,7 +126,7 @@ class WBU extends Module {
 	/* AR */
 	dataSramAXILite.io.axiLiteM.arAddr	:= aluDataWire
 	val arValidReg 						= RegInit(0.U(1.W))
-	dataSramAXILite.io.axiLiteM.arValid	:= arValidReg
+	dataSramAXILite.io.axiLiteM.arValid	:= arValidReg & lfsrDelay(7)
 	val arReadyWire 					= dataSramAXILite.io.axiLiteM.arReady
 	/* R */
 	val rDataWire 						= dataSramAXILite.io.axiLiteM.rData
@@ -134,36 +139,36 @@ class WBU extends Module {
 	val rrEspWire 						= dataSramAXILite.io.axiLiteM.rrEsp
 	val rValidWire  					= dataSramAXILite.io.axiLiteM.rValid
 	val rReadyReg 						= RegInit(1.U(1.W))
-	dataSramAXILite.io.axiLiteM.rReady	:= rReadyReg
+	dataSramAXILite.io.axiLiteM.rReady	:= rReadyReg & lfsrDelay(7)
 	/* AW */
 	dataSramAXILite.io.axiLiteM.awAddr	:= aluDataWire
 	val awValidReg 						= RegInit(0.U(1.W))
-	dataSramAXILite.io.axiLiteM.awValid	:= awValidReg
+	dataSramAXILite.io.axiLiteM.awValid	:= awValidReg & lfsrDelay(7)
 	val awReadyWire						= dataSramAXILite.io.axiLiteM.awReady
 	/* W */
 	dataSramAXILite.io.axiLiteM.wData	:= memDataWire
 	dataSramAXILite.io.axiLiteM.wStrb	:= wMaskWire
 	val wValidReg 						= RegInit(0.U(1.W))
-	dataSramAXILite.io.axiLiteM.wValid	:= wValidReg
+	dataSramAXILite.io.axiLiteM.wValid	:= wValidReg & lfsrDelay(7)
 	val wReadyWire 						= dataSramAXILite.io.axiLiteM.wReady
 	/* B */
 	val bRespWire						= dataSramAXILite.io.axiLiteM.bResp
 	val bValidWire						= dataSramAXILite.io.axiLiteM.bValid
 	val bReadyReg						= RegInit(1.U(1.W))
-	dataSramAXILite.io.axiLiteM.bReady	:= bReadyReg
+	dataSramAXILite.io.axiLiteM.bReady	:= bReadyReg & lfsrDelay(7)
 	/* Data Memory Headshake */
 	/* AR */
 	when(~resetnWire.asBool) {
 		arValidReg	:= 0.U
-	} .elsewhen(io.exu2WBU.ready && io.exu2WBU.valid && io.exu2WBU.bits.memValid.asBool) {
+	} .elsewhen(io.exu2WBU.ready && io.exu2WBU.valid && (io.exu2WBU.bits.memValid.asBool && (~io.exu2WBU.bits.memWR.asBool))) {
 		arValidReg	:= 1.U
-	} .elsewhen(arValidReg.asBool && arReadyWire.asBool) {
+	} .elsewhen(dataSramAXILite.io.axiLiteM.arValid.asBool && dataSramAXILite.io.axiLiteM.arReady.asBool) {
 		arValidReg	:= 0.U
 	}
 	/* R */
 	when(~resetnWire.asBool) {
 		rReadyReg	:= 1.U(1.W)
-	} .elsewhen(rValidWire.asBool && rReadyReg.asBool && io.exu2WBU.bits.memValid.asBool) {
+	} .elsewhen(rValidWire.asBool && dataSramAXILite.io.axiLiteM.rReady.asBool && io.exu2WBU.bits.memValid.asBool) {
 		rReadyReg	:= 0.U(1.W)
 	} .elsewhen(rValidWire.asBool) {
 		rReadyReg	:= 1.U(1.W)
@@ -173,7 +178,7 @@ class WBU extends Module {
 		awValidReg	:= 0.U
 	} .elsewhen(io.exu2WBU.ready && io.exu2WBU.valid && io.exu2WBU.bits.memValid.asBool && io.exu2WBU.bits.memWR.asBool) {
 		awValidReg	:= 1.U
-	} .elsewhen(awReadyWire.asBool && awValidReg.asBool) {
+	} .elsewhen(awReadyWire.asBool && dataSramAXILite.io.axiLiteM.awValid.asBool) {
 		awValidReg	:= 0.U
 	}
 	/* W */
@@ -181,13 +186,13 @@ class WBU extends Module {
 		wValidReg	:= 0.U
 	} .elsewhen(io.exu2WBU.ready && io.exu2WBU.valid && io.exu2WBU.bits.memValid.asBool && io.exu2WBU.bits.memWR.asBool) {
 		wValidReg	:= 1.U
-	} .elsewhen(wReadyWire.asBool && wValidReg.asBool) {
+	} .elsewhen(wReadyWire.asBool && dataSramAXILite.io.axiLiteM.wValid.asBool) {
 		wValidReg	:= 0.U
 	}
 	/* B */
 	when(~resetnWire.asBool) {
 		bReadyReg	:= 1.U
-	} .elsewhen(bValidWire.asBool && bReadyReg.asBool) {
+	} .elsewhen(bValidWire.asBool && dataSramAXILite.io.axiLiteM.bReady.asBool) {
 		bReadyReg	:= 0.U
 	} .elsewhen(bValidWire.asBool) {
 		bReadyReg	:= 1.U
