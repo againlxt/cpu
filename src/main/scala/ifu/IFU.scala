@@ -11,7 +11,6 @@ import basemode.Delay
 class IFU extends Module {
     val io = IO(new Bundle {
 		val pc  	 	= Input(UInt(32.W))
-        //val memData  = Input(UInt(32.W))
         val inst     	= Decoupled(new IFU2IDU)
 		val ifu2Mem		= new AXILite 
     })
