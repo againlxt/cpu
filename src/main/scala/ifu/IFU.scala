@@ -10,11 +10,11 @@ import basemode.Delay
 
 class IFU extends Module {
     val io = IO(new Bundle {
-		val pc  	 = Input(UInt(32.W))
+		val pc  	 	= Input(UInt(32.W))
         //val memData  = Input(UInt(32.W))
-        val inst     = Decoupled(new IFU2IDU)
+        val inst     	= Decoupled(new IFU2IDU)
+		val ifu2Mem		= new AXILite 
     })
-	val instSramAXILite	= Module(new AXILiteInstSram)
 	/* Clock and Reset */
 	val clockWire		= this.clock.asUInt
 	val resetnWire		= ~this.reset.asUInt
@@ -37,30 +37,30 @@ class IFU extends Module {
 
 	/* Signal Connection */
 	/* Clock And Reset */
-	instSramAXILite.io.axiLiteM.aclk	:= clockWire
-	instSramAXILite.io.axiLiteM.aresetn	:= resetnWire
+	io.ifu2Mem.aclk	:= clockWire
+	io.ifu2Mem.aresetn	:= resetnWire
 	/* AR */
-	instSramAXILite.io.axiLiteM.arAddr	:= arAddrReg
-	instSramAXILite.io.axiLiteM.arValid	:= arValidReg
-	val arReadyWire						= instSramAXILite.io.axiLiteM.arReady
+	io.ifu2Mem.arAddr	:= arAddrReg
+	io.ifu2Mem.arValid	:= arValidReg
+	val arReadyWire						= io.ifu2Mem.arReady
 	/* R */
-	val rDataWire 						= instSramAXILite.io.axiLiteM.rData
-	val rrEspWire						= instSramAXILite.io.axiLiteM.rrEsp
-	val rValidWire						= instSramAXILite.io.axiLiteM.rValid
-	instSramAXILite.io.axiLiteM.rReady	:= rReadyReg
+	val rDataWire 						= io.ifu2Mem.rData
+	val rrEspWire						= io.ifu2Mem.rrEsp
+	val rValidWire						= io.ifu2Mem.rValid
+	io.ifu2Mem.rReady	:= rReadyReg
 	/* AW */
-	instSramAXILite.io.axiLiteM.awAddr	:= awAddrReg
-	instSramAXILite.io.axiLiteM.awValid	:= awValidReg
-	val awReadyWire						= instSramAXILite.io.axiLiteM.awReady
+	io.ifu2Mem.awAddr	:= awAddrReg
+	io.ifu2Mem.awValid	:= awValidReg
+	val awReadyWire						= io.ifu2Mem.awReady
 	/* W */
-	instSramAXILite.io.axiLiteM.wData	:= wDataReg
-	instSramAXILite.io.axiLiteM.wStrb	:= wStrbReg
-	instSramAXILite.io.axiLiteM.wValid	:= wValidReg
-	val wReadyWire						= instSramAXILite.io.axiLiteM.wReady
+	io.ifu2Mem.wData	:= wDataReg
+	io.ifu2Mem.wStrb	:= wStrbReg
+	io.ifu2Mem.wValid	:= wValidReg
+	val wReadyWire						= io.ifu2Mem.wReady
 	/* B */
-	val bRespWire						= instSramAXILite.io.axiLiteM.bResp
-	val bValidWire						= instSramAXILite.io.axiLiteM.bValid
-	instSramAXILite.io.axiLiteM.bReady	:= bReadyReg
+	val bRespWire						= io.ifu2Mem.bResp
+	val bValidWire						= io.ifu2Mem.bValid
+	io.ifu2Mem.bReady	:= bReadyReg
 	
 	/* HeadShake Signals */
 	when(~resetnWire.asBool) {

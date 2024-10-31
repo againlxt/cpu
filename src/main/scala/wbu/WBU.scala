@@ -13,9 +13,10 @@ import basemode.LFSR
 
 class WBU extends Module {
 	val io = IO(new Bundle {
-		val exu2WBU 	= Flipped(Decoupled(new EXU2WBU))
+		val exu2WBU 	= Flipped(Decoupled(new EXU2WBU))	
         val wbu2CSR     = new WBU2CSR
         val wbu2BaseReg = new WBU2BaseReg
+		val wbu2Mem		= new AXILite 
         val wbu2PC      = Decoupled(new WBU2PC)
 	})
 	val clockWire 		= this.clock.asBool
@@ -118,57 +119,55 @@ class WBU extends Module {
 	val pcASrcWire 		= branchCond.io.pcASrc
 	val pcBSrcWire 		= branchCond.io.pcBSrc
 
-	/* Data Memory */
-	val dataSramAXILite					= Module(new AXILiteSram)
 	/* Clock And Reset */
-	dataSramAXILite.io.axiLiteM.aclk	:= this.clock.asBool
-	dataSramAXILite.io.axiLiteM.aresetn	:= resetnWire
+	io.wbu2Mem.aclk	:= this.clock.asBool
+	io.wbu2Mem.aresetn	:= resetnWire
 	/* AR */
-	dataSramAXILite.io.axiLiteM.arAddr	:= aluDataWire
+	io.wbu2Mem.arAddr	:= aluDataWire
 	val arValidReg 						= RegInit(0.U(1.W))
-	dataSramAXILite.io.axiLiteM.arValid	:= arValidReg & lfsrDelay(7)
-	val arReadyWire 					= dataSramAXILite.io.axiLiteM.arReady
+	io.wbu2Mem.arValid	:= arValidReg & lfsrDelay(7)
+	val arReadyWire 					= io.wbu2Mem.arReady
 	/* R */
-	val rDataWire 						= dataSramAXILite.io.axiLiteM.rData
+	val rDataWire 						= io.wbu2Mem.rData
 	val signDataWire					= MuxCase(rDataWire.asSInt, Seq(
 		(wMaskWire === "b0001".U).asBool 	-> Cat(Fill(24, rDataWire(7)), rDataWire(7, 0)).asSInt,
 		(wMaskWire === "b0011".U).asBool 	-> Cat(Fill(16, rDataWire(15)), rDataWire(15, 0)).asSInt,
 		(wMaskWire === "b1111".U).asBool 	-> rDataWire.asSInt
 	))
 	val memRdDataWire 					= Mux(sOrUWire.asBool, signDataWire.asUInt, rDataWire)
-	val rrEspWire 						= dataSramAXILite.io.axiLiteM.rrEsp
-	val rValidWire  					= dataSramAXILite.io.axiLiteM.rValid
+	val rrEspWire 						= io.wbu2Mem.rrEsp
+	val rValidWire  					= io.wbu2Mem.rValid
 	val rReadyReg 						= RegInit(1.U(1.W))
-	dataSramAXILite.io.axiLiteM.rReady	:= rReadyReg & lfsrDelay(7)
+	io.wbu2Mem.rReady	:= rReadyReg & lfsrDelay(7)
 	/* AW */
-	dataSramAXILite.io.axiLiteM.awAddr	:= aluDataWire
+	io.wbu2Mem.awAddr	:= aluDataWire
 	val awValidReg 						= RegInit(0.U(1.W))
-	dataSramAXILite.io.axiLiteM.awValid	:= awValidReg & lfsrDelay(7)
-	val awReadyWire						= dataSramAXILite.io.axiLiteM.awReady
+	io.wbu2Mem.awValid	:= awValidReg & lfsrDelay(7)
+	val awReadyWire						= io.wbu2Mem.awReady
 	/* W */
-	dataSramAXILite.io.axiLiteM.wData	:= memDataWire
-	dataSramAXILite.io.axiLiteM.wStrb	:= wMaskWire
+	io.wbu2Mem.wData	:= memDataWire
+	io.wbu2Mem.wStrb	:= wMaskWire
 	val wValidReg 						= RegInit(0.U(1.W))
-	dataSramAXILite.io.axiLiteM.wValid	:= wValidReg & lfsrDelay(7)
-	val wReadyWire 						= dataSramAXILite.io.axiLiteM.wReady
+	io.wbu2Mem.wValid	:= wValidReg & lfsrDelay(7)
+	val wReadyWire 						= io.wbu2Mem.wReady
 	/* B */
-	val bRespWire						= dataSramAXILite.io.axiLiteM.bResp
-	val bValidWire						= dataSramAXILite.io.axiLiteM.bValid
+	val bRespWire						= io.wbu2Mem.bResp
+	val bValidWire						= io.wbu2Mem.bValid
 	val bReadyReg						= RegInit(1.U(1.W))
-	dataSramAXILite.io.axiLiteM.bReady	:= bReadyReg & lfsrDelay(7)
+	io.wbu2Mem.bReady	:= bReadyReg & lfsrDelay(7)
 	/* Data Memory Headshake */
 	/* AR */
 	when(~resetnWire.asBool) {
 		arValidReg	:= 0.U
 	} .elsewhen(io.exu2WBU.ready && io.exu2WBU.valid && (io.exu2WBU.bits.memValid.asBool && (~io.exu2WBU.bits.memWR.asBool))) {
 		arValidReg	:= 1.U
-	} .elsewhen(dataSramAXILite.io.axiLiteM.arValid.asBool && dataSramAXILite.io.axiLiteM.arReady.asBool) {
+	} .elsewhen(io.wbu2Mem.arValid.asBool && io.wbu2Mem.arReady.asBool) {
 		arValidReg	:= 0.U
 	}
 	/* R */
 	when(~resetnWire.asBool) {
 		rReadyReg	:= 1.U(1.W)
-	} .elsewhen(rValidWire.asBool && dataSramAXILite.io.axiLiteM.rReady.asBool && io.exu2WBU.bits.memValid.asBool) {
+	} .elsewhen(rValidWire.asBool && io.wbu2Mem.rReady.asBool && io.exu2WBU.bits.memValid.asBool) {
 		rReadyReg	:= 0.U(1.W)
 	} .elsewhen(rValidWire.asBool) {
 		rReadyReg	:= 1.U(1.W)
@@ -178,7 +177,7 @@ class WBU extends Module {
 		awValidReg	:= 0.U
 	} .elsewhen(io.exu2WBU.ready && io.exu2WBU.valid && io.exu2WBU.bits.memValid.asBool && io.exu2WBU.bits.memWR.asBool) {
 		awValidReg	:= 1.U
-	} .elsewhen(awReadyWire.asBool && dataSramAXILite.io.axiLiteM.awValid.asBool) {
+	} .elsewhen(awReadyWire.asBool && io.wbu2Mem.awValid.asBool) {
 		awValidReg	:= 0.U
 	}
 	/* W */
@@ -186,13 +185,13 @@ class WBU extends Module {
 		wValidReg	:= 0.U
 	} .elsewhen(io.exu2WBU.ready && io.exu2WBU.valid && io.exu2WBU.bits.memValid.asBool && io.exu2WBU.bits.memWR.asBool) {
 		wValidReg	:= 1.U
-	} .elsewhen(wReadyWire.asBool && dataSramAXILite.io.axiLiteM.wValid.asBool) {
+	} .elsewhen(wReadyWire.asBool && io.wbu2Mem.wValid.asBool) {
 		wValidReg	:= 0.U
 	}
 	/* B */
 	when(~resetnWire.asBool) {
 		bReadyReg	:= 1.U
-	} .elsewhen(bValidWire.asBool && dataSramAXILite.io.axiLiteM.bReady.asBool) {
+	} .elsewhen(bValidWire.asBool && io.wbu2Mem.bReady.asBool) {
 		bReadyReg	:= 0.U
 	} .elsewhen(bValidWire.asBool) {
 		bReadyReg	:= 1.U

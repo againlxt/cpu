@@ -52,7 +52,7 @@ class ReadWriteSmem(dataWidth: Int, addrWidth: Int, memorySize: Int) extends Mod
     }
   } .otherwise {}
 }
-
+/*
 class AXILiteInstSram extends Module {
   val io = IO(new Bundle {
     val axiLiteM = Flipped(new AXILite)
@@ -239,6 +239,96 @@ class AXILiteInstSramV extends BlackBox with HasBlackBoxInline {
 	   |endmodule
 	""".stripMargin)
 }
+*/
+class AXILiteBusArbiter extends Module {
+  val io = IO(new Bundle {
+    val axiLiteMaster0 = Flipped(new AXILite)
+    val axiLiteMaster1 = Flipped(new AXILite)
+    val axiLiteSlave  = new AXILite
+  })
+  io.axiLiteMaster0.arReady := 0.B
+  io.axiLiteMaster0.rData   := 0.U(32.W)
+  io.axiLiteMaster0.rrEsp   := 0.U(2.W)
+  io.axiLiteMaster0.rValid  := 0.B
+  io.axiLiteMaster0.awReady := 0.B
+  io.axiLiteMaster0.wReady  := 0.B
+  io.axiLiteMaster0.bResp   := 0.U(2.W)
+  io.axiLiteMaster0.bValid  := 0.B
+
+  io.axiLiteMaster1.arReady := 0.B
+  io.axiLiteMaster1.rData   := 0.U(32.W)
+  io.axiLiteMaster1.rrEsp   := 0.U(2.W)
+  io.axiLiteMaster1.rValid  := 0.B
+  io.axiLiteMaster1.awReady := 0.B
+  io.axiLiteMaster1.wReady  := 0.B
+  io.axiLiteMaster1.bResp   := 0.U(2.W)
+  io.axiLiteMaster1.bValid  := 0.B
+
+  io.axiLiteSlave.aclk      := this.clock.asUInt
+  io.axiLiteSlave.aresetn   := 1.U(1.W)-(this.reset.asUInt)
+  io.axiLiteSlave.arAddr    := 0.U(32.W)
+  io.axiLiteSlave.arValid   := 0.B
+  io.axiLiteSlave.rReady    := 0.B
+  io.axiLiteSlave.awAddr    := 0.U(32.W)
+  io.axiLiteSlave.awValid   := 0.B
+  io.axiLiteSlave.wData     := 0.U(32.W)
+  io.axiLiteSlave.wStrb     := 0.U(4.W)
+  io.axiLiteSlave.wValid    := 0.B
+  io.axiLiteSlave.bReady    := 0.B
+
+  val arValidWire0  = io.axiLiteMaster0.arValid
+  val arReadyWire0  = io.axiLiteMaster0.arReady
+  val awValidWire0  = io.axiLiteMaster0.awValid
+  val awReadyWire0  = io.axiLiteMaster0.awReady
+  val wValidWire0   = io.axiLiteMaster0.wValid
+  val wReadyWire0   = io.axiLiteMaster0.wReady
+  val rValidWire0   = io.axiLiteMaster0.rValid
+  val rReadyWire0   = io.axiLiteMaster0.rReady
+  val bValidWire0   = io.axiLiteMaster0.bValid
+  val bReadyWire0   = io.axiLiteMaster0.bReady
+
+  val arValidWire1  = io.axiLiteMaster1.arValid
+  val arReadyWire1  = io.axiLiteMaster1.arReady
+  val awValidWire1  = io.axiLiteMaster1.awValid
+  val awReadyWire1  = io.axiLiteMaster1.awReady
+  val wValidWire1   = io.axiLiteMaster1.wValid
+  val wReadyWire1   = io.axiLiteMaster1.wReady
+  val rValidWire1   = io.axiLiteMaster1.rValid
+  val rReadyWire1   = io.axiLiteMaster1.rReady
+  val bValidWire1   = io.axiLiteMaster1.bValid
+  val bReadyWire1   = io.axiLiteMaster1.bReady
+
+  val s_idle :: s_wait :: s_ifu :: s_lsu :: Nil = Enum(4)
+  val state = RegInit(s_idle)
+  val wait2LSUWire  = arValidWire1.asBool || awValidWire1.asBool || wValidWire1.asBool
+  val wait2IFUWire  = arValidWire0.asBool || awValidWire0.asBool || wValidWire0.asBool
+  val ifu2WaitWire  = (rValidWire0.asBool && rReadyWire0.asBool) || (wValidWire0.asBool && wReadyWire0.asBool)
+  val lsu2WaitWire  = (rValidWire1.asBool && rReadyWire1.asBool) || (wValidWire1.asBool && wReadyWire1.asBool)
+  state := MuxLookup(state, s_idle)(List(
+    s_idle  -> Mux(this.reset.asBool, s_idle, s_wait),
+    s_wait  -> Mux(this.reset.asBool, s_idle, Mux(wait2LSUWire, s_lsu, Mux(wait2IFUWire, s_ifu, s_wait))),
+    s_ifu   -> Mux(this.reset.asBool, s_idle, Mux(ifu2WaitWire, s_wait, s_ifu)),
+    s_lsu   -> Mux(this.reset.asBool, s_idle, Mux(lsu2WaitWire, s_wait, s_lsu))
+  ))
+
+  when(state === s_idle) {
+    io.axiLiteSlave.aclk    := this.clock.asUInt
+    io.axiLiteSlave.aresetn := (~(this.reset.asBool)).asUInt
+    io.axiLiteSlave.arAddr  := 0.U(32.W)
+    io.axiLiteSlave.arValid := 0.U(1.W)
+    io.axiLiteSlave.rReady  := 0.U(1.W)
+    io.axiLiteSlave.awAddr  := 0.U(32.W)
+    io.axiLiteSlave.awValid := 0.U(1.W)
+    io.axiLiteSlave.wData   := 0.U(32.W)
+    io.axiLiteSlave.wStrb   := 0.U(4.W)
+    io.axiLiteSlave.wValid  := 0.U(1.W)
+    io.axiLiteSlave.bReady  := 0.U(1.W)
+  } .elsewhen(state === s_ifu || state === s_wait) {
+    io.axiLiteSlave <> io.axiLiteMaster0
+  } .elsewhen(state === s_lsu) {
+    io.axiLiteSlave <> io.axiLiteMaster1
+  }
+}
 
 class AXILiteSram extends Module {
   val io = IO(new Bundle {
@@ -416,7 +506,7 @@ class AXILiteSramV extends BlackBox with HasBlackBoxInline {
      |always@(posedge aclk) begin
      |  if(!aresetn)                    rValidReg   <= 1'b0;
      |  else if(arValid && arReady)     rValidReg   <= 1'b1;
-     |  else if(rValid && rReady)       rValidReg   <= 1'b0;
+     |  else if(rReady)                 rValidReg   <= 1'b0;
      |  else                            rValidReg   <= rValidReg;
      |end
      |always@(posedge aclk) begin

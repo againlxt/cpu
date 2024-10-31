@@ -9,6 +9,7 @@ import exu._
 import alu._
 import common._
 import wbu.WBU
+import memory._
 
 /* 
 import "DPI-C" function void sim_exit();
@@ -50,6 +51,7 @@ class top extends Module {
 	val idu 			= Module(new IDU)
 	val exu 			= Module(new EXU)
 	val wbu 			= Module(new WBU)
+	val axiLiteBusArbiter	= Module(new AXILiteBusArbiter)
 	//val memDataWire 	= io.memData
 
 	// PC Reg
@@ -64,7 +66,8 @@ class top extends Module {
 	ifu.io.pc 		:= pcWire
 	//ifu.io.memData 	:= memDataWire
 	// Output
-	ifu.io.inst <> idu.io.inst
+	ifu.io.inst 		<> idu.io.inst
+	axiLiteBusArbiter.io.axiLiteMaster0	<> ifu.io.ifu2Mem
 
 	// IDU
 	idu.io.idu2EXU 		<> exu.io.idu2EXU
@@ -77,4 +80,9 @@ class top extends Module {
 	// WBU
 	wbu.io.wbu2CSR		<> csrReg.io.wbu2CSR
 	wbu.io.wbu2BaseReg	<> riscv32BaseReg.io.wbu2BaseReg
+	axiLiteBusArbiter.io.axiLiteMaster1	<> wbu.io.wbu2Mem
+
+	/* Memory */
+	val dataSramAXILite					= Module(new AXILiteSram)
+	dataSramAXILite.io.axiLiteM	<> axiLiteBusArbiter.io.axiLiteSlave
 }
