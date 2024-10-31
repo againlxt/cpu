@@ -21,10 +21,6 @@ class WBU extends Module {
 	})
 	val clockWire 		= this.clock.asBool
 	val resetnWire		= ~this.reset.asBool
-	val lfsr          = Module(new LFSR)
-	lfsr.io.clk       := this.clock.asUInt
-	lfsr.io.rstn      := resetnWire
-	val lfsrDelay     = lfsr.io.out
 
     val pcReg 			= RegInit(BigInt("80000000", 16).U(32.W))
 	val memDataReg		= RegInit(0.U(32.W))
@@ -125,7 +121,7 @@ class WBU extends Module {
 	/* AR */
 	io.wbu2Mem.arAddr	:= aluDataWire
 	val arValidReg 						= RegInit(0.U(1.W))
-	io.wbu2Mem.arValid	:= arValidReg & lfsrDelay(7)
+	io.wbu2Mem.arValid	:= arValidReg
 	val arReadyWire 					= io.wbu2Mem.arReady
 	/* R */
 	val rDataWire 						= io.wbu2Mem.rData
@@ -134,27 +130,33 @@ class WBU extends Module {
 		(wMaskWire === "b0011".U).asBool 	-> Cat(Fill(16, rDataWire(15)), rDataWire(15, 0)).asSInt,
 		(wMaskWire === "b1111".U).asBool 	-> rDataWire.asSInt
 	))
-	val memRdDataWire 					= Mux(sOrUWire.asBool, signDataWire.asUInt, rDataWire)
+	val memRdDataReg					= RegInit(0.U(32.W))
+	val memRdDataWire 					= Mux(sOrUWire.asBool, signDataWire.asUInt, rDataWire)	
 	val rrEspWire 						= io.wbu2Mem.rrEsp
 	val rValidWire  					= io.wbu2Mem.rValid
 	val rReadyReg 						= RegInit(1.U(1.W))
-	io.wbu2Mem.rReady	:= rReadyReg & lfsrDelay(7)
+	io.wbu2Mem.rReady	:= rReadyReg
+	when(~resetnWire.asBool) {
+		memRdDataReg	:= 0.U(32.W)
+	} .elsewhen(rValidWire.asBool && io.wbu2Mem.rReady.asBool) {
+		memRdDataReg	:= memRdDataWire
+	}
 	/* AW */
 	io.wbu2Mem.awAddr	:= aluDataWire
 	val awValidReg 						= RegInit(0.U(1.W))
-	io.wbu2Mem.awValid	:= awValidReg & lfsrDelay(7)
+	io.wbu2Mem.awValid	:= awValidReg
 	val awReadyWire						= io.wbu2Mem.awReady
 	/* W */
 	io.wbu2Mem.wData	:= memDataWire
 	io.wbu2Mem.wStrb	:= wMaskWire
 	val wValidReg 						= RegInit(0.U(1.W))
-	io.wbu2Mem.wValid	:= wValidReg & lfsrDelay(7)
+	io.wbu2Mem.wValid	:= wValidReg
 	val wReadyWire 						= io.wbu2Mem.wReady
 	/* B */
 	val bRespWire						= io.wbu2Mem.bResp
 	val bValidWire						= io.wbu2Mem.bValid
 	val bReadyReg						= RegInit(1.U(1.W))
-	io.wbu2Mem.bReady	:= bReadyReg & lfsrDelay(7)
+	io.wbu2Mem.bReady	:= bReadyReg
 	/* Data Memory Headshake */
 	/* AR */
 	when(~resetnWire.asBool) {
@@ -168,7 +170,7 @@ class WBU extends Module {
 	when(~resetnWire.asBool) {
 		rReadyReg	:= 1.U(1.W)
 	} .elsewhen(rValidWire.asBool && io.wbu2Mem.rReady.asBool && io.exu2WBU.bits.memValid.asBool) {
-		rReadyReg	:= 0.U(1.W)
+		rReadyReg		:= 0.U(1.W) 
 	} .elsewhen(rValidWire.asBool) {
 		rReadyReg	:= 1.U(1.W)
 	}
@@ -233,7 +235,7 @@ class WBU extends Module {
 
     io.wbu2BaseReg.data := MuxCase(	0.U(32.W), Seq(	
         (toRegWire === "b00".U).asBool -> aluDataWire,
-		(toRegWire === "b01".U).asBool -> memRdDataWire,
+		(toRegWire === "b01".U).asBool -> memRdDataReg,
 		(toRegWire === "b10".U).asBool -> csrDataWire
     ))
     io.wbu2BaseReg.rdIndex  := instWire(11,7)
