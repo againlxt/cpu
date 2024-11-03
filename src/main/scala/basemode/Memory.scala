@@ -143,46 +143,61 @@ class AXILiteBusArbiter extends Module {
   }
 }
 
-class AXILiteSram extends Module {
+class AXILiteSram(regMem: Bool) extends Module {
   val io = IO(new Bundle {
     val axiLiteM = Flipped(new AXILite)
   })
 
   val axiLiteSramV  = Module(new AXILiteSramV)
-  val lfsr          = Module(new LFSR)
-  lfsr.io.clk       := this.clock.asUInt
-  lfsr.io.rstn      := ~this.reset.asUInt
-  val lfsrDelay     = lfsr.io.out
+  val axiLiteReg    = Module(new AXILiteReg(256))
 
-  axiLiteSramV.io.aclk      := io.axiLiteM.aclk
-  axiLiteSramV.io.aresetn   := io.axiLiteM.aresetn
+  axiLiteSramV.io.aclk      := false.B
+  axiLiteSramV.io.aresetn   := false.B
+  axiLiteSramV.io.arAddr    := 0.U
+  axiLiteSramV.io.arValid   := false.B
+  axiLiteSramV.io.rReady    := false.B
+  axiLiteSramV.io.awAddr    := 0.U
+  axiLiteSramV.io.awValid   := false.B
+  axiLiteSramV.io.wData     := 0.U
+  axiLiteSramV.io.wStrb     := 0.U
+  axiLiteSramV.io.wValid    := false.B
+  axiLiteSramV.io.bReady    := false.B
 
-  /* AR */
-  axiLiteSramV.io.arAddr   := io.axiLiteM.arAddr
-  axiLiteSramV.io.arValid  := io.axiLiteM.arValid
-  io.axiLiteM.arReady      := axiLiteSramV.io.arReady
+  axiLiteReg.io := DontCare
 
-  /* R */
-  io.axiLiteM.rData        := axiLiteSramV.io.rData
-  io.axiLiteM.rrEsp        := axiLiteSramV.io.rrEsp
-  io.axiLiteM.rValid       := axiLiteSramV.io.rValid
-  axiLiteSramV.io.rReady   := io.axiLiteM.rReady
+  when(regMem) {
+    io.axiLiteM <> axiLiteReg.io.axiLite
+  } .otherwise {
+    axiLiteSramV.io.aclk      := io.axiLiteM.aclk
+    axiLiteSramV.io.aresetn   := io.axiLiteM.aresetn
 
-  /* AW */
-  axiLiteSramV.io.awAddr   := io.axiLiteM.awAddr
-  axiLiteSramV.io.awValid  := io.axiLiteM.awValid
-  io.axiLiteM.awReady      := axiLiteSramV.io.awReady
+    /* AR */
+    axiLiteSramV.io.arAddr   := io.axiLiteM.arAddr
+    axiLiteSramV.io.arValid  := io.axiLiteM.arValid
+    io.axiLiteM.arReady      := axiLiteSramV.io.arReady
 
-  /* W */
-  axiLiteSramV.io.wData    := io.axiLiteM.wData
-  axiLiteSramV.io.wStrb    := io.axiLiteM.wStrb
-  axiLiteSramV.io.wValid   := io.axiLiteM.wValid
-  io.axiLiteM.wReady       := axiLiteSramV.io.wReady
+    /* R */
+    io.axiLiteM.rData        := axiLiteSramV.io.rData
+    io.axiLiteM.rrEsp        := axiLiteSramV.io.rrEsp
+    io.axiLiteM.rValid       := axiLiteSramV.io.rValid
+    axiLiteSramV.io.rReady   := io.axiLiteM.rReady
 
-  /* B */
-  io.axiLiteM.bResp        := axiLiteSramV.io.bResp
-  io.axiLiteM.bValid       := axiLiteSramV.io.bValid
-  axiLiteSramV.io.bReady   := io.axiLiteM.bReady
+    /* AW */
+    axiLiteSramV.io.awAddr   := io.axiLiteM.awAddr
+    axiLiteSramV.io.awValid  := io.axiLiteM.awValid
+    io.axiLiteM.awReady      := axiLiteSramV.io.awReady
+
+    /* W */
+    axiLiteSramV.io.wData    := io.axiLiteM.wData
+    axiLiteSramV.io.wStrb    := io.axiLiteM.wStrb
+    axiLiteSramV.io.wValid   := io.axiLiteM.wValid
+    io.axiLiteM.wReady       := axiLiteSramV.io.wReady
+
+    /* B */
+    io.axiLiteM.bResp        := axiLiteSramV.io.bResp
+    io.axiLiteM.bValid       := axiLiteSramV.io.bValid
+    axiLiteSramV.io.bReady   := io.axiLiteM.bReady
+  }
 }
 
 class AXILiteSramV extends BlackBox with HasBlackBoxInline {
@@ -371,4 +386,130 @@ class AXILiteSramV extends BlackBox with HasBlackBoxInline {
      |
 	   |endmodule
 	""".stripMargin)
+}
+
+class AXILiteReg(memorySize: Int) extends Module {
+  val io = IO(new Bundle {
+    val axiLite = Flipped(new AXILite)
+  })
+  val mem = RegInit(VecInit(Seq.fill(memorySize)(0.U(32.W))))
+  val aresetn = io.axiLite.aresetn
+
+  /* Headshake Signal Reg */
+  val arReadyReg  = RegInit(0.B)
+  val rDataReg    = RegInit(0.U(32.W))
+  val rrEspReg    = RegInit(0.U(2.W))
+  val rValidReg   = RegInit(0.B)
+  val awReadyReg  = RegInit(1.B)
+  val wReadyReg   = RegInit(0.B)
+  val bRespReg    = RegInit(0.U(2.W))
+  val bValidReg   = RegInit(0.B)
+
+  val awEnReg     = RegInit(1.B)
+  val awAddrReg   = RegInit(0.U(32.W))
+  val arAddrReg   = RegInit(0.U(32.W))
+  
+  val wAddrWire   = (awAddrReg - "h80000000".U) >> 2
+  val rAddrWire   = (arAddrReg - "h80000000".U) >> 2
+
+  /* Connection */
+  /* AR */
+  val arAddrWire      = io.axiLite.arAddr
+  val arValidWire     = io.axiLite.arValid
+  io.axiLite.arReady  := arReadyReg
+  /* R */
+  io.axiLite.rData    := rDataReg
+  io.axiLite.rrEsp    := rrEspReg
+  io.axiLite.rValid   := rValidReg
+  val rReadyWire      = io.axiLite.rReady
+  /* AW */
+  val awAddrWire      = io.axiLite.awAddr
+  val awValidWire     = io.axiLite.awValid
+  io.axiLite.awReady  := awReadyReg
+  /* W */
+  val wDataWire       = io.axiLite.wData
+  val wStrbWire       = io.axiLite.wStrb
+  val wValidWire      = io.axiLite.wValid
+  io.axiLite.wReady   := wReadyReg
+  /* B */
+  io.axiLite.bResp    := bRespReg
+  io.axiLite.bValid   := bValidReg
+  val bReadyWire      = io.axiLite.bReady
+
+  /* AW */
+  when (!(aresetn.asBool)) {
+    awReadyReg  := 1.B
+    awEnReg     := 1.B
+  } .elsewhen (awValidWire && wValidWire && (~awReadyReg) && awEnReg) {
+    awReadyReg  := 1.B
+    awEnReg     := 0.B
+  } .elsewhen (wValidWire && wReadyReg) {
+    awReadyReg  := 0.B
+    awEnReg     := 1.B
+  } .otherwise {
+    awReadyReg  := 0.B
+  }
+  when (!(aresetn.asBool)) {
+    awAddrReg   := 0.U
+  } .elsewhen (awValidWire && wValidWire && (~awReadyReg) && awEnReg) {
+    awAddrReg   := awAddrWire
+  }
+  /* W */
+  when(!(aresetn.asBool)) {
+    wReadyReg   := 0.B
+  } .elsewhen((~wValidWire) && wReadyReg && awValidWire && awReadyReg) {
+    wReadyReg   := 1.B
+  } .otherwise {
+    wReadyReg   := 0.B
+  }
+  when(wValidWire && wReadyReg && awValidWire && awReadyReg) {
+    when (wStrbWire === "b0001".U) {
+      mem(rAddrWire(7,0)) := wDataWire & "h000000FF".U
+    } .elsewhen (wStrbWire === "b0011".U) {
+      mem(rAddrWire(7,0)) := wDataWire & "h0000FFFF".U
+    } .elsewhen (wStrbWire === "b1111".U) {
+      mem(rAddrWire(7,0)) := wDataWire & "hFFFFFFFF".U
+    }
+  }
+  /* B */
+  when(!(aresetn.asBool)) {
+    bValidReg   := 1.B
+    bRespReg    := 0.U(2.W)
+  } .elsewhen (awValidWire && awReadyReg && wValidWire && (~bValidReg)) {
+    bValidReg   := 1.B
+    bRespReg    := 0.U(2.W)
+  } .elsewhen(bValidReg && bReadyWire) {
+    bValidReg   := 0.B
+  }
+  /* AR */
+  when(!(aresetn.asBool)) {
+    arReadyReg  := 1.B
+    arAddrReg   := 0.U(32.W)
+  } .elsewhen(arValidWire && (~arReadyReg)) {
+    arReadyReg  := 1.B
+    arAddrReg   := arAddrWire
+  } .otherwise {
+    arReadyReg  := 0.B
+  }
+  /* R */
+  when(!(aresetn.asBool)) {
+    rValidReg := 0.B
+    rrEspReg  := 0.U(2.W)
+  } .elsewhen(arValidWire && arReadyReg && (~rValidReg)) {
+    rValidReg := 1.B
+    rrEspReg  := 0.U(2.W)
+  } .elsewhen(rReadyWire) {
+    rValidReg := 0.B
+  }
+  when(!(aresetn.asBool)) {
+    rDataReg  := 0.U(32.W)
+  } .elsewhen(arValidWire && arReadyReg && (~rValidReg)) {
+    when (wStrbWire === "b0001".U) {
+      rDataReg := mem(rAddrWire(7,0)) & "h000000FF".U
+    } .elsewhen (wStrbWire === "b0011".U) {
+      rDataReg := mem(rAddrWire(7,0)) & "h0000FFFF".U
+    } .elsewhen (wStrbWire === "b1111".U) {
+      rDataReg := mem(rAddrWire(7,0)) & "hFFFFFFFF".U
+    }
+  }
 }

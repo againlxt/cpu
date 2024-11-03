@@ -83,6 +83,6 @@ class top extends Module {
 	axiLiteBusArbiter.io.axiLiteMaster1	<> wbu.io.wbu2Mem
 
 	/* Memory */
-	val dataSramAXILite					= Module(new AXILiteSram)
+	val dataSramAXILite					= Module(new AXILiteSram(0.B))
 	dataSramAXILite.io.axiLiteM	<> axiLiteBusArbiter.io.axiLiteSlave
 }
