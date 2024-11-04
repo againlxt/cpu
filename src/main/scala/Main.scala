@@ -9,28 +9,7 @@ import exu._
 import alu._
 import common._
 import wbu.WBU
-
-/* 
-import "DPI-C" function void sim_exit();
-always @(io_memData) begin
-    if(io_memData==32'h00100073)   sim_exit();
-end
-
-import "DPI-C" function void set_ftrace_function_call_flag();
-always @(io_memData) begin
-	if(io_memData[11:0]==12'b00001_11011_11) set_ftrace_function_call_flag();
-end
-
-import "DPI-C" function void set_ftrace_ret_flag();
-always @(io_memData) begin
-	if(io_memData[19:0]==20'b00001_000_00000_11001_11) set_ftrace_ret_flag();
-end
-
-export "DPI-C" function getCommond;
-function bit [31:0] getCommond;
-	return _ifu_io_cmd;
-endfunction
-*/
+import memory._
 
 object Main extends App {
 	emitVerilog(new top, Array("--split-verilog" ,"--target-dir", "generated"))
@@ -50,6 +29,7 @@ class top extends Module {
 	val idu 			= Module(new IDU)
 	val exu 			= Module(new EXU)
 	val wbu 			= Module(new WBU)
+	val axiLiteBusArbiter	= Module(new AXILiteBusArbiter)
 	//val memDataWire 	= io.memData
 
 	// PC Reg
@@ -64,7 +44,8 @@ class top extends Module {
 	ifu.io.pc 		:= pcWire
 	//ifu.io.memData 	:= memDataWire
 	// Output
-	ifu.io.inst <> idu.io.inst
+	ifu.io.inst 		<> idu.io.inst
+	axiLiteBusArbiter.io.axiLiteMaster0	<> ifu.io.ifu2Mem
 
 	// IDU
 	idu.io.idu2EXU 		<> exu.io.idu2EXU
@@ -77,4 +58,9 @@ class top extends Module {
 	// WBU
 	wbu.io.wbu2CSR		<> csrReg.io.wbu2CSR
 	wbu.io.wbu2BaseReg	<> riscv32BaseReg.io.wbu2BaseReg
+	axiLiteBusArbiter.io.axiLiteMaster1	<> wbu.io.wbu2Mem
+
+	/* Memory */
+	val dataSramAXILite					= Module(new AXILiteSram(0.B))
+	dataSramAXILite.io.axiLiteM	<> axiLiteBusArbiter.io.axiLiteSlave
 }
