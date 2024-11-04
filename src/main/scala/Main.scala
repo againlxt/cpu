@@ -12,6 +12,7 @@ import wbu.WBU
 import memory._
 import device.Xbar
 import device.AXILiteUart
+import device.AXILiteClint
 
 object Main extends App {
 	emitVerilog(new top, Array("--split-verilog" ,"--target-dir", "generated"))
@@ -68,6 +69,10 @@ class top extends Module {
 	dataSramAXILite.io.axiLiteM	<> xbar.io.axiLiteSram
 
 	/* Device */
+	/* Uart */
 	val axiLiteUart = Module(new AXILiteUart)
 	axiLiteUart.io.axiLiteMaster <> xbar.io.axiLiteUart
+	/* Clint */
+	val axiLiteClint = Module(new AXILiteClint)
+	axiLiteClint.io.axiLiteMaster <> xbar.io.axiLiteClint
 }
