@@ -3,17 +3,72 @@ package device
 import chisel3._
 import chisel3.util._
 import _root_.interface.AXILite
+import memory.AXILiteBusArbiter
+import memory.AXILiteSram
+
+object DeviceID extends ChiselEnum{
+	val UART, CLINT, INIT = Value
+}
+
+object Device {
+	val deviceUart 	= DeviceUart
+}
+
+object DeviceUart {
+	val baseAddr	= "hA00003F8".U
+}
+
+class Xbar extends Module {
+	val io = IO(new Bundle {
+		val axiLiteMaster0 = Flipped(new AXILite)
+		val axiLiteMaster1 = Flipped(new AXILite)
+		val axiLiteSram    = new AXILite 
+		val axiLiteUart    = new AXILite
+	})
+	def initializeAXILite(axiLite: AXILite): Unit = {
+		axiLite.arAddr := 0.U
+		axiLite.arValid := false.B
+		axiLite.rReady := false.B
+		axiLite.awAddr := 0.U
+		axiLite.awValid := false.B
+		axiLite.wData := 0.U
+		axiLite.wStrb := 0.U
+		axiLite.wValid := false.B
+		axiLite.bReady := false.B
+	}
+	initializeAXILite(io.axiLiteSram)
+  	initializeAXILite(io.axiLiteUart)
+
+	val axiLiteBusArbiter 	= Module(new AXILiteBusArbiter)
+	io.axiLiteMaster0 <> axiLiteBusArbiter.io.axiLiteMaster0
+	io.axiLiteMaster1 <> axiLiteBusArbiter.io.axiLiteMaster1
+	val axiLiteSlave = axiLiteBusArbiter.io.axiLiteSlave
+
+	val deviceID = MuxCase(DeviceID.INIT, Seq(
+		(axiLiteSlave.arAddr === Device.deviceUart.baseAddr) -> DeviceID.UART
+	))
+	
+	when(deviceID === DeviceID.UART) {
+		axiLiteSlave <> io.axiLiteUart
+	}.otherwise {
+		axiLiteSlave <> io.axiLiteSram
+	}	
+}
 
 class AXILiteUart extends Module {
     val io = IO(new Bundle {
         val axiLiteMaster    = Flipped(new AXILite)
     })
+	val uart = Module(new UartV);
+	uart.io.en := 0.B
+	uart.io.data := 0.U
+
     val aresetnWire          = 1.B - this.reset.asBool
-    io.axiLiteMaster.arReady := 0.B
+    io.axiLiteMaster.arReady := 1.B
     io.axiLiteMaster.rData   := 0.U(32.W)
     io.axiLiteMaster.rrEsp   := 0.U(2.W)
     io.axiLiteMaster.rValid  := 0.B
-    io.axiLiteMaster.awReady := 0.B
+    io.axiLiteMaster.awReady := 1.B
     io.axiLiteMaster.wReady  := 0.B
     io.axiLiteMaster.bResp   := 0.U(2.W)
     io.axiLiteMaster.bValid  := 0.B
@@ -50,7 +105,7 @@ class AXILiteUart extends Module {
     io.axiLiteMaster.bValid := bValidReg
     val bReadyWire          = io.axiLiteMaster.bReady
 
-    val awEnReg             = RegInit(0.B)
+    val awEnReg             = RegInit(1.B)
     val uartEnReg           = RegInit(0.B)
     val awAddrReg           = RegInit(0.U(32.W))
     val arAddrReg           = RegInit(0.U(32.W))
@@ -78,10 +133,12 @@ class AXILiteUart extends Module {
         awAddrReg   := awAddrWire
     }
     /* W */
+	uart.io.en := uartEnReg
     when(~aresetnWire.asBool) {
         wReadyReg   := 0.B
     } .elsewhen(~wReadyReg && wValidWire && awValidWire && awEnReg) {
         wReadyReg   := 1.B
+		uart.io.data:= wDataWire
     } .otherwise {
         wReadyReg   := 0.B
     }
@@ -126,4 +183,18 @@ class UartV extends BlackBox with HasBlackBoxInline {
         val en      = Input(Bool())
         val data    = Input(UInt(8.W))
     })
+
+	setInline("UartV.sv",
+	"""module UartV(
+	|	input en,
+	|	input [7:0]	data
+	|);
+	|
+	|import "DPI-C" function void uart(input byte chr);
+	|always@(posedge en) begin
+	|	if(en) uart(data);
+	|end
+	|
+	|endmodule
+	""".stripMargin)
 }
