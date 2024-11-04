@@ -77,8 +77,6 @@ class AXILiteBusArbiter extends Module {
   io.axiLiteMaster1.bResp   := 0.U(2.W)
   io.axiLiteMaster1.bValid  := 0.B
 
-  io.axiLiteSlave.aclk      := this.clock.asUInt
-  io.axiLiteSlave.aresetn   := 1.U(1.W)-(this.reset.asUInt)
   io.axiLiteSlave.arAddr    := 0.U(32.W)
   io.axiLiteSlave.arValid   := 0.B
   io.axiLiteSlave.rReady    := 0.B
@@ -125,8 +123,6 @@ class AXILiteBusArbiter extends Module {
   ))
 
   when(state === s_idle) {
-    io.axiLiteSlave.aclk    := this.clock.asUInt
-    io.axiLiteSlave.aresetn := (~(this.reset.asBool)).asUInt
     io.axiLiteSlave.arAddr  := 0.U(32.W)
     io.axiLiteSlave.arValid := 0.U(1.W)
     io.axiLiteSlave.rReady  := 0.U(1.W)
@@ -168,8 +164,8 @@ class AXILiteSram(regMem: Bool) extends Module {
   when(regMem) {
     io.axiLiteM <> axiLiteReg.io.axiLite
   } .otherwise {
-    axiLiteSramV.io.aclk      := io.axiLiteM.aclk
-    axiLiteSramV.io.aresetn   := io.axiLiteM.aresetn
+    axiLiteSramV.io.aclk      := this.clock.asUInt
+    axiLiteSramV.io.aresetn   := ~this.reset.asUInt
 
     /* AR */
     axiLiteSramV.io.arAddr   := io.axiLiteM.arAddr
@@ -393,7 +389,7 @@ class AXILiteReg(memorySize: Int) extends Module {
     val axiLite = Flipped(new AXILite)
   })
   val mem = RegInit(VecInit(Seq.fill(memorySize)(0.U(32.W))))
-  val aresetn = io.axiLite.aresetn
+  val aresetn = ~this.reset.asUInt
 
   /* Headshake Signal Reg */
   val arReadyReg  = RegInit(0.B)

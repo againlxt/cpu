@@ -118,9 +118,6 @@ class WBUSRAM extends Bundle {
 }
 
 class AXILite extends Bundle {
-	val aclk 	= Output(UInt(1.W))
-	val aresetn	= Output(UInt(1.W))
-
 	/* AR */
 	val arAddr	= Output(UInt(32.W))
 	val arValid	= Output(Bool())

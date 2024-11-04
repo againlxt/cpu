@@ -115,9 +115,6 @@ class WBU extends Module {
 	val pcASrcWire 		= branchCond.io.pcASrc
 	val pcBSrcWire 		= branchCond.io.pcBSrc
 
-	/* Clock And Reset */
-	io.wbu2Mem.aclk	:= this.clock.asBool
-	io.wbu2Mem.aresetn	:= resetnWire
 	/* AR */
 	io.wbu2Mem.arAddr	:= aluDataWire
 	val arValidReg 						= RegInit(0.U(1.W))

@@ -35,9 +35,6 @@ class IFU extends Module {
 	val rReadyReg		= RegInit(1.U(1.W))	
 
 	/* Signal Connection */
-	/* Clock And Reset */
-	io.ifu2Mem.aclk	:= clockWire
-	io.ifu2Mem.aresetn	:= resetnWire
 	/* AR */
 	io.ifu2Mem.arAddr	:= arAddrReg
 	io.ifu2Mem.arValid	:= arValidReg

@@ -11,28 +11,6 @@ import common._
 import wbu.WBU
 import memory._
 
-/* 
-import "DPI-C" function void sim_exit();
-always @(io_memData) begin
-    if(io_memData==32'h00100073)   sim_exit();
-end
-
-import "DPI-C" function void set_ftrace_function_call_flag();
-always @(io_memData) begin
-	if(io_memData[11:0]==12'b00001_11011_11) set_ftrace_function_call_flag();
-end
-
-import "DPI-C" function void set_ftrace_ret_flag();
-always @(io_memData) begin
-	if(io_memData[19:0]==20'b00001_000_00000_11001_11) set_ftrace_ret_flag();
-end
-
-export "DPI-C" function getCommond;
-function bit [31:0] getCommond;
-	return _ifu_io_cmd;
-endfunction
-*/
-
 object Main extends App {
 	emitVerilog(new top, Array("--split-verilog" ,"--target-dir", "generated"))
 }
