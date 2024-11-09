@@ -152,27 +152,27 @@ class XbarAXI extends Module {
 		//axiLiteSlave <> io.axiLiteClint
 	}.otherwise {
          /* AW */
-        axiMaster.master_awready    := io.axiLiteUart.awReady
-        io.axiLiteUart.awValid      := axiMaster.master_awvalid
-        io.axiLiteUart.awAddr       := axiMaster.master_awaddr
+        axiMaster.master_awready    := io.axiLiteSram.awReady
+        io.axiLiteSram.awValid      := axiMaster.master_awvalid
+        io.axiLiteSram.awAddr       := axiMaster.master_awaddr
         /* W */
-        axiMaster.master_wready     := io.axiLiteUart.wReady
-        io.axiLiteUart.wValid       := axiMaster.master_wvalid
-        io.axiLiteUart.wData        := axiMaster.master_wdata
-        io.axiLiteUart.wStrb        := axiMaster.master_wstrb
+        axiMaster.master_wready     := io.axiLiteSram.wReady
+        io.axiLiteSram.wValid       := axiMaster.master_wvalid
+        io.axiLiteSram.wData        := axiMaster.master_wdata
+        io.axiLiteSram.wStrb        := axiMaster.master_wstrb
         /* B */
-        axiMaster.master_bresp      := io.axiLiteUart.bResp
-        axiMaster.master_bvalid     := io.axiLiteUart.bValid
-        io.axiLiteUart.bReady       := axiMaster.master_bready
+        axiMaster.master_bresp      := io.axiLiteSram.bResp
+        axiMaster.master_bvalid     := io.axiLiteSram.bValid
+        io.axiLiteSram.bReady       := axiMaster.master_bready
         /* AR */
-        axiMaster.master_arready    := io.axiLiteUart.arReady
-        io.axiLiteUart.arValid      := axiMaster.master_arvalid
-        io.axiLiteUart.arAddr       := axiMaster.master_araddr
+        axiMaster.master_arready    := io.axiLiteSram.arReady
+        io.axiLiteSram.arValid      := axiMaster.master_arvalid
+        io.axiLiteSram.arAddr       := axiMaster.master_araddr
         /* R */
-        axiMaster.master_rdata      := io.axiLiteUart.rData
-        axiMaster.master_rresp      := io.axiLiteUart.rrEsp
-        axiMaster.master_rvalid     := io.axiLiteUart.rValid
-        io.axiLiteUart.rReady       := axiMaster.master_rready
+        axiMaster.master_rdata      := io.axiLiteSram.rData
+        axiMaster.master_rresp      := io.axiLiteSram.rrEsp
+        axiMaster.master_rvalid     := io.axiLiteSram.rValid
+        io.axiLiteSram.rReady       := axiMaster.master_rready
 		//axiLiteSlave <> io.axiLiteSram
 	}
 }
