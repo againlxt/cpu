@@ -10,9 +10,8 @@ import alu._
 import common._
 import wbu.WBU
 import memory._
-import device.Xbar
-import device.AXILiteUart
-import device.AXILiteClint
+import device._
+import _root_.interface._
 
 object Main extends App {
 	emitVerilog(new top, Array("--split-verilog" ,"--target-dir", "generated"))
@@ -32,7 +31,8 @@ class top extends Module {
 	val idu 			= Module(new IDU)
 	val exu 			= Module(new EXU)
 	val wbu 			= Module(new WBU)
-	val xbar 			= Module(new Xbar)
+	val xbarAXI			= Module(new XbarAXI)
+	//val xbar 			= Module(new Xbar)
 	//val axiLiteBusArbiter	= Module(new AXILiteBusArbiter)
 
 	/* PC Reg */
@@ -46,9 +46,10 @@ class top extends Module {
 	/* Input */
 	ifu.io.pc 		:= pcWire
 	/* Output */
-	ifu.io.inst 		<> idu.io.inst
+	ifu.io.inst 			<> idu.io.inst
+	AXIUtils.connectAXI(ifu.io.ifu2Mem, xbarAXI.io.axiSlaveIFU)
 	//axiLiteBusArbiter.io.axiLiteMaster0	<> ifu.io.ifu2Mem
-	xbar.io.axiLiteMaster0 <> ifu.io.ifu2Mem
+	//xbar.io.axiLiteMaster0 <> ifu.io.ifu2Mem
 
 	/* IDU */
 	idu.io.idu2EXU 		<> exu.io.idu2EXU
@@ -59,20 +60,24 @@ class top extends Module {
 	exu.io.exu2CSR 	<> csrReg.io.exu2CSR
 
 	/* WBU */
-	wbu.io.wbu2CSR		<> csrReg.io.wbu2CSR
-	wbu.io.wbu2BaseReg	<> riscv32BaseReg.io.wbu2BaseReg
+	wbu.io.wbu2CSR			<> csrReg.io.wbu2CSR
+	wbu.io.wbu2BaseReg		<> riscv32BaseReg.io.wbu2BaseReg
+	AXIUtils.connectAXI(wbu.io.wbu2Mem, xbarAXI.io.axiSlaveWBU)
 	// axiLiteBusArbiter.io.axiLiteMaster1	<> wbu.io.wbu2Mem
-	xbar.io.axiLiteMaster1 <> wbu.io.wbu2Mem
+	//xbar.io.axiLiteMaster1 <> wbu.io.wbu2Mem
 
 	/* Memory */
-	val dataSramAXILite			= Module(new AXILiteSram(0.B))
-	dataSramAXILite.io.axiLiteM	<> xbar.io.axiLiteSram
+	val dataSramAXILite				= Module(new AXILiteSram(0.B))
+	dataSramAXILite.io.axiLiteM		<> xbarAXI.io.axiLiteSram 	
+	//dataSramAXILite.io.axiLiteM	<> xbar.io.axiLiteSram
 
 	/* Device */
 	/* Uart */
 	val axiLiteUart = Module(new AXILiteUart)
-	axiLiteUart.io.axiLiteMaster <> xbar.io.axiLiteUart
+	axiLiteUart.io.axiLiteMaster 	<> xbarAXI.io.axiLiteUart
+	//axiLiteUart.io.axiLiteMaster <> xbar.io.axiLiteUart
 	/* Clint */
 	val axiLiteClint = Module(new AXILiteClint)
-	axiLiteClint.io.axiLiteMaster <> xbar.io.axiLiteClint
+	axiLiteClint.io.axiLiteMaster 	<> xbarAXI.io.axiLiteClint
+	//axiLiteClint.io.axiLiteMaster <> xbar.io.axiLiteClint
 }

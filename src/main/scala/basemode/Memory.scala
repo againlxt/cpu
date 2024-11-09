@@ -1,7 +1,7 @@
 package memory
 import chisel3._
 import chisel3.util._
-import _root_.interface.AXILite
+import _root_.interface._
 import basemode.Delay
 import basemode.LFSR
 
@@ -136,6 +136,61 @@ class AXILiteBusArbiter extends Module {
     io.axiLiteSlave <> io.axiLiteMaster0
   } .elsewhen(state === s_lsu) {
     io.axiLiteSlave <> io.axiLiteMaster1
+  }
+}
+
+class AXIBusArbiter extends Module {
+  val io = IO(new Bundle {
+    val axiSlave0   = new AXISlave
+    val axiSlave1   = new AXISlave
+    val axiMaster   = new AXIMaster
+  })
+  AXIUtils.initializeAXISlave(io.axiSlave0)
+  AXIUtils.initializeAXISlave(io.axiSlave1)
+  AXIUtils.initializeAXIMaster(io.axiMaster)
+
+  val awvalidWire0  = io.axiSlave0.slave_awvalid
+  val awreadyWire0  = io.axiSlave0.slave_awready
+  val wvalidWire0   = io.axiSlave0.slave_wvalid
+  val wreadyWire0   = io.axiSlave0.slave_wready
+  val bvalidWire0   = io.axiSlave0.slave_bvalid
+  val breadyWire0   = io.axiSlave0.slave_bready
+  val arvalidWire0  = io.axiSlave0.slave_arvalid
+  val arreadyWire0  = io.axiSlave0.slave_arready
+  val rvalidWire0   = io.axiSlave0.slave_rvalid
+  val rreadyWire0   = io.axiSlave0.slave_rready
+
+  val awvalidWire1  = io.axiSlave1.slave_awvalid
+  val awreadyWire1  = io.axiSlave1.slave_awready
+  val wvalidWire1   = io.axiSlave1.slave_wvalid
+  val wreadyWire1   = io.axiSlave1.slave_wready
+  val bvalidWire1   = io.axiSlave1.slave_bvalid
+  val breadyWire1   = io.axiSlave1.slave_bready
+  val arvalidWire1  = io.axiSlave1.slave_arvalid
+  val arreadyWire1  = io.axiSlave1.slave_arready
+  val rvalidWire1   = io.axiSlave1.slave_rvalid
+  val rreadyWire1   = io.axiSlave1.slave_rready
+
+  val s_idle :: s_wait :: s_ifu :: s_lsu :: Nil = Enum(4)
+  val state = RegInit(s_idle)
+  val wait2LSUWire  = arvalidWire1.asBool || awvalidWire1.asBool || wvalidWire1.asBool
+  val wait2IFUWire  = arvalidWire0.asBool || awvalidWire0.asBool || wvalidWire0.asBool
+  val ifu2WaitWire  = (rvalidWire0.asBool && rreadyWire0.asBool) || (wvalidWire0.asBool && wreadyWire0.asBool)
+  val lsu2WaitWire  = (rvalidWire1.asBool && rreadyWire1.asBool) || (wvalidWire1.asBool && wreadyWire1.asBool)
+
+  state := MuxLookup(state, s_idle)(List(
+    s_idle  -> Mux(this.reset.asBool, s_idle, s_wait),
+    s_wait  -> Mux(this.reset.asBool, s_idle, Mux(wait2LSUWire, s_lsu, Mux(wait2IFUWire, s_ifu, s_wait))),
+    s_ifu   -> Mux(this.reset.asBool, s_idle, Mux(ifu2WaitWire, s_wait, s_ifu)),
+    s_lsu   -> Mux(this.reset.asBool, s_idle, Mux(lsu2WaitWire, s_wait, s_lsu))
+  ))
+
+  when(state === s_idle) {
+    AXIUtils.initializeAXIMaster(io.axiMaster)
+  } .elsewhen(state === s_ifu || state === s_wait) {
+    AXIUtils.connectAXI(io.axiMaster, io.axiSlave0)
+  } .elsewhen(state === s_lsu) {
+    AXIUtils.connectAXI(io.axiMaster, io.axiSlave1)
   }
 }
 

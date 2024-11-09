@@ -12,69 +12,95 @@ class IFU extends Module {
     val io = IO(new Bundle {
 		val pc  	 	= Input(UInt(32.W))
         val inst     	= Decoupled(new IFU2IDU)
-		val ifu2Mem		= new AXILite 
+		val ifu2Mem		= new AXIMaster 
     })
 	/* Clock and Reset */
 	val clockWire		= this.clock.asUInt
 	val resetnWire		= ~this.reset.asUInt
 
 	/* AW */
-	val awAddrReg		= RegInit(0.U(32.W))
-	val awValidReg		= RegInit(0.U(1.W))
+	val awvalidReg		= RegInit(0.B)
+	val awaddrReg		= RegInit(0.U(32.W))
+	val awidReg 		= RegInit(0.U(4.W))
+	val awlenReg 		= RegInit(0.U(8.W))
+	val awsizeReg 		= RegInit(2.U(3.W))
+	val awburstReg 		= RegInit(1.U(2.W))
 	/* W */
-	val wDataReg		= RegInit(0.U(32.W))
-	val wStrbReg		= RegInit(15.U(4.W))
-	val wValidReg		= RegInit(0.U(1.W))
+	val wvalidReg		= RegInit(0.B)
+	val wdataReg		= RegInit(0.U(32.W))
+	val wstrbReg		= RegInit(15.U(4.W))
+	val wlastReg 		= RegInit(0.B)
 	/* B */
-	val bReadyReg		= RegInit(0.U(1.W))
+	val breadyReg		= RegInit(0.B)
 	/* AR */
-	val arAddrReg		= RegInit(BigInt("80000000", 16).U(32.W))
-	arAddrReg			:= io.pc
-	val arValidReg		= RegInit(1.U(1.W))
+	val arvalidReg		= RegInit(1.U(1.W))
+	val araddrReg		= RegInit(BigInt("80000000", 16).U(32.W))
+	val aridReg 		= RegInit(0.U(4.W))
+	val arlenReg 		= RegInit(0.U(8.W))
+	val arsizeReg 		= RegInit(2.U(3.W))
+	val arburstReg 		= RegInit(1.U(2.W))
+	araddrReg			:= io.pc
 	/* R */
-	val rReadyReg		= RegInit(1.U(1.W))	
+	val rreadyReg		= RegInit(0.B)
 
 	/* Signal Connection */
-	/* AR */
-	io.ifu2Mem.arAddr	:= arAddrReg
-	io.ifu2Mem.arValid	:= arValidReg
-	val arReadyWire						= io.ifu2Mem.arReady
-	/* R */
-	val rDataWire 						= io.ifu2Mem.rData
-	val rrEspWire						= io.ifu2Mem.rrEsp
-	val rValidWire						= io.ifu2Mem.rValid
-	io.ifu2Mem.rReady	:= rReadyReg
 	/* AW */
-	io.ifu2Mem.awAddr	:= awAddrReg
-	io.ifu2Mem.awValid	:= awValidReg
-	val awReadyWire						= io.ifu2Mem.awReady
+	val awreadyWire		 		= io.ifu2Mem.master_awready
+	io.ifu2Mem.master_awvalid	:= awvalidReg
+	io.ifu2Mem.master_awaddr	:= awaddrReg
+	io.ifu2Mem.master_awid 		:= awidReg
+	io.ifu2Mem.master_awlen 	:= awlenReg
+	io.ifu2Mem.master_awsize 	:= awsizeReg
+	io.ifu2Mem.master_awburst	:= awburstReg
 	/* W */
-	io.ifu2Mem.wData	:= wDataReg
-	io.ifu2Mem.wStrb	:= wStrbReg
-	io.ifu2Mem.wValid	:= wValidReg
-	val wReadyWire						= io.ifu2Mem.wReady
+	val wreadyWire 				= io.ifu2Mem.master_wready
+	io.ifu2Mem.master_wvalid 	:= wvalidReg
+	io.ifu2Mem.master_wdata 	:= wdataReg
+	io.ifu2Mem.master_wstrb 	:= wstrbReg
+	io.ifu2Mem.master_wlast 	:= wlastReg
 	/* B */
-	val bRespWire						= io.ifu2Mem.bResp
-	val bValidWire						= io.ifu2Mem.bValid
-	io.ifu2Mem.bReady	:= bReadyReg
+	io.ifu2Mem.master_bready	:= breadyReg
+	val bvalidWire 				= io.ifu2Mem.master_bvalid
+	val brespWire 				= io.ifu2Mem.master_bresp
+	val bidWire 				= io.ifu2Mem.master_bid
+	/* AR */
+	val arreadyWire 			= io.ifu2Mem.master_arready
+	io.ifu2Mem.master_arvalid	:= arvalidReg
+	io.ifu2Mem.master_araddr	:= araddrReg
+	io.ifu2Mem.master_arid 		:= aridReg
+	io.ifu2Mem.master_arlen 	:= arlenReg
+	io.ifu2Mem.master_arsize 	:= arsizeReg
+	io.ifu2Mem.master_arburst	:= arburstReg
+	/* R */
+	io.ifu2Mem.master_rready 	:= rreadyReg
+	val rvalidWire 				= io.ifu2Mem.master_rvalid
+	val rrespWire 				= io.ifu2Mem.master_rresp
+	val rdataWire 				= io.ifu2Mem.master_rdata
+	val rlastWire 				= io.ifu2Mem.master_rlast
+	val ridWire 				= io.ifu2Mem.master_rid
 	
 	/* HeadShake Signals */
+	/* AW */
+	/* W */
+	/* B */
+	/* AR */
 	when(~resetnWire.asBool) {
-		arValidReg := 1.U
-	} .elsewhen(arAddrReg =/= io.pc) {
-		arValidReg := 1.U
-	} .elsewhen(arReadyWire.asBool) {
-		arValidReg := 0.U
+		arvalidReg := 1.U
+	} .elsewhen(araddrReg =/= io.pc) {
+		arvalidReg := 1.U
+	} .elsewhen(arreadyWire.asBool) {
+		arvalidReg := 0.U
 	}
+	/* R */
 	when(~resetnWire.asBool) {
-		rReadyReg := 1.U
-	} .elsewhen(rValidWire.asBool && rReadyReg.asBool) {
-		rReadyReg := 0.U
-	} .elsewhen(rValidWire.asBool) {
-		rReadyReg := 1.U
+		rreadyReg := 1.U
+	} .elsewhen(rvalidWire.asBool && rreadyReg.asBool) {
+		rreadyReg := 0.U
+	} .elsewhen(rvalidWire.asBool) {
+		rreadyReg := 1.U
 	}
 
-	io.inst.valid		:= rValidWire.asBool && rReadyReg.asBool
-	io.inst.bits.inst	:= rDataWire
-	io.inst.bits.pc		:= arAddrReg			
+	io.inst.valid		:= rvalidWire && rreadyReg
+	io.inst.bits.inst	:= rdataWire
+	io.inst.bits.pc		:= araddrReg			
 }

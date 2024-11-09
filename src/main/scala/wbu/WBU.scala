@@ -16,7 +16,8 @@ class WBU extends Module {
 		val exu2WBU 	= Flipped(Decoupled(new EXU2WBU))	
         val wbu2CSR     = new WBU2CSR
         val wbu2BaseReg = new WBU2BaseReg
-		val wbu2Mem		= new AXILite 
+		// val wbu2Mem		= new AXILite
+		val wbu2Mem 	= new AXIMaster
         val wbu2PC      = Decoupled(new WBU2PC)
 	})
 	val clockWire 		= this.clock.asBool
@@ -115,6 +116,111 @@ class WBU extends Module {
 	val pcASrcWire 		= branchCond.io.pcASrc
 	val pcBSrcWire 		= branchCond.io.pcBSrc
 
+	/* AXI Transport */
+	/* AW */
+	val awreadyWire 			= io.wbu2Mem.master_awready
+	val awvalidReg 				= RegInit(0.B)
+	io.wbu2Mem.master_awvalid 	:= awvalidReg
+	io.wbu2Mem.master_awaddr	:= aluDataWire
+	val awidReg 				= RegInit(0.U(4.W))
+	io.wbu2Mem.master_awid 		:= awidReg
+	val awlenReg 				= RegInit(0.U(8.W))
+	io.wbu2Mem.master_awlen 	:= awlenReg
+	val awsizeReg 				= RegInit(2.U(3.W))
+	io.wbu2Mem.master_awsize 	:= awsizeReg
+	val awburstReg 				= RegInit(1.U(2.W))
+	io.wbu2Mem.master_awburst 	:= awburstReg
+	/* W */
+	val wreadyWire 				= io.wbu2Mem.master_wready
+	val wvalidReg 				= RegInit(0.B)
+	io.wbu2Mem.master_wvalid 	:= wvalidReg
+	io.wbu2Mem.master_wdata 	:= memDataWire
+	io.wbu2Mem.master_wstrb 	:= wMaskWire
+	val wlastReg 				= RegInit(0.B)
+	io.wbu2Mem.master_wlast 	:= wlastReg
+	/* B */
+	val breadyReg 				= RegInit(1.B)
+	io.wbu2Mem.master_bready 	:= breadyReg
+	val bvalidWire 				= io.wbu2Mem.master_bvalid
+	val brespWire 				= io.wbu2Mem.master_bresp
+	val bidWire 				= io.wbu2Mem.master_bid
+	/* AR */
+	val arreadyWire 			= io.wbu2Mem.master_arready
+	val arvalidReg 				= RegInit(0.B)
+	io.wbu2Mem.master_arvalid 	:= arvalidReg
+	io.wbu2Mem.master_araddr	:= aluDataWire
+	val aridReg 				= RegInit(0.U(4.W))
+	io.wbu2Mem.master_arid 		:= aridReg
+	val arlenReg 				= RegInit(0.U(8.W))
+	io.wbu2Mem.master_arlen 	:= arlenReg
+	val arsizeReg 				= RegInit(2.U(3.W))
+	io.wbu2Mem.master_arsize 	:= arsizeReg
+	val arburstReg 				= RegInit(1.U(2.W))
+	io.wbu2Mem.master_arburst 	:= arburstReg
+	/* R */
+	val rreadyReg 				= RegInit(1.B)
+	io.wbu2Mem.master_rready 	:= rreadyReg
+	val rvalidWire 				= io.wbu2Mem.master_rvalid
+	val rrespWire 				= io.wbu2Mem.master_rresp
+	val rdataWire 				= io.wbu2Mem.master_rdata
+	val signDataWire					= MuxCase(rdataWire.asSInt, Seq(
+		(wMaskWire === "b0001".U).asBool 	-> Cat(Fill(24, rdataWire(7)), rdataWire(7, 0)).asSInt,
+		(wMaskWire === "b0011".U).asBool 	-> Cat(Fill(16, rdataWire(15)), rdataWire(15, 0)).asSInt,
+		(wMaskWire === "b1111".U).asBool 	-> rdataWire.asSInt
+	))
+	val memRdDataReg					= RegInit(0.U(32.W))
+	val memRdDataWire 					= Mux(sOrUWire.asBool, signDataWire.asUInt, rdataWire)
+	val rlastWire 				= io.wbu2Mem.master_rlast
+	val ridWire 				= io.wbu2Mem.master_rid
+	when(~resetnWire.asBool) {
+		memRdDataReg	:= 0.U(32.W)
+	} .elsewhen(rvalidWire && io.wbu2Mem.master_rready) {
+		memRdDataReg	:= memRdDataWire
+	}
+	/* Data Memory Headshake */
+	/* AW */
+	when(~resetnWire.asBool) {
+		awvalidReg	:= 0.U
+	} .elsewhen(io.exu2WBU.ready && io.exu2WBU.valid && io.exu2WBU.bits.memValid.asBool && io.exu2WBU.bits.memWR.asBool) {
+		awvalidReg	:= 1.U
+	} .elsewhen(awreadyWire && io.wbu2Mem.master_awvalid) {
+		awvalidReg	:= 0.U
+	}
+	/* W */
+	when(~resetnWire.asBool) {
+		wvalidReg	:= 0.U
+	} .elsewhen(io.exu2WBU.ready && io.exu2WBU.valid && io.exu2WBU.bits.memValid.asBool && io.exu2WBU.bits.memWR.asBool) {
+		wvalidReg	:= 1.U
+	} .elsewhen(wreadyWire && io.wbu2Mem.master_wvalid) {
+		wvalidReg	:= 0.U
+	}
+	/* B */
+	when(~resetnWire.asBool) {
+		breadyReg	:= 1.U
+	} .elsewhen(bvalidWire && io.wbu2Mem.master_bready) {
+		breadyReg	:= 0.U
+	} .elsewhen(bvalidWire) {
+		breadyReg	:= 1.U
+	}
+	/* AR */
+	when(~resetnWire.asBool) {
+		arvalidReg	:= 0.U
+	} .elsewhen(io.exu2WBU.ready && io.exu2WBU.valid && (io.exu2WBU.bits.memValid.asBool && (~io.exu2WBU.bits.memWR.asBool))) {
+		arvalidReg	:= 1.U
+	} .elsewhen(io.wbu2Mem.master_arvalid && io.wbu2Mem.master_arready) {
+		arvalidReg	:= 0.U
+	}
+	/* R */
+	when(~resetnWire.asBool) {
+		rreadyReg	:= 1.U(1.W)
+	} .elsewhen(rvalidWire && io.wbu2Mem.master_rready && io.exu2WBU.bits.memValid.asBool) {
+		rreadyReg	:= 0.U(1.W) 
+	} .elsewhen(rvalidWire) {
+		rreadyReg	:= 1.U(1.W)
+	}
+	/* AXI Transport End */
+
+	/*
 	/* AR */
 	io.wbu2Mem.arAddr	:= aluDataWire
 	val arValidReg 						= RegInit(0.U(1.W))
@@ -196,11 +302,12 @@ class WBU extends Module {
 		bReadyReg	:= 1.U
 	}
 	/* Data Memory End */
+	*/
 
 	// State Machine
 	val s_idle :: s_wait_exu_valid :: s_sram_op :: s_wait_pcReg_ready :: Nil = Enum(4)
 	val state = RegInit(s_idle)
-	val memEnd = (wReadyWire.asBool && wValidReg.asBool) || (rReadyReg.asBool && rValidWire.asBool)
+	val memEnd = (wreadyWire && wvalidReg) || (rreadyReg && rvalidWire)
 	state := MuxLookup(state, s_idle)(List(
 		s_idle				-> Mux(reset.asBool, s_idle, s_wait_exu_valid),
 		s_wait_exu_valid	-> Mux(reset.asBool, s_idle, Mux(io.exu2WBU.valid, Mux(io.exu2WBU.bits.memValid.asBool, s_sram_op, s_wait_pcReg_ready), s_wait_exu_valid)),
