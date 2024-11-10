@@ -19,8 +19,11 @@ object Main extends App {
 
 class top extends Module {
 	val io = IO(new Bundle {
+		val interrupt 	= Input(UInt(1.W))
+		val axiMaster 	= new AXIMaster
+		val axiSlave 	= new AXISlave
+
 		val npcState 	= Input(UInt(3.W))
-		//val memData 	= Input(UInt(32.W))
 		val curPC 		= Output(UInt(32.W))
 		val nextPC 		= Output(UInt(32.W))
 	})
@@ -32,8 +35,6 @@ class top extends Module {
 	val exu 			= Module(new EXU)
 	val wbu 			= Module(new WBU)
 	val xbarAXI			= Module(new XbarAXI)
-	//val xbar 			= Module(new Xbar)
-	//val axiLiteBusArbiter	= Module(new AXILiteBusArbiter)
 
 	/* PC Reg */
 	pc.io.npcState 	:= io.npcState
@@ -48,8 +49,6 @@ class top extends Module {
 	/* Output */
 	ifu.io.inst 			<> idu.io.inst
 	AXIUtils.connectAXI(ifu.io.ifu2Mem, xbarAXI.io.axiSlaveIFU)
-	//axiLiteBusArbiter.io.axiLiteMaster0	<> ifu.io.ifu2Mem
-	//xbar.io.axiLiteMaster0 <> ifu.io.ifu2Mem
 
 	/* IDU */
 	idu.io.idu2EXU 		<> exu.io.idu2EXU
@@ -63,21 +62,16 @@ class top extends Module {
 	wbu.io.wbu2CSR			<> csrReg.io.wbu2CSR
 	wbu.io.wbu2BaseReg		<> riscv32BaseReg.io.wbu2BaseReg
 	AXIUtils.connectAXI(wbu.io.wbu2Mem, xbarAXI.io.axiSlaveWBU)
-	// axiLiteBusArbiter.io.axiLiteMaster1	<> wbu.io.wbu2Mem
-	//xbar.io.axiLiteMaster1 <> wbu.io.wbu2Mem
 
 	/* Memory */
 	val dataSramAXILite				= Module(new AXILiteSram(0.B))
 	dataSramAXILite.io.axiLiteM		<> xbarAXI.io.axiLiteSram 	
-	//dataSramAXILite.io.axiLiteM	<> xbar.io.axiLiteSram
 
 	/* Device */
 	/* Uart */
 	val axiLiteUart = Module(new AXILiteUart)
 	axiLiteUart.io.axiLiteMaster 	<> xbarAXI.io.axiLiteUart
-	//axiLiteUart.io.axiLiteMaster <> xbar.io.axiLiteUart
 	/* Clint */
 	val axiLiteClint = Module(new AXILiteClint)
 	axiLiteClint.io.axiLiteMaster 	<> xbarAXI.io.axiLiteClint
-	//axiLiteClint.io.axiLiteMaster <> xbar.io.axiLiteClint
 }
