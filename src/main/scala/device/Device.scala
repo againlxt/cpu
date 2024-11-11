@@ -62,10 +62,9 @@ class Xbar extends Module {
 
 class XbarAXI extends Module {
     val io = IO(new Bundle {
-        val axiSlaveIFU     = new AXISlave
-        val axiSlaveWBU     = new AXISlave
-        val axiLiteSram    	= new AXILite 
-		val axiLiteUart    	= new AXILite
+        val axiSlaveIFU     = Flipped(new AXI)
+        val axiSlaveWBU     = Flipped(new AXI)
+        val axiMasterDevice = new AXI
 		val axiLiteClint	= new AXILite
     })
 
@@ -83,97 +82,48 @@ class XbarAXI extends Module {
     
     AXIUtils.initializeAXISlave(io.axiSlaveIFU)
     AXIUtils.initializeAXISlave((io.axiSlaveWBU))
+    AXIUtils.initializeAXIMaster(io.axiMasterDevice)
 
-	initializeAXILite(io.axiLiteSram)
-  	initializeAXILite(io.axiLiteUart)
 	initializeAXILite(io.axiLiteClint)
 
     val axiBusarbiter   = Module(new AXIBusArbiter)
     io.axiSlaveIFU  <> axiBusarbiter.io.axiSlave0
     io.axiSlaveWBU  <> axiBusarbiter.io.axiSlave1
     val axiMaster       = axiBusarbiter.io.axiMaster
-    axiMaster.master_bid    := 0.U
-    axiMaster.master_rlast  := 0.B
-    axiMaster.master_rid    := 0.U
+    axiMaster.bid    := 0.U
+    axiMaster.rlast  := 0.B
+    axiMaster.rid    := 0.U
 
     val deviceID = MuxCase(DeviceID.INIT, Seq(
-		(axiMaster.master_araddr === DeviceUart.baseAddr || axiMaster.master_awaddr === DeviceUart.baseAddr) -> DeviceID.UART,
-		(DeviceClint.baseAddr === axiMaster.master_araddr || axiMaster.master_araddr === DeviceClint.baseAddr + DeviceClint.size - 4.U ||
-        DeviceClint.baseAddr === axiMaster.master_awaddr || axiMaster.master_awaddr === DeviceClint.baseAddr + DeviceClint.size - 4.U) -> DeviceID.CLINT
+		(DeviceClint.baseAddr === axiMaster.araddr || axiMaster.araddr === DeviceClint.baseAddr + DeviceClint.size - 4.U ||
+        DeviceClint.baseAddr === axiMaster.awaddr || axiMaster.awaddr === DeviceClint.baseAddr + DeviceClint.size - 4.U) -> DeviceID.CLINT
 	))
 
-    when(deviceID === DeviceID.UART) {
-        /* AW */
-        axiMaster.master_awready    := io.axiLiteUart.awReady
-        io.axiLiteUart.awValid      := axiMaster.master_awvalid
-        io.axiLiteUart.awAddr       := axiMaster.master_awaddr
-        /* W */
-        axiMaster.master_wready     := io.axiLiteUart.wReady
-        io.axiLiteUart.wValid       := axiMaster.master_wvalid
-        io.axiLiteUart.wData        := axiMaster.master_wdata
-        io.axiLiteUart.wStrb        := axiMaster.master_wstrb
-        /* B */
-        axiMaster.master_bresp      := io.axiLiteUart.bResp
-        axiMaster.master_bvalid     := io.axiLiteUart.bValid
-        io.axiLiteUart.bReady       := axiMaster.master_bready
-        /* AR */
-        axiMaster.master_arready    := io.axiLiteUart.arReady
-        io.axiLiteUart.arValid      := axiMaster.master_arvalid
-        io.axiLiteUart.arAddr       := axiMaster.master_araddr
-        /* R */
-        axiMaster.master_rdata      := io.axiLiteUart.rData
-        axiMaster.master_rresp      := io.axiLiteUart.rrEsp
-        axiMaster.master_rvalid     := io.axiLiteUart.rValid
-        io.axiLiteUart.rReady       := axiMaster.master_rready
-		//axiLiteSlave <> io.axiLiteUart
-	} .elsewhen(deviceID === DeviceID.CLINT) {
+    when(deviceID === DeviceID.CLINT) {
          /* AW */
-        axiMaster.master_awready    := io.axiLiteClint.awReady
-        io.axiLiteClint.awValid      := axiMaster.master_awvalid
-        io.axiLiteClint.awAddr       := axiMaster.master_awaddr
+        axiMaster.awready    := io.axiLiteClint.awReady
+        io.axiLiteClint.awValid      := axiMaster.awvalid
+        io.axiLiteClint.awAddr       := axiMaster.awaddr
         /* W */
-        axiMaster.master_wready     := io.axiLiteClint.wReady
-        io.axiLiteClint.wValid       := axiMaster.master_wvalid
-        io.axiLiteClint.wData        := axiMaster.master_wdata
-        io.axiLiteClint.wStrb        := axiMaster.master_wstrb
+        axiMaster.wready     := io.axiLiteClint.wReady
+        io.axiLiteClint.wValid       := axiMaster.wvalid
+        io.axiLiteClint.wData        := axiMaster.wdata
+        io.axiLiteClint.wStrb        := axiMaster.wstrb
         /* B */
-        axiMaster.master_bresp      := io.axiLiteClint.bResp
-        axiMaster.master_bvalid     := io.axiLiteClint.bValid
-        io.axiLiteClint.bReady       := axiMaster.master_bready
+        axiMaster.bresp      := io.axiLiteClint.bResp
+        axiMaster.bvalid     := io.axiLiteClint.bValid
+        io.axiLiteClint.bReady       := axiMaster.bready
         /* AR */
-        axiMaster.master_arready    := io.axiLiteClint.arReady
-        io.axiLiteClint.arValid      := axiMaster.master_arvalid
-        io.axiLiteClint.arAddr       := axiMaster.master_araddr
+        axiMaster.arready    := io.axiLiteClint.arReady
+        io.axiLiteClint.arValid      := axiMaster.arvalid
+        io.axiLiteClint.arAddr       := axiMaster.araddr
         /* R */
-        axiMaster.master_rdata      := io.axiLiteClint.rData
-        axiMaster.master_rresp      := io.axiLiteClint.rrEsp
-        axiMaster.master_rvalid     := io.axiLiteClint.rValid
-        io.axiLiteClint.rReady       := axiMaster.master_rready
-		//axiLiteSlave <> io.axiLiteClint
+        axiMaster.rdata      := io.axiLiteClint.rData
+        axiMaster.rresp      := io.axiLiteClint.rrEsp
+        axiMaster.rvalid     := io.axiLiteClint.rValid
+        io.axiLiteClint.rReady       := axiMaster.rready
 	}.otherwise {
-         /* AW */
-        axiMaster.master_awready    := io.axiLiteSram.awReady
-        io.axiLiteSram.awValid      := axiMaster.master_awvalid
-        io.axiLiteSram.awAddr       := axiMaster.master_awaddr
-        /* W */
-        axiMaster.master_wready     := io.axiLiteSram.wReady
-        io.axiLiteSram.wValid       := axiMaster.master_wvalid
-        io.axiLiteSram.wData        := axiMaster.master_wdata
-        io.axiLiteSram.wStrb        := axiMaster.master_wstrb
-        /* B */
-        axiMaster.master_bresp      := io.axiLiteSram.bResp
-        axiMaster.master_bvalid     := io.axiLiteSram.bValid
-        io.axiLiteSram.bReady       := axiMaster.master_bready
-        /* AR */
-        axiMaster.master_arready    := io.axiLiteSram.arReady
-        io.axiLiteSram.arValid      := axiMaster.master_arvalid
-        io.axiLiteSram.arAddr       := axiMaster.master_araddr
-        /* R */
-        axiMaster.master_rdata      := io.axiLiteSram.rData
-        axiMaster.master_rresp      := io.axiLiteSram.rrEsp
-        axiMaster.master_rvalid     := io.axiLiteSram.rValid
-        io.axiLiteSram.rReady       := axiMaster.master_rready
-		//axiLiteSlave <> io.axiLiteSram
+        axiMaster <> io.axiMasterDevice
 	}
 }
 

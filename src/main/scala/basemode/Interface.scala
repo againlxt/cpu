@@ -146,173 +146,90 @@ class AXILite extends Bundle {
 	val bReady 	= Output(Bool())
 }
 
-class AXIMaster extends Bundle {
+class AXI extends Bundle {
 	/* AW */
-	val master_awready	= Input(Bool())
-	val master_awvalid	= Output(Bool())
-	val master_awaddr	= Output(UInt(32.W))
-	val master_awid 	= Output(UInt(4.W))
-	val master_awlen 	= Output(UInt(8.W))
-	val master_awsize 	= Output(UInt(3.W))
-	val master_awburst 	= Output(UInt(2.W))
+	val awready	= Input(Bool())
+	val awvalid	= Output(Bool())
+	val awaddr	= Output(UInt(32.W))
+	val awid 	= Output(UInt(4.W))
+	val awlen 	= Output(UInt(8.W))
+	val awsize 	= Output(UInt(3.W))
+	val awburst 	= Output(UInt(2.W))
 
 	/* W */
-	val master_wready 	= Input(Bool())
-	val master_wvalid 	= Output(Bool())
-	val master_wdata 	= Output(UInt(32.W))
-	val master_wstrb 	= Output(UInt(4.W))
-	val master_wlast 	= Output(Bool())
+	val wready 	= Input(Bool())
+	val wvalid 	= Output(Bool())
+	val wdata 	= Output(UInt(32.W))
+	val wstrb 	= Output(UInt(4.W))
+	val wlast 	= Output(Bool())
 
 	/* B */
-	val master_bready 	= Output(Bool())
-	val master_bvalid 	= Input(Bool())
-	val master_bresp 	= Input(UInt(2.W))
-	val master_bid 		= Input(UInt(4.W))
+	val bready 	= Output(Bool())
+	val bvalid 	= Input(Bool())
+	val bresp 	= Input(UInt(2.W))
+	val bid 		= Input(UInt(4.W))
 
 	/* AR */
-	val master_arready 	= Input(Bool())
-	val master_arvalid 	= Output(Bool())
-	val master_araddr 	= Output(UInt(32.W))
-	val master_arid 	= Output(UInt(4.W))
-	val master_arlen 	= Output(UInt(8.W))
-	val master_arsize 	= Output(UInt(3.W))
-	val master_arburst 	= Output(UInt(2.W))
+	val arready 	= Input(Bool())
+	val arvalid 	= Output(Bool())
+	val araddr 	= Output(UInt(32.W))
+	val arid 	= Output(UInt(4.W))
+	val arlen 	= Output(UInt(8.W))
+	val arsize 	= Output(UInt(3.W))
+	val arburst 	= Output(UInt(2.W))
 	
 	/* R */
-	val master_rready 	= Output(Bool())
-	val master_rvalid 	= Input(Bool())
-	val master_rresp 	= Input(UInt(2.W))
-	val master_rdata 	= Input(UInt(32.W))
-	val master_rlast 	= Input(Bool())
-	val master_rid 		= Input(UInt(4.W))
-}
-
-class AXISlave extends Bundle {
-	/* AW */
-	val slave_awready	= Output(Bool())
-	val slave_awvalid	= Input(Bool())
-	val slave_awaddr	= Input(UInt(32.W))
-	val slave_awid 		= Input(UInt(4.W))
-	val slave_awlen 	= Input(UInt(8.W))
-	val slave_awsize 	= Input(UInt(3.W))
-	val slave_awburst 	= Input(UInt(2.W))
-
-	/* W */
-	val slave_wready 	= Output(Bool())
-	val slave_wvalid 	= Input(Bool())
-	val slave_wdata 	= Input(UInt(32.W))
-	val slave_wstrb 	= Input(UInt(4.W))
-	val slave_wlast 	= Input(Bool())
-
-	/* B */
-	val slave_bready 	= Input(Bool())
-	val slave_bvalid 	= Output(Bool())
-	val slave_bresp 	= Output(UInt(2.W))
-	val slave_bid 		= Output(UInt(4.W))
-
-	/* AR */
-	val slave_arready 	= Output(Bool())
-	val slave_arvalid 	= Input(Bool())
-	val slave_araddr 	= Input(UInt(32.W))
-	val slave_arid 		= Input(UInt(4.W))
-	val slave_arlen 	= Input(UInt(8.W))
-	val slave_arsize 	= Input(UInt(3.W))
-	val slave_arburst 	= Input(UInt(2.W))
-	
-	/* R */
-	val slave_rready 	= Input(Bool())
-	val slave_rvalid 	= Output(Bool())
-	val slave_rresp 	= Output(UInt(2.W))
-	val slave_rdata 	= Output(UInt(32.W))
-	val slave_rlast 	= Output(Bool())
-	val slave_rid 		= Output(UInt(4.W))
+	val rready 	= Output(Bool())
+	val rvalid 	= Input(Bool())
+	val rresp 	= Input(UInt(2.W))
+	val rdata 	= Input(UInt(32.W))
+	val rlast 	= Input(Bool())
+	val rid 		= Input(UInt(4.W))
 }
 
 object AXIUtils {
-    def initializeAXISlave(axiSlave: AXISlave): Unit = {
+    def initializeAXISlave(axi: AXI): Unit = {
         /* AW */
-        axiSlave.slave_awready := false.B
+        axi.awready := false.B
         /* W */
-        axiSlave.slave_wready := false.B
+        axi.wready := false.B
         /* B */
-        axiSlave.slave_bvalid := false.B
-        axiSlave.slave_bresp := 0.U
-        axiSlave.slave_bid := 0.U
+        axi.bvalid := false.B
+        axi.bresp := 0.U
+        axi.bid := 0.U
         /* AR */
-        axiSlave.slave_arready := false.B
+        axi.arready := false.B
         /* R */
-        axiSlave.slave_rvalid := false.B
-        axiSlave.slave_rresp := 0.U
-        axiSlave.slave_rdata := 0.U
-        axiSlave.slave_rlast := false.B
-        axiSlave.slave_rid := 0.U
+        axi.rvalid := false.B
+        axi.rresp := 0.U
+        axi.rdata := 0.U
+        axi.rlast := false.B
+        axi.rid := 0.U
     }
 
-    def initializeAXIMaster(axiMaster: AXIMaster): Unit = {
+    def initializeAXIMaster(axi: AXI): Unit = {
         /* AW */
-        axiMaster.master_awvalid := false.B
-        axiMaster.master_awaddr := 0.U
-        axiMaster.master_awid := 0.U
-        axiMaster.master_awlen := 0.U
-        axiMaster.master_awsize := 2.U
-        axiMaster.master_awburst := 1.U
+        axi.awvalid := false.B
+        axi.awaddr := 0.U
+        axi.awid := 0.U
+        axi.awlen := 0.U
+        axi.awsize := 2.U
+        axi.awburst := 1.U
         /* W */
-        axiMaster.master_wvalid := false.B
-        axiMaster.master_wdata := 0.U
-        axiMaster.master_wstrb := 0.U
-        axiMaster.master_wlast := false.B
+        axi.wvalid := false.B
+        axi.wdata := 0.U
+        axi.wstrb := 0.U
+        axi.wlast := false.B
         /* B */
-        axiMaster.master_bready := false.B
+        axi.bready := false.B
         /* AR */
-        axiMaster.master_arvalid := false.B
-        axiMaster.master_araddr := 0.U
-        axiMaster.master_arid := 0.U
-        axiMaster.master_arlen := 0.U
-        axiMaster.master_arsize := 2.U
-        axiMaster.master_arburst := 1.U
+        axi.arvalid := false.B
+        axi.araddr := 0.U
+        axi.arid := 0.U
+        axi.arlen := 0.U
+        axi.arsize := 2.U
+        axi.arburst := 1.U
         /* R */
-        axiMaster.master_rready := false.B
+        axi.rready := false.B
     }
-
-	def connectAXI(master: AXIMaster, slave: AXISlave): Unit = {
-		/* AW channel */
-		master.master_awready <> slave.slave_awready
-		slave.slave_awvalid <> master.master_awvalid
-		slave.slave_awaddr <> master.master_awaddr
-		slave.slave_awid <> master.master_awid
-		slave.slave_awlen <> master.master_awlen
-		slave.slave_awsize <> master.master_awsize
-		slave.slave_awburst <> master.master_awburst
-
-		/* W channel */
-		master.master_wready <> slave.slave_wready
-		slave.slave_wvalid <> master.master_wvalid
-		slave.slave_wdata <> master.master_wdata
-		slave.slave_wstrb <> master.master_wstrb
-		slave.slave_wlast <> master.master_wlast
-
-		/* B channel */
-		slave.slave_bready <> master.master_bready
-		master.master_bvalid <> slave.slave_bvalid
-		master.master_bresp <> slave.slave_bresp
-		master.master_bid <> slave.slave_bid
-
-		/* AR channel */
-		master.master_arready <> slave.slave_arready
-		slave.slave_arvalid <> master.master_arvalid
-		slave.slave_araddr <> master.master_araddr
-		slave.slave_arid <> master.master_arid
-		slave.slave_arlen <> master.master_arlen
-		slave.slave_arsize <> master.master_arsize
-		slave.slave_arburst <> master.master_arburst
-
-		/* R channel */
-		slave.slave_rready <> master.master_rready
-		master.master_rvalid <> slave.slave_rvalid
-		master.master_rresp <> slave.slave_rresp
-		master.master_rdata <> slave.slave_rdata
-		master.master_rlast <> slave.slave_rlast
-		master.master_rid <> slave.slave_rid
-	}
-
 }

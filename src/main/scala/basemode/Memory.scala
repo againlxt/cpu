@@ -141,35 +141,35 @@ class AXILiteBusArbiter extends Module {
 
 class AXIBusArbiter extends Module {
   val io = IO(new Bundle {
-    val axiSlave0   = new AXISlave
-    val axiSlave1   = new AXISlave
-    val axiMaster   = new AXIMaster
+    val axiSlave0   = Flipped(new AXI)
+    val axiSlave1   = Flipped(new AXI)
+    val axiMaster   = new AXI
   })
   AXIUtils.initializeAXISlave(io.axiSlave0)
   AXIUtils.initializeAXISlave(io.axiSlave1)
   AXIUtils.initializeAXIMaster(io.axiMaster)
 
-  val awvalidWire0  = io.axiSlave0.slave_awvalid
-  val awreadyWire0  = io.axiSlave0.slave_awready
-  val wvalidWire0   = io.axiSlave0.slave_wvalid
-  val wreadyWire0   = io.axiSlave0.slave_wready
-  val bvalidWire0   = io.axiSlave0.slave_bvalid
-  val breadyWire0   = io.axiSlave0.slave_bready
-  val arvalidWire0  = io.axiSlave0.slave_arvalid
-  val arreadyWire0  = io.axiSlave0.slave_arready
-  val rvalidWire0   = io.axiSlave0.slave_rvalid
-  val rreadyWire0   = io.axiSlave0.slave_rready
+  val awvalidWire0  = io.axiSlave0.awvalid
+  val awreadyWire0  = io.axiSlave0.awready
+  val wvalidWire0   = io.axiSlave0.wvalid
+  val wreadyWire0   = io.axiSlave0.wready
+  val bvalidWire0   = io.axiSlave0.bvalid
+  val breadyWire0   = io.axiSlave0.bready
+  val arvalidWire0  = io.axiSlave0.arvalid
+  val arreadyWire0  = io.axiSlave0.arready
+  val rvalidWire0   = io.axiSlave0.rvalid
+  val rreadyWire0   = io.axiSlave0.rready
 
-  val awvalidWire1  = io.axiSlave1.slave_awvalid
-  val awreadyWire1  = io.axiSlave1.slave_awready
-  val wvalidWire1   = io.axiSlave1.slave_wvalid
-  val wreadyWire1   = io.axiSlave1.slave_wready
-  val bvalidWire1   = io.axiSlave1.slave_bvalid
-  val breadyWire1   = io.axiSlave1.slave_bready
-  val arvalidWire1  = io.axiSlave1.slave_arvalid
-  val arreadyWire1  = io.axiSlave1.slave_arready
-  val rvalidWire1   = io.axiSlave1.slave_rvalid
-  val rreadyWire1   = io.axiSlave1.slave_rready
+  val awvalidWire1  = io.axiSlave1.awvalid
+  val awreadyWire1  = io.axiSlave1.awready
+  val wvalidWire1   = io.axiSlave1.wvalid
+  val wreadyWire1   = io.axiSlave1.wready
+  val bvalidWire1   = io.axiSlave1.bvalid
+  val breadyWire1   = io.axiSlave1.bready
+  val arvalidWire1  = io.axiSlave1.arvalid
+  val arreadyWire1  = io.axiSlave1.arready
+  val rvalidWire1   = io.axiSlave1.rvalid
+  val rreadyWire1   = io.axiSlave1.rready
 
   val s_idle :: s_wait :: s_ifu :: s_lsu :: Nil = Enum(4)
   val state = RegInit(s_idle)
@@ -188,9 +188,9 @@ class AXIBusArbiter extends Module {
   when(state === s_idle) {
     AXIUtils.initializeAXIMaster(io.axiMaster)
   } .elsewhen(state === s_ifu || state === s_wait) {
-    AXIUtils.connectAXI(io.axiMaster, io.axiSlave0)
+    io.axiMaster <> io.axiSlave0
   } .elsewhen(state === s_lsu) {
-    AXIUtils.connectAXI(io.axiMaster, io.axiSlave1)
+    io.axiMaster <> io.axiSlave1
   }
 }
 

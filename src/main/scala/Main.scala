@@ -20,12 +20,8 @@ object Main extends App {
 class top extends Module {
 	val io = IO(new Bundle {
 		val interrupt 	= Input(UInt(1.W))
-		val axiMaster 	= new AXIMaster
-		val axiSlave 	= new AXISlave
-
-		val npcState 	= Input(UInt(3.W))
-		val curPC 		= Output(UInt(32.W))
-		val nextPC 		= Output(UInt(32.W))
+		val master 	= new AXI
+		val slave 	= Flipped(new AXI)
 	})
 	val pc 				= Module(new PC)
 	val ifu 			= Module(new IFU)
@@ -37,18 +33,15 @@ class top extends Module {
 	val xbarAXI			= Module(new XbarAXI)
 
 	/* PC Reg */
-	pc.io.npcState 	:= io.npcState
 	pc.io.wbu2PC 	<> wbu.io.wbu2PC
 	val pcWire 		= pc.io.pc
-	io.curPC     	:= pcWire
-	io.nextPC 		:= wbu.io.wbu2PC.bits.nextPC
 
 	/* IFU */
 	/* Input */
 	ifu.io.pc 		:= pcWire
 	/* Output */
 	ifu.io.inst 			<> idu.io.inst
-	AXIUtils.connectAXI(ifu.io.ifu2Mem, xbarAXI.io.axiSlaveIFU)
+	ifu.io.ifu2Mem <> xbarAXI.io.axiSlaveIFU
 
 	/* IDU */
 	idu.io.idu2EXU 		<> exu.io.idu2EXU
@@ -61,16 +54,12 @@ class top extends Module {
 	/* WBU */
 	wbu.io.wbu2CSR			<> csrReg.io.wbu2CSR
 	wbu.io.wbu2BaseReg		<> riscv32BaseReg.io.wbu2BaseReg
-	AXIUtils.connectAXI(wbu.io.wbu2Mem, xbarAXI.io.axiSlaveWBU)
-
-	/* Memory */
-	val dataSramAXILite				= Module(new AXILiteSram(0.B))
-	dataSramAXILite.io.axiLiteM		<> xbarAXI.io.axiLiteSram 	
+	wbu.io.wbu2Mem <> xbarAXI.io.axiSlaveWBU
 
 	/* Device */
-	/* Uart */
-	val axiLiteUart = Module(new AXILiteUart)
-	axiLiteUart.io.axiLiteMaster 	<> xbarAXI.io.axiLiteUart
+	/* Peripherals */
+	io.master 			<> xbarAXI.io.axiMasterDevice
+	AXIUtils.initializeAXISlave(io.slave)
 	/* Clint */
 	val axiLiteClint = Module(new AXILiteClint)
 	axiLiteClint.io.axiLiteMaster 	<> xbarAXI.io.axiLiteClint

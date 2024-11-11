@@ -12,7 +12,7 @@ class IFU extends Module {
     val io = IO(new Bundle {
 		val pc  	 	= Input(UInt(32.W))
         val inst     	= Decoupled(new IFU2IDU)
-		val ifu2Mem		= new AXIMaster 
+		val ifu2Mem		= new AXI 
     })
 	/* Clock and Reset */
 	val clockWire		= this.clock.asUInt
@@ -45,39 +45,39 @@ class IFU extends Module {
 
 	/* Signal Connection */
 	/* AW */
-	val awreadyWire		 		= io.ifu2Mem.master_awready
-	io.ifu2Mem.master_awvalid	:= awvalidReg
-	io.ifu2Mem.master_awaddr	:= awaddrReg
-	io.ifu2Mem.master_awid 		:= awidReg
-	io.ifu2Mem.master_awlen 	:= awlenReg
-	io.ifu2Mem.master_awsize 	:= awsizeReg
-	io.ifu2Mem.master_awburst	:= awburstReg
+	val awreadyWire		 		= io.ifu2Mem.awready
+	io.ifu2Mem.awvalid	:= awvalidReg
+	io.ifu2Mem.awaddr	:= awaddrReg
+	io.ifu2Mem.awid 		:= awidReg
+	io.ifu2Mem.awlen 	:= awlenReg
+	io.ifu2Mem.awsize 	:= awsizeReg
+	io.ifu2Mem.awburst	:= awburstReg
 	/* W */
-	val wreadyWire 				= io.ifu2Mem.master_wready
-	io.ifu2Mem.master_wvalid 	:= wvalidReg
-	io.ifu2Mem.master_wdata 	:= wdataReg
-	io.ifu2Mem.master_wstrb 	:= wstrbReg
-	io.ifu2Mem.master_wlast 	:= wlastReg
+	val wreadyWire 				= io.ifu2Mem.wready
+	io.ifu2Mem.wvalid 	:= wvalidReg
+	io.ifu2Mem.wdata 	:= wdataReg
+	io.ifu2Mem.wstrb 	:= wstrbReg
+	io.ifu2Mem.wlast 	:= wlastReg
 	/* B */
-	io.ifu2Mem.master_bready	:= breadyReg
-	val bvalidWire 				= io.ifu2Mem.master_bvalid
-	val brespWire 				= io.ifu2Mem.master_bresp
-	val bidWire 				= io.ifu2Mem.master_bid
+	io.ifu2Mem.bready	:= breadyReg
+	val bvalidWire 				= io.ifu2Mem.bvalid
+	val brespWire 				= io.ifu2Mem.bresp
+	val bidWire 				= io.ifu2Mem.bid
 	/* AR */
-	val arreadyWire 			= io.ifu2Mem.master_arready
-	io.ifu2Mem.master_arvalid	:= arvalidReg
-	io.ifu2Mem.master_araddr	:= araddrReg
-	io.ifu2Mem.master_arid 		:= aridReg
-	io.ifu2Mem.master_arlen 	:= arlenReg
-	io.ifu2Mem.master_arsize 	:= arsizeReg
-	io.ifu2Mem.master_arburst	:= arburstReg
+	val arreadyWire 			= io.ifu2Mem.arready
+	io.ifu2Mem.arvalid	:= arvalidReg
+	io.ifu2Mem.araddr	:= araddrReg
+	io.ifu2Mem.arid 		:= aridReg
+	io.ifu2Mem.arlen 	:= arlenReg
+	io.ifu2Mem.arsize 	:= arsizeReg
+	io.ifu2Mem.arburst	:= arburstReg
 	/* R */
-	io.ifu2Mem.master_rready 	:= rreadyReg
-	val rvalidWire 				= io.ifu2Mem.master_rvalid
-	val rrespWire 				= io.ifu2Mem.master_rresp
-	val rdataWire 				= io.ifu2Mem.master_rdata
-	val rlastWire 				= io.ifu2Mem.master_rlast
-	val ridWire 				= io.ifu2Mem.master_rid
+	io.ifu2Mem.rready 	:= rreadyReg
+	val rvalidWire 				= io.ifu2Mem.rvalid
+	val rrespWire 				= io.ifu2Mem.rresp
+	val rdataWire 				= io.ifu2Mem.rdata
+	val rlastWire 				= io.ifu2Mem.rlast
+	val ridWire 				= io.ifu2Mem.rid
 	
 	/* HeadShake Signals */
 	/* AW */
