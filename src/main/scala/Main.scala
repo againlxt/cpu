@@ -54,7 +54,7 @@ class top extends Module {
 	/* WBU */
 	wbu.io.wbu2CSR			<> csrReg.io.wbu2CSR
 	wbu.io.wbu2BaseReg		<> riscv32BaseReg.io.wbu2BaseReg
-	wbu.io.wbu2Mem <> xbarAXI.io.axiSlaveWBU
+	wbu.io.wbu2Mem 			<> xbarAXI.io.axiSlaveWBU
 
 	/* Device */
 	/* Peripherals */
@@ -63,4 +63,44 @@ class top extends Module {
 	/* Clint */
 	val axiLiteClint = Module(new AXILiteClint)
 	axiLiteClint.io.axiLiteMaster 	<> xbarAXI.io.axiLiteClint
+
+	/* DPI-C */
+	val getCurPC	= Module(new GetCurPC)
+	val getNextPC 	= Module(new GetNextPC)
+	getCurPC.io.pc 		:= pcWire
+	getNextPC.io.nextPC	:= wbu.io.wbu2PC.bits.nextPC
+}
+
+class GetCurPC extends BlackBox with HasBlackBoxInline {
+	val io = IO(new Bundle {
+		val pc = Input(UInt(32.W))
+	})
+  setInline("GetCurPC.sv",
+	"""module GetCurPC(
+	   |  input [31:0] pc 
+	   |);
+	   |
+	   |export "DPI-C" function get_cur_pc;
+	   |function bit [31:0] get_cur_pc;
+	   |	return pc;
+	   |endfunction
+	   |endmodule
+	""".stripMargin)
+}
+
+class GetNextPC extends BlackBox with HasBlackBoxInline {
+	val io = IO(new Bundle {
+		val nextPC = Input(UInt(32.W))
+	})
+  setInline("GetNextPC.sv",
+	"""module GetNextPC(
+	   |  input	[31:0] nextPC
+	   |);
+	   |
+	   |export "DPI-C" function get_next_pc;
+	   |function bit [31:0] get_next_pc;
+	   |	return nextPC;
+	   |endfunction
+	   |endmodule
+	""".stripMargin)
 }

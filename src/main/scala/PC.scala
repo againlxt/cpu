@@ -19,6 +19,9 @@ class PC extends Module {
 	// 使用 RegNext 更新 PC 值
 	when (io.wbu2PC.ready && io.wbu2PC.valid) {
 		pcReg := io.wbu2PC.bits.nextPC.asUInt
+		wbu2PCReadyReg := 0.U
+	} .otherwise {
+		wbu2PCReadyReg := 1.U
 	}
 
 	// 输出当前 PC 值
