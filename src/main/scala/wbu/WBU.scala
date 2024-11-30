@@ -22,7 +22,7 @@ class WBU extends Module {
 	val clockWire 		= this.clock.asBool
 	val resetnWire		= ~this.reset.asBool
 
-    val pcReg 			= RegInit(BigInt("80000000", 16).U(32.W))
+    val pcReg 			= RegInit(BigInt("20000000", 16).U(32.W))
 	val memDataReg		= RegInit(0.U(32.W))
 	val aluDataReg		= RegInit(0.U(32.W))
 	val csrWDataReg		= RegInit(0.U(32.W))
@@ -120,7 +120,8 @@ class WBU extends Module {
 	val awreadyWire 			= io.wbu2Mem.awready
 	val awvalidReg 				= RegInit(0.B)
 	io.wbu2Mem.awvalid 	:= awvalidReg
-	io.wbu2Mem.awaddr	:= aluDataWire
+	val awaddrReg 		:= RegInit(0.U(32.W))
+	io.wbu2Mem.awaddr	:= awaddrReg
 	val awidReg 				= RegInit(0.U(4.W))
 	io.wbu2Mem.awid 		:= awidReg
 	val awlenReg 				= RegInit(0.U(8.W))
@@ -178,6 +179,13 @@ class WBU extends Module {
 	}
 	/* Data Memory Headshake */
 	/* AW */
+	when(~resetnWire.asBool) {
+		awaddrReg	:= 0.U
+	} .elsewhen(awvalidReg && awreadyWire) {
+		awaddrReg 	:= aluDataReg
+	} .elsewhen(wvalidReg.asBool && wreadyWire) {
+		awaddrReg	:= 0.U
+	}
 	when(~resetnWire.asBool) {
 		awvalidReg	:= 0.U
 	} .elsewhen(io.exu2WBU.ready && io.exu2WBU.valid && io.exu2WBU.bits.memValid.asBool && io.exu2WBU.bits.memWR.asBool) {
