@@ -8,6 +8,7 @@ import _root_.interface.WBU2CSR
 import _root_.interface.WBU2BaseReg
 import _root_.interface.WBU2PC
 import _root_.interface._
+import basemode.AXIAccessFault
 import dataclass.data
 import basemode.LFSR
 
@@ -202,6 +203,10 @@ class WBU extends Module {
 		wvalidReg	:= 0.U
 	}
 	/* B */
+	val axiAccessFault = Module(new AXIAccessFault())
+	axiAccessFault.io.ready := breadyReg
+	axiAccessFault.io.valid := bvalidWire
+	axiAccessFault.io.resp	:= brespWire
 	when(~resetnWire.asBool) {
 		breadyReg	:= 1.U
 	} .elsewhen(bvalidWire && io.wbu2Mem.bready) {

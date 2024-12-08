@@ -7,6 +7,7 @@ import _root_.interface._
 import memory._
 import javax.management.modelmbean.ModelMBean
 import basemode.Delay
+import basemode.AXIAccessFault
 
 class IFU extends Module {
     val io = IO(new Bundle {
@@ -83,6 +84,17 @@ class IFU extends Module {
 	/* AW */
 	/* W */
 	/* B */
+	val axiAccessFault = Module(new AXIAccessFault())
+	axiAccessFault.io.ready := breadyReg
+	axiAccessFault.io.valid := bvalidWire
+	axiAccessFault.io.resp	:= brespWire
+	when(~resetnWire.asBool) {
+		breadyReg	:= 1.U
+	} .elsewhen(bvalidWire && io.ifu2Mem.bready) {
+		breadyReg	:= 0.U
+	} .elsewhen(bvalidWire) {
+		breadyReg	:= 1.U
+	}
 	/* AR */
 	when(~resetnWire.asBool) {
 		arvalidReg := 1.U
