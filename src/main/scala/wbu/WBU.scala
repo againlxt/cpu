@@ -120,7 +120,7 @@ class WBU extends Module {
 	val awreadyWire 			= io.wbu2Mem.awready
 	val awvalidReg 				= RegInit(0.B)
 	io.wbu2Mem.awvalid 	:= awvalidReg
-	val awaddrReg 		:= RegInit(0.U(32.W))
+	val awaddrReg 		= RegInit(0.U(32.W))
 	io.wbu2Mem.awaddr	:= awaddrReg
 	val awidReg 				= RegInit(0.U(4.W))
 	io.wbu2Mem.awid 		:= awidReg
