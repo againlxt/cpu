@@ -99,6 +99,8 @@ class XbarAXI extends Module {
         DeviceClint.baseAddr === axiMaster.awaddr || axiMaster.awaddr === DeviceClint.baseAddr + DeviceClint.size - 4.U) -> DeviceID.CLINT
 	))
 
+    val skipDiff = Module(new SkipDiff())
+    skipDiff.io.en(deviceID === DeviceID.INIT);
     when(deviceID === DeviceID.CLINT) {
          /* AW */
         axiMaster.awready    := io.axiLiteClint.awReady
@@ -269,6 +271,25 @@ class UartV extends BlackBox with HasBlackBoxInline {
 	|import "DPI-C" function void uart(input byte chr);
 	|always@(en) begin
 	|	if(en) uart(data);
+	|end
+	|
+	|endmodule
+	""".stripMargin)
+}
+
+class SkipDiff extends BlackBox with HasBlackBoxInline {
+    val io = IO(new Bundle {
+        val en = Input(Bool())
+    })
+
+	setInline("SkipDiff.sv",
+	"""module SkipDiff(
+	|	input en
+	|);
+	|
+	|import "DPI-C" function void difftest_skip_ref();
+	|always@(en) begin
+	|	if(en) difftest_skip_ref();
 	|end
 	|
 	|endmodule
