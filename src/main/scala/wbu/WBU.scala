@@ -106,6 +106,9 @@ class WBU extends Module {
 		(memOPWire === "b100".U).asBool -> 0.U(1.W)
 	))
 
+	val getCmd 		= Module(new GetCommond)
+	getCmd.io.cmd 	:= instWire
+
 	// Branch Cond
 	val branchCond 		= Module(new BranchCond)
 	// Input
@@ -121,8 +124,7 @@ class WBU extends Module {
 	val awreadyWire 			= io.wbu2Mem.awready
 	val awvalidReg 				= RegInit(0.B)
 	io.wbu2Mem.awvalid 	:= awvalidReg
-	val awaddrReg 		= RegInit(0.U(32.W))
-	io.wbu2Mem.awaddr	:= awaddrReg
+	io.wbu2Mem.awaddr	:= aluDataWire
 	val awidReg 				= RegInit(0.U(4.W))
 	io.wbu2Mem.awid 		:= awidReg
 	val awlenReg 				= RegInit(0.U(8.W))
@@ -180,13 +182,15 @@ class WBU extends Module {
 	}
 	/* Data Memory Headshake */
 	/* AW */
+	/*
 	when(~resetnWire.asBool) {
 		awaddrReg	:= 0.U
 	} .elsewhen(awvalidReg && awreadyWire) {
-		awaddrReg 	:= aluDataReg
+		awaddrReg 	:= aluDataWire
 	} .elsewhen(wvalidReg.asBool && wreadyWire) {
 		awaddrReg	:= 0.U
 	}
+	*/
 	when(~resetnWire.asBool) {
 		awvalidReg	:= 0.U
 	} .elsewhen(io.exu2WBU.ready && io.exu2WBU.valid && io.exu2WBU.bits.memValid.asBool && io.exu2WBU.bits.memWR.asBool) {
@@ -327,4 +331,25 @@ class BranchCond extends Module {
 		(branchWire === "b0111".U & !lessWire).asBool -> 0.U,
 		(branchWire === "b1000".U).asBool -> 2.U
 	))
+}
+
+class GetCommond extends BlackBox with HasBlackBoxInline {
+	val io = IO(new Bundle{
+		val cmd	= Input(UInt(32.W))
+	})
+
+	setInline("GetCommond.sv",
+	"""module GetCommond(
+	|	input [31:0] cmd
+	|);
+	|import "DPI-C" function void sim_exit();
+	|always @(cmd) begin
+	|    if(cmd==32'h00100073)   sim_exit();
+	|end
+	|export "DPI-C" function getCommond;
+	|function bit [31:0] getCommond;
+	|	return cmd;
+	|endfunction
+	|endmodule
+	""".stripMargin)
 }

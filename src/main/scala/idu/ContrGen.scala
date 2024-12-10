@@ -1004,7 +1004,6 @@ class ContrGen extends Module {
 	}
 
 	val cgDPIC = Module(new CGDPIC())
-	cgDPIC.io.cmd 					:= io.cmd
 	cgDPIC.io.instructionFormat 	:= instructionFormatWire.asUInt
 	cgDPIC.io.instructionFormatJAL 	:= InstructionFormat.JAL.asUInt
 	cgDPIC.io.instructionFormatJALR := InstructionFormat.JALR.asUInt
@@ -1013,7 +1012,6 @@ class ContrGen extends Module {
 
 class CGDPIC extends BlackBox with HasBlackBoxInline {
 	val io = IO(new Bundle{
-		val cmd 					= Input(UInt(32.W))
 		val instructionFormat 		= Input(UInt(32.W))
 		val instructionFormatJAL	= Input(UInt(32.W))
 		val instructionFormatJALR	= Input(UInt(32.W))
@@ -1022,16 +1020,11 @@ class CGDPIC extends BlackBox with HasBlackBoxInline {
 
 	setInline("CGDPIC.sv",
 	"""module CGDPIC(
-	|	input [31:0] cmd,
 	|	input [31:0] instructionFormat,
 	|	input [31:0] instructionFormatJAL,
 	|	input [31:0] instructionFormatJALR,
 	|	input [31:0] instructionFormatRET
 	|);
-	|import "DPI-C" function void sim_exit();
-	|always @(cmd) begin
-	|    if(cmd==32'h00100073)   sim_exit();
-	|end
 	|
 	|import "DPI-C" function void set_ftrace_function_call_flag();
 	|always @(instructionFormat) begin
@@ -1043,11 +1036,6 @@ class CGDPIC extends BlackBox with HasBlackBoxInline {
 	|always @(instructionFormat) begin
 	|	if(instructionFormat==instructionFormatRET) set_ftrace_ret_flag();
 	|end
-	|
-	|export "DPI-C" function getCommond;
-	|function bit [31:0] getCommond;
-	|	return cmd;
-	|endfunction
 	|endmodule
 	""".stripMargin)
 }
