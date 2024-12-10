@@ -121,60 +121,77 @@ class WBU extends Module {
 
 	/* AXI Transport */
 	/* AW */
-	val awreadyWire 			= io.wbu2Mem.awready
-	val awvalidReg 				= RegInit(0.B)
+	val awreadyWire 	= io.wbu2Mem.awready
+	val awvalidReg 		= RegInit(0.B)
 	io.wbu2Mem.awvalid 	:= awvalidReg
 	io.wbu2Mem.awaddr	:= aluDataWire
-	val awidReg 				= RegInit(0.U(4.W))
-	io.wbu2Mem.awid 		:= awidReg
-	val awlenReg 				= RegInit(0.U(8.W))
+	val awidReg 		= RegInit(0.U(4.W))
+	io.wbu2Mem.awid 	:= awidReg
+	val awlenReg 		= RegInit(0.U(8.W))
 	io.wbu2Mem.awlen 	:= awlenReg
-	val awsizeReg 				= RegInit(2.U(3.W))
-	io.wbu2Mem.awsize 	:= awsizeReg
-	val awburstReg 				= RegInit(1.U(2.W))
+	io.wbu2Mem.awsize 	:= memOPWire(1,0)
+	val awburstReg 		= RegInit(1.U(2.W))
 	io.wbu2Mem.awburst 	:= awburstReg
 	/* W */
-	val wreadyWire 				= io.wbu2Mem.wready
-	val wvalidReg 				= RegInit(0.B)
+	val wreadyWire 		= io.wbu2Mem.wready
+	val wvalidReg 		= RegInit(0.B)
 	io.wbu2Mem.wvalid 	:= wvalidReg
-	io.wbu2Mem.wdata 	:= memDataWire
-	io.wbu2Mem.wstrb 	:= wMaskWire
-	val wlastReg 				= RegInit(0.B)
+	io.wbu2Mem.wdata 	:= MuxCase(memDataWire, Seq(
+		(aluDataWire(1,0) === 0.U).asBool	-> memDataWire,
+		(aluDataWire(1,0) === 1.U).asBool	-> Cat(memDataWire(23,0), 0.U(8.W)),
+		(aluDataWire(1,0) === 2.U).asBool	-> Cat(memDataWire(15,0), 0.U(16.W)),
+		(aluDataWire(1,0) === 3.U).asBool	-> Cat(memDataWire(7,0), 0.U(24.W))
+	))
+	io.wbu2Mem.wstrb 	:= MuxCase(wMaskWire, Seq(
+		(aluDataWire(1,0) === 0.U).asBool	-> wMaskWire,
+		(aluDataWire(1,0) === 1.U).asBool	-> Cat(wMaskWire(2,0), 0.U(1.W)),
+		(aluDataWire(1,0) === 2.U).asBool	-> Cat(wMaskWire(1,0), 0.U(2.W)),
+		(aluDataWire(1,0) === 3.U).asBool	-> Cat(wMaskWire(0), 0.U(3.W))
+	))
+	val wlastReg 		= RegInit(0.B)
 	io.wbu2Mem.wlast 	:= wlastReg
 	/* B */
-	val breadyReg 				= RegInit(1.B)
+	val breadyReg 		= RegInit(1.B)
 	io.wbu2Mem.bready 	:= breadyReg
-	val bvalidWire 				= io.wbu2Mem.bvalid
-	val brespWire 				= io.wbu2Mem.bresp
-	val bidWire 				= io.wbu2Mem.bid
+	val bvalidWire 		= io.wbu2Mem.bvalid
+	val brespWire 		= io.wbu2Mem.bresp
+	val bidWire 		= io.wbu2Mem.bid
 	/* AR */
-	val arreadyWire 			= io.wbu2Mem.arready
-	val arvalidReg 				= RegInit(0.B)
+	val arreadyWire 	= io.wbu2Mem.arready
+	val arvalidReg 		= RegInit(0.B)
 	io.wbu2Mem.arvalid 	:= arvalidReg
 	io.wbu2Mem.araddr	:= aluDataWire
-	val aridReg 				= RegInit(0.U(4.W))
-	io.wbu2Mem.arid 		:= aridReg
-	val arlenReg 				= RegInit(0.U(8.W))
+	val aridReg 		= RegInit(0.U(4.W))
+	io.wbu2Mem.arid 	:= aridReg
+	val arlenReg 		= RegInit(0.U(8.W))
 	io.wbu2Mem.arlen 	:= arlenReg
-	val arsizeReg 				= RegInit(2.U(3.W))
-	io.wbu2Mem.arsize 	:= arsizeReg
-	val arburstReg 				= RegInit(1.U(2.W))
+	io.wbu2Mem.arsize 	:= memOPWire(1,0) 
+	val arburstReg 		= RegInit(1.U(2.W))
 	io.wbu2Mem.arburst 	:= arburstReg
 	/* R */
-	val rreadyReg 				= RegInit(1.B)
+	val rreadyReg 		= RegInit(1.B)
 	io.wbu2Mem.rready 	:= rreadyReg
-	val rvalidWire 				= io.wbu2Mem.rvalid
-	val rrespWire 				= io.wbu2Mem.rresp
-	val rdataWire 				= io.wbu2Mem.rdata
-	val signDataWire					= MuxCase(rdataWire.asSInt, Seq(
-		(wMaskWire === "b0001".U).asBool 	-> Cat(Fill(24, rdataWire(7)), rdataWire(7, 0)).asSInt,
-		(wMaskWire === "b0011".U).asBool 	-> Cat(Fill(16, rdataWire(15)), rdataWire(15, 0)).asSInt,
-		(wMaskWire === "b1111".U).asBool 	-> rdataWire.asSInt
+	val rvalidWire 		= io.wbu2Mem.rvalid
+	val rrespWire 		= io.wbu2Mem.rresp
+	val rdataWire 		= io.wbu2Mem.rdata
+	val rdataShiftWire  = Wire(UInt(32.W))
+	rdataShiftWire 	:= MuxCase(rdataWire, Seq(
+		(aluDataWire(1,0) === 0.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(7,0)),
+		(aluDataWire(1,0) === 0.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(15,0)),
+		(aluDataWire(1,0) === 1.U).asBool	-> Cat(0.U(24.W), rdataWire(15,8)),
+		(aluDataWire(1,0) === 2.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(23,16)),
+		(aluDataWire(1,0) === 2.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(31,16)),
+		(aluDataWire(1,0) === 3.U).asBool	-> Cat(0.U(24.W), rdataWire(31,24))
 	))
-	val memRdDataReg					= RegInit(0.U(32.W))
-	val memRdDataWire 					= Mux(sOrUWire.asBool, signDataWire.asUInt, rdataWire)
-	val rlastWire 				= io.wbu2Mem.rlast
-	val ridWire 				= io.wbu2Mem.rid
+	val signDataWire					= MuxCase(rdataShiftWire.asSInt, Seq(
+		(wMaskWire === "b0001".U).asBool 	-> Cat(Fill(24, rdataShiftWire(7)), rdataShiftWire(7, 0)).asSInt,
+		(wMaskWire === "b0011".U).asBool 	-> Cat(Fill(16, rdataShiftWire(15)), rdataShiftWire(15, 0)).asSInt,
+		(wMaskWire === "b1111".U).asBool 	-> rdataShiftWire.asSInt
+	))
+	val memRdDataReg	= RegInit(0.U(32.W))
+	val memRdDataWire 	= Mux(sOrUWire.asBool, signDataWire.asUInt, rdataShiftWire)
+	val rlastWire 		= io.wbu2Mem.rlast
+	val ridWire 		= io.wbu2Mem.rid
 	when(~resetnWire.asBool) {
 		memRdDataReg	:= 0.U(32.W)
 	} .elsewhen(rvalidWire && io.wbu2Mem.rready) {
