@@ -142,10 +142,10 @@ class WBU extends Module {
 		(aluDataWire(1,0) === 0.U && memOPWire(1,0) === 2.U).asBool	-> memDataWire,
 		(aluDataWire(1,0) === 0.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), memDataWire(15,0)),
 		(aluDataWire(1,0) === 0.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), memDataWire(7,0)),
-		(aluDataWire(1,0) === 1.U).asBool	-> Cat(memDataWire(23,0), memDataWire(15,8)),
-		(aluDataWire(1,0) === 2.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), memDataWire(23,16)),
-		(aluDataWire(1,0) === 2.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), memDataWire(31,16)),
-		(aluDataWire(1,0) === 3.U).asBool	-> Cat(0.U(24.W), memDataWire(31,24))
+		(aluDataWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), Cat(memDataWire(7,0), 0.U(8.W))),
+		(aluDataWire(1,0) === 2.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(8.W), Cat(memDataWire(7,0), 0.U(16.W))),
+		(aluDataWire(1,0) === 2.U && memOPWire(1,0) === 1.U).asBool	-> Cat(memDataWire(15,0), 0.U(16.W)),
+		(aluDataWire(1,0) === 3.U).asBool	-> Cat(memDataWire(7,0), 0.U(24.W))
 	))
 	io.wbu2Mem.wstrb 	:= MuxCase(wMaskWire, Seq(
 		(aluDataWire(1,0) === 0.U).asBool	-> wMaskWire,

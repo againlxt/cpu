@@ -107,12 +107,8 @@ class Shifter extends  Module {
 
 		val dOut	= Output(UInt(32.W))
 	})
-
-	val leftShiftedDataWire = io.dIn << io.shamt
-	val rightShiftedDataWire = Mux(io.aOrL.asBool,
-		(io.dIn.asSInt >> io.shamt).asUInt,  // 算术右移
-		(io.dIn >> io.shamt) // 逻辑右移
-	)
-
-	io.dOut := Mux(io.lOrR.asBool, leftShiftedDataWire, rightShiftedDataWire)
+	val dataS 					= Cat(Fill(32, io.dIn(31)), io.dIn.asUInt)
+	val rightShiftedDataWire	= dataS >> io.shamt
+	val leftShiftedDataWire 	= io.dIn << io.shamt
+	io.dOut := Mux(io.lOrR.asBool, leftShiftedDataWire, Mux(io.aOrL.asBool, rightShiftedDataWire(31, 0), io.dIn >> io.shamt))
 }
