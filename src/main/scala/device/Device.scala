@@ -49,9 +49,10 @@ class Xbar extends Module {
 
 	val deviceID = MuxCase(DeviceID.INIT, Seq(
 		(axiLiteSlave.arAddr === DeviceUart.baseAddr) -> DeviceID.UART,
-		(DeviceClint.baseAddr <= axiLiteSlave.arAddr && axiLiteSlave.arAddr < DeviceClint.baseAddr + DeviceClint.size) -> DeviceID.CLINT
+		(DeviceClint.baseAddr === axiLiteSlave.arAddr || axiLiteSlave.arAddr === DeviceClint.baseAddr + DeviceClint.size - 4.U) -> DeviceID.CLINT
 	))
-	
+	val skipDiff = Module(new SkipDiff())
+    skipDiff.io.en := (deviceID =/= DeviceID.INIT)
 	when(deviceID === DeviceID.UART) {
 		axiLiteSlave <> io.axiLiteUart
 	} .elsewhen(deviceID === DeviceID.CLINT) {
@@ -113,6 +114,8 @@ class AXILiteUart extends Module {
 
     val awEnReg             = RegInit(1.B)
     val uartEnReg           = RegInit(0.B)
+    val uartDataReg         = RegInit(8.U)
+    uart.io.data            := uartDataReg
     val awAddrReg           = RegInit(0.U(32.W))
     val arAddrReg           = RegInit(0.U(32.W))
 
@@ -132,6 +135,7 @@ class AXILiteUart extends Module {
         uartEnReg   := 1.B
     } .otherwise {
         awReadyReg  := 0.B
+        uartEnReg   := 0.B
     }
     when(~aresetnWire.asBool) {
         awAddrReg   := 0.U
@@ -142,9 +146,10 @@ class AXILiteUart extends Module {
 	uart.io.en := uartEnReg
     when(~aresetnWire.asBool) {
         wReadyReg   := 0.B
+        uartDataReg := 0.B
     } .elsewhen(~wReadyReg && wValidWire && awValidWire && awEnReg) {
         wReadyReg   := 1.B
-		uart.io.data:= wDataWire
+		uartDataReg := wDataWire
     } .otherwise {
         wReadyReg   := 0.B
     }
@@ -197,8 +202,27 @@ class UartV extends BlackBox with HasBlackBoxInline {
 	|);
 	|
 	|import "DPI-C" function void uart(input byte chr);
-	|always@(posedge en) begin
+	|always@(en) begin
 	|	if(en) uart(data);
+	|end
+	|
+	|endmodule
+	""".stripMargin)
+}
+
+class SkipDiff extends BlackBox with HasBlackBoxInline {
+    val io = IO(new Bundle {
+        val en = Input(Bool())
+    })
+
+	setInline("SkipDiff.sv",
+	"""module SkipDiff(
+	|	input en
+	|);
+	|
+	|import "DPI-C" function void difftest_skip_ref();
+	|always@(en) begin
+	|	if(en) difftest_skip_ref();
 	|end
 	|
 	|endmodule
