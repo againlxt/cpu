@@ -122,8 +122,8 @@
             ],
             "jars": [
                 "/home/lxt/.sbt/boot/scala-2.12.18/lib/scala-library.jar",
-                "/home/lxt/.sbt/boot/scala-2.12.18/lib/scala-compiler.jar",
                 "/home/lxt/.sbt/boot/scala-2.12.18/lib/scala-xml_2.12-2.1.0.jar",
+                "/home/lxt/.sbt/boot/scala-2.12.18/lib/scala-compiler.jar",
                 "/home/lxt/.sbt/boot/scala-2.12.18/lib/scala-reflect.jar"
             ],
             "setup": {
