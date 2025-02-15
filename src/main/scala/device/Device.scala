@@ -6,58 +6,37 @@ import _root_.interface._
 import memory._
 
 object DeviceID extends ChiselEnum{
-	val UART, CLINT, INIT = Value
-}
-
-object DeviceUart {
-	val baseAddr	= "hA00003F8".U
+	val CLINT, UART16550, MSPI, GPIO, PS2, VGA, INIT = Value
 }
 
 object DeviceClint {
-	val baseAddr 	= "hA0000048".U
-	val size 		= 8.U
+	val baseAddr 	= 0x02000000.U
+	val size 		= 0x10000.U
 }
 
-class Xbar extends Module {
-	val io = IO(new Bundle {
-		val axiLiteMaster0 	= Flipped(new AXILite)
-		val axiLiteMaster1 	= Flipped(new AXILite)
-		val axiLiteSram    	= new AXILite 
-		val axiLiteUart    	= new AXILite
-		val axiLiteClint	= new AXILite
-	})
-	def initializeAXILite(axiLite: AXILite): Unit = {
-		axiLite.arAddr := 0.U
-		axiLite.arValid := false.B
-		axiLite.rReady := false.B
-		axiLite.awAddr := 0.U
-		axiLite.awValid := false.B
-		axiLite.wData := 0.U
-		axiLite.wStrb := 0.U
-		axiLite.wValid := false.B
-		axiLite.bReady := false.B
-	}
-	initializeAXILite(io.axiLiteSram)
-  	initializeAXILite(io.axiLiteUart)
-	initializeAXILite(io.axiLiteClint)
+object DeviceUart16550 {
+	val baseAddr	= 0x10000000.U
+	val size 		= 0x1000.U
+}
 
-	val axiLiteBusArbiter 	= Module(new AXILiteBusArbiter)
-	io.axiLiteMaster0 <> axiLiteBusArbiter.io.axiLiteMaster0
-	io.axiLiteMaster1 <> axiLiteBusArbiter.io.axiLiteMaster1
-	val axiLiteSlave = axiLiteBusArbiter.io.axiLiteSlave
+object DeviceMSPI {
+	val baseAddr	= 0x10001000.U
+	val size 		= 0x1000.U
+}
 
-	val deviceID = MuxCase(DeviceID.INIT, Seq(
-		(axiLiteSlave.arAddr === DeviceUart.baseAddr) -> DeviceID.UART,
-		(DeviceClint.baseAddr === axiLiteSlave.arAddr || axiLiteSlave.arAddr === DeviceClint.baseAddr + DeviceClint.size - 4.U) -> DeviceID.CLINT
-	))
-	
-	when(deviceID === DeviceID.UART) {
-		axiLiteSlave <> io.axiLiteUart
-	} .elsewhen(deviceID === DeviceID.CLINT) {
-		axiLiteSlave <> io.axiLiteClint
-	}.otherwise {
-		axiLiteSlave <> io.axiLiteSram
-	}	
+object DeviceGPIO {
+	val baseAddr	= 0x10002000.U
+	val size 		= 0x8.U
+}
+
+object DevicePS2 {
+	val baseAddr	= 0x10011000.U
+	val size 		= 0x8.U
+}
+
+object DeviceVGA {
+	val baseAddr	= 0x21000000.U
+	val size 		= 0x00200000.U
 }
 
 class XbarAXI extends Module {
@@ -95,8 +74,18 @@ class XbarAXI extends Module {
     axiMaster.rid    := 0.U
 
     val deviceID = MuxCase(DeviceID.INIT, Seq(
-		(DeviceClint.baseAddr === axiMaster.araddr || axiMaster.araddr === DeviceClint.baseAddr + DeviceClint.size - 4.U ||
-        DeviceClint.baseAddr === axiMaster.awaddr || axiMaster.awaddr === DeviceClint.baseAddr + DeviceClint.size - 4.U) -> DeviceID.CLINT
+		(((axiMaster.araddr < DeviceClint.baseAddr + DeviceClint.size) & (axiMaster.araddr >= DeviceClint.baseAddr)) | 
+		((axiMaster.awaddr < DeviceClint.baseAddr + DeviceClint.size) & (axiMaster.awaddr >= DeviceClint.baseAddr))) -> DeviceID.CLINT,
+		(((axiMaster.araddr < DeviceUart16550.baseAddr + DeviceUart16550.size) & (axiMaster.araddr >= DeviceUart16550.baseAddr)) | 
+		((axiMaster.awaddr < DeviceUart16550.baseAddr + DeviceUart16550.size) & (axiMaster.awaddr >= DeviceUart16550.baseAddr))) -> DeviceID.UART16550,
+		(((axiMaster.araddr < DeviceMSPI.baseAddr + DeviceMSPI.size) & (axiMaster.araddr >= DeviceMSPI.baseAddr)) | 
+		((axiMaster.awaddr < DeviceMSPI.baseAddr + DeviceMSPI.size) & (axiMaster.awaddr >= DeviceMSPI.baseAddr))) -> DeviceID.MSPI,
+		(((axiMaster.araddr < DeviceGPIO.baseAddr + DeviceGPIO.size) & (axiMaster.araddr >= DeviceGPIO.baseAddr)) | 
+		((axiMaster.awaddr < DeviceGPIO.baseAddr + DeviceGPIO.size) & (axiMaster.awaddr >= DeviceGPIO.baseAddr))) -> DeviceID.GPIO,
+		(((axiMaster.araddr < DevicePS2.baseAddr + DevicePS2.size) & (axiMaster.araddr >= DevicePS2.baseAddr)) | 
+		((axiMaster.awaddr < DevicePS2.baseAddr + DevicePS2.size) & (axiMaster.awaddr >= DevicePS2.baseAddr))) -> DeviceID.PS2,
+		(((axiMaster.araddr < DeviceVGA.baseAddr + DeviceVGA.size) & (axiMaster.araddr >= DeviceVGA.baseAddr)) | 
+		((axiMaster.awaddr < DeviceVGA.baseAddr + DeviceVGA.size) & (axiMaster.awaddr >= DeviceVGA.baseAddr))) -> DeviceID.VGA,
 	))
 
     val skipDiff = Module(new SkipDiff())

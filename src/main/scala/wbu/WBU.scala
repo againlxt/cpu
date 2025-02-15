@@ -137,7 +137,6 @@ class WBU extends Module {
 	val wvalidReg 		= RegInit(0.B)
 	io.wbu2Mem.wvalid 	:= wvalidReg
 	io.wbu2Mem.wdata 	:= MuxCase(memDataWire, Seq(
-
 		/* SRAM Write */
 		(aluDataWire(1,0) === 0.U && memOPWire(1,0) === 2.U).asBool	-> memDataWire,
 		(aluDataWire(1,0) === 0.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), memDataWire(15,0)),
@@ -148,10 +147,10 @@ class WBU extends Module {
 		(aluDataWire(1,0) === 3.U).asBool	-> Cat(memDataWire(7,0), 0.U(24.W))
 	))
 	io.wbu2Mem.wstrb 	:= MuxCase(wMaskWire, Seq(
-		(aluDataWire(1,0) === 0.U).asBool	-> wMaskWire,
-		(aluDataWire(1,0) === 1.U).asBool	-> Cat(wMaskWire(2,0), 0.U(1.W)),
-		(aluDataWire(1,0) === 2.U).asBool	-> Cat(wMaskWire(1,0), 0.U(2.W)),
-		(aluDataWire(1,0) === 3.U).asBool	-> Cat(wMaskWire(0), 0.U(3.W))
+		(aluDataWire(1,0) === 0.U & memWRWire.asBool).asBool	-> wMaskWire,
+		(aluDataWire(1,0) === 1.U & memWRWire.asBool).asBool	-> Cat(wMaskWire(2,0), 0.U(1.W)),
+		(aluDataWire(1,0) === 2.U & memWRWire.asBool).asBool	-> Cat(wMaskWire(1,0), 0.U(2.W)),
+		(aluDataWire(1,0) === 3.U & memWRWire.asBool).asBool	-> Cat(wMaskWire(0), 0.U(3.W))
 	))
 	val wlastReg 		= RegInit(0.B)
 	io.wbu2Mem.wlast 	:= wlastReg
@@ -185,6 +184,11 @@ class WBU extends Module {
 		(aluDataWire(31,16) ==="h2000".U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(7,0)),
 		(aluDataWire(31,16) ==="h2000".U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(15,0)),
 		(aluDataWire(31,16) ==="h2000".U && memOPWire(1,0) === 2.U).asBool	-> rdataWire,
+
+		/* FLASH Read */
+		(aluDataWire(31,16) ==="h3000".U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(7,0)),
+		(aluDataWire(31,16) ==="h3000".U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(15,0)),
+		(aluDataWire(31,16) ==="h3000".U && memOPWire(1,0) === 2.U).asBool	-> rdataWire,
 
 		/* SRAM Read */
 		(aluDataWire(31,16) ==="h0f00".U && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 2.U).asBool -> rdataWire,
