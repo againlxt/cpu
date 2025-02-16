@@ -89,7 +89,8 @@ class XbarAXI extends Module {
 	))
 
     val skipDiff = Module(new SkipDiff())
-    skipDiff.io.en := deviceID =/= DeviceID.INIT;
+    skipDiff.io.en := (deviceID =/= DeviceID.INIT) & 
+	((axiMaster.wvalid & axiMaster.wready) | (axiMaster.rvalid & axiMaster.rready));
     when(deviceID === DeviceID.CLINT) {
          /* AW */
         axiMaster.awready    := io.axiLiteClint.awReady
