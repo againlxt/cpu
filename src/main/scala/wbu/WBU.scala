@@ -190,6 +190,15 @@ class WBU extends Module {
 		(aluDataWire(31,16) ==="h3000".U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(15,0)),
 		(aluDataWire(31,16) ==="h3000".U && memOPWire(1,0) === 2.U).asBool	-> rdataWire,
 
+		/* PSRAM Read */
+		((aluDataWire <= "h9fffffff".U) && (aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 2.U).asBool -> rdataWire,
+		((aluDataWire <= "h9fffffff".U) && (aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(7,0)),
+		((aluDataWire <= "h9fffffff".U) && (aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(15,0)),
+		((aluDataWire <= "h9fffffff".U) && (aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 1.U).asBool	-> Cat(0.U(24.W), rdataWire(15,8)),
+		((aluDataWire <= "h9fffffff".U) && (aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 2.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(23,16)),
+		((aluDataWire <= "h9fffffff".U) && (aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 2.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(31,16)),
+		((aluDataWire <= "h9fffffff".U) && (aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 3.U).asBool	-> Cat(0.U(24.W), rdataWire(31,24)),
+		
 		/* SRAM Read */
 		(aluDataWire(31,16) ==="h0f00".U && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 2.U).asBool -> rdataWire,
 		(aluDataWire(31,16) ==="h0f00".U && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(7,0)),
