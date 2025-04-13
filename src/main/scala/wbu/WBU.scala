@@ -224,15 +224,6 @@ class WBU extends Module {
 	}
 	/* Data Memory Headshake */
 	/* AW */
-	/*
-	when(~resetnWire.asBool) {
-		awaddrReg	:= 0.U
-	} .elsewhen(awvalidReg && awreadyWire) {
-		awaddrReg 	:= aluDataWire
-	} .elsewhen(wvalidReg.asBool && wreadyWire) {
-		awaddrReg	:= 0.U
-	}
-	*/
 	when(~resetnWire.asBool) {
 		awvalidReg	:= 0.U
 	} .elsewhen(io.exu2WBU.ready && io.exu2WBU.valid && io.exu2WBU.bits.memValid.asBool && io.exu2WBU.bits.memWR.asBool) {
