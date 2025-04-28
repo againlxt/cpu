@@ -137,7 +137,6 @@ class WBU extends Module {
 	val wvalidReg 		= RegInit(0.B)
 	io.wbu2Mem.wvalid 	:= wvalidReg
 	io.wbu2Mem.wdata 	:= MuxCase(memDataWire, Seq(
-		/* SRAM Write */
 		(aluDataWire(1,0) === 0.U && memOPWire(1,0) === 2.U).asBool	-> memDataWire,
 		(aluDataWire(1,0) === 0.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), memDataWire(15,0)),
 		(aluDataWire(1,0) === 0.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), memDataWire(7,0)),
@@ -198,6 +197,15 @@ class WBU extends Module {
 		((aluDataWire <= "h9fffffff".U) && (aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 2.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(23,16)),
 		((aluDataWire <= "h9fffffff".U) && (aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 2.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(31,16)),
 		((aluDataWire <= "h9fffffff".U) && (aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 3.U).asBool	-> Cat(0.U(24.W), rdataWire(31,24)),
+
+		/* SDRAM Read */
+		((aluDataWire <= "hbfffffff".U) && (aluDataWire >= "ha0000000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 2.U).asBool -> rdataWire,
+		((aluDataWire <= "hbfffffff".U) && (aluDataWire >= "ha0000000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(7,0)),
+		((aluDataWire <= "hbfffffff".U) && (aluDataWire >= "ha0000000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(15,0)),
+		((aluDataWire <= "hbfffffff".U) && (aluDataWire >= "ha0000000".U) && aluDataWire(1,0) === 1.U).asBool	-> Cat(0.U(24.W), rdataWire(15,8)),
+		((aluDataWire <= "hbfffffff".U) && (aluDataWire >= "ha0000000".U) && aluDataWire(1,0) === 2.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(23,16)),
+		((aluDataWire <= "hbfffffff".U) && (aluDataWire >= "ha0000000".U) && aluDataWire(1,0) === 2.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(31,16)),
+		((aluDataWire <= "hbfffffff".U) && (aluDataWire >= "ha0000000".U) && aluDataWire(1,0) === 3.U).asBool	-> Cat(0.U(24.W), rdataWire(31,24)),
 		
 		/* SRAM Read */
 		((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 2.U).asBool -> rdataWire,
