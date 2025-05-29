@@ -32,7 +32,7 @@ class IFU extends Module {
 	val wstrbReg		= RegInit(15.U(4.W))
 	val wlastReg 		= RegInit(0.B)
 	/* B */
-	val breadyReg		= RegInit(0.B)
+	val breadyReg		= RegInit(1.B)
 	/* AR */
 	val arvalidReg		= RegInit(1.U(1.W))
 	val araddrReg		= RegInit(BigInt("80000000", 16).U(32.W))
