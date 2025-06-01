@@ -1,9 +1,9 @@
-package singlecyclecpu
+package cpu
 
 import chisel3._
 import chisel3.util._
 import chisel3.experimental._
-import singlecyclecpu._
+import cpu._
 import ifu._
 import idu._
 import exu._
@@ -16,7 +16,7 @@ import _root_.interface._
 import java.time.Clock
 
 object Main extends App {
-	emitVerilog(new top, Array("--split-verilog" ,"--target-dir", "generated"))
+	emitVerilog(new top, Array(/*"--split-verilog" ,*/"--target-dir", "generated"))
 }
 
 class top extends Module {

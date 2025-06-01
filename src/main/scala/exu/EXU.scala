@@ -5,12 +5,13 @@ import chisel3.util._
 import exu._
 import alu._
 import common._
-import singlecyclecpu._
+import cpu._
 import chisel3.util.HasBlackBoxResource
 import java.time.Clock
 import _root_.interface.IDU2EXU
 import _root_.interface.EXU2WBU
 import _root_.interface.EXU2CSR
+import cpu.Config
 
 class EXU extends Module {
 	val io = IO(new Bundle {
@@ -142,7 +143,17 @@ class EXU extends Module {
 	csrALU.io.srcAData	:= csrDataWire
 	csrALU.io.srcBData 	:= Mux(csrOPWire.asBool, rs1IndexWire, rs1DataWire)
 	csrALU.io.csrALUOP 	:= csrALUOPWire
-	val csrODataWire= csrALU.io.oData 
+	val csrODataWire= csrALU.io.oData
+
+	/* Counter */
+	if (Config.hasPerformanceCounter) {
+		val exCounter = RegInit(0.U(32.W))
+		val valid2WBURegReg = RegInit(0.U(1.W))
+		valid2WBURegReg := valid2WBUReg
+		when (valid2WBUReg.asBool && (!valid2WBURegReg.asBool)) {
+			exCounter := exCounter + 1.U
+		}
+	} 
 
 	io.exu2WBU.bits.pc 			:= pcWire
 	io.exu2WBU.bits.memData		:= rs2DataWire

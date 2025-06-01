@@ -11,6 +11,7 @@ import _root_.interface._
 import basemode.AXIAccessFault
 import dataclass.data
 import basemode.LFSR
+import cpu.Config
 
 class WBU extends Module {
 	val io = IO(new Bundle {
@@ -302,6 +303,14 @@ class WBU extends Module {
 	mTrace.io.memop 	:= memOPWire(1,0)
 	mTrace.io.wOrR 		:= memWRReg.asBool
 	mTrace.io.enable	:= ((wvalidReg & wreadyWire) | (rreadyReg & rvalidWire)) & memValidReg
+
+	/* Counter */
+	if (Config.hasPerformanceCounter) {
+		val lsCounter = RegInit(0.U(32.W))
+		when (rvalidWire && io.wbu2Mem.rready) {
+			lsCounter := lsCounter + 1.U
+		}
+	}
 
 	// Output
     io.wbu2CSR.pc       := pcWire

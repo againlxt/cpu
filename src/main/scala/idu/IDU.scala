@@ -5,6 +5,7 @@ import chisel3.util._
 import chisel3.util.HasBlackBoxResource
 import scala.collection.immutable.ArraySeq
 import interface._
+import cpu.Config
 
 import idu._
 import _root_.interface._
@@ -100,6 +101,26 @@ class IDU extends Module {
     immGen.io.immType 	:= immTypewire
 	// Output
     val immWire 	= immGen.io.imm
+
+    /* Counter */
+	if (Config.hasPerformanceCounter) {
+		val calculateInstCounter = RegInit(0.U(32.W))
+        val memInstCounter       = RegInit(0.U(32.W))
+        val csrInstCounter       = RegInit(0.U(32.W))
+        val validReg             = RegInit(0.B)
+        validReg                 := io.idu2EXU.valid
+		when (!validReg & io.idu2EXU.valid) {
+            when(opcodeWire === "b0010011".U || opcodeWire === "b0110011".U) {
+                calculateInstCounter := calculateInstCounter + 1.U
+            }
+            when(opcodeWire === "b0000011".U || opcodeWire === "b0100011".U) {
+                memInstCounter := memInstCounter + 1.U
+            }
+            when(opcodeWire === "b1110011".U) {
+                csrInstCounter := csrInstCounter + 1.U
+            }
+		}
+	}
 
 	// Output
     io.idu2EXU.bits.regWR 	 	:= regWRWire

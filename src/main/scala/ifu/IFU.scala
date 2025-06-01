@@ -8,6 +8,7 @@ import memory._
 import javax.management.modelmbean.ModelMBean
 import basemode.Delay
 import basemode.AXIAccessFault
+import cpu.Config
 
 class IFU extends Module {
     val io = IO(new Bundle {
@@ -110,6 +111,14 @@ class IFU extends Module {
 		rreadyReg := 0.U
 	} .elsewhen(rvalidWire.asBool) {
 		rreadyReg := 1.U
+	}
+
+	/* Counter */
+	if (Config.hasPerformanceCounter) {
+		val instCounter = RegInit(0.U(32.W))
+		when (rvalidWire.asBool && rreadyReg.asBool) {
+			instCounter := instCounter + 1.U
+		}
 	}
 
 	io.inst.valid		:= rvalidWire && rreadyReg
