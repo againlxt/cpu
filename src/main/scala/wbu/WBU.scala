@@ -222,6 +222,7 @@ class WBU extends Module {
 		memRdDataReg	:= memRdDataWire
 	}
 	/* Data Memory Headshake */
+	assert(!(io.wbu2Mem.awvalid & (io.wbu2Mem.awaddr <= 0x0F000000.U)) | !(io.wbu2Mem.arvalid & (io.wbu2Mem.araddr <= 0x0F000000.U)));
 	/* AW */
 	when(~resetnWire.asBool) {
 		awvalidReg	:= 0.U

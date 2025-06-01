@@ -6,7 +6,7 @@ import _root_.interface._
 import memory._
 
 object DeviceID extends ChiselEnum{
-	val CLINT, UART16550, MSPI, GPIO, PS2, VGA, INIT = Value
+	val CLINT, UART16550, MSPI, GPIO, PS2, VGA, SRAM, MROM, OTHER, ERROR = Value
 }
 
 object DeviceClint {
@@ -37,6 +37,20 @@ object DevicePS2 {
 object DeviceVGA {
 	val baseAddr	= 0x21000000.U
 	val size 		= 0x00200000.U
+}
+
+object DeviceSRAM {
+	val baseAddr	= 0x0F000000.U
+	val size 		= 0x00002000.U
+}
+
+object DeviceMROM {
+	val baseAddr	= 0x20000000.U
+	val size 		= 0x00001000.U
+}
+
+object DeviceOTHER {
+	val baseAddr	= 0x30000000.U
 }
 
 class XbarAXI extends Module {
@@ -73,7 +87,7 @@ class XbarAXI extends Module {
     axiMaster.rlast  := 0.B
     axiMaster.rid    := 0.U
 
-    val deviceID = MuxCase(DeviceID.INIT, Seq(
+    val deviceID = MuxCase(DeviceID.ERROR, Seq(
 		(((axiMaster.araddr < DeviceClint.baseAddr + DeviceClint.size) & (axiMaster.araddr >= DeviceClint.baseAddr)) | 
 		((axiMaster.awaddr < DeviceClint.baseAddr + DeviceClint.size) & (axiMaster.awaddr >= DeviceClint.baseAddr))) -> DeviceID.CLINT,
 		(((axiMaster.araddr < DeviceUart16550.baseAddr + DeviceUart16550.size) & (axiMaster.araddr >= DeviceUart16550.baseAddr)) | 
@@ -86,10 +100,16 @@ class XbarAXI extends Module {
 		((axiMaster.awaddr < DevicePS2.baseAddr + DevicePS2.size) & (axiMaster.awaddr >= DevicePS2.baseAddr))) -> DeviceID.PS2,
 		(((axiMaster.araddr < DeviceVGA.baseAddr + DeviceVGA.size) & (axiMaster.araddr >= DeviceVGA.baseAddr)) | 
 		((axiMaster.awaddr < DeviceVGA.baseAddr + DeviceVGA.size) & (axiMaster.awaddr >= DeviceVGA.baseAddr))) -> DeviceID.VGA,
-	))
+        (((axiMaster.araddr < DeviceSRAM.baseAddr + DeviceSRAM.size) & (axiMaster.araddr >= DeviceSRAM.baseAddr)) | 
+		((axiMaster.awaddr < DeviceSRAM.baseAddr + DeviceSRAM.size) & (axiMaster.awaddr >= DeviceSRAM.baseAddr))) -> DeviceID.SRAM,
+        (((axiMaster.araddr < DeviceMROM.baseAddr + DeviceMROM.size) & (axiMaster.araddr >= DeviceMROM.baseAddr)) | 
+		((axiMaster.awaddr < DeviceMROM.baseAddr + DeviceMROM.size) & (axiMaster.awaddr >= DeviceMROM.baseAddr))) -> DeviceID.MROM,
+        ((axiMaster.araddr >= DeviceOTHER.baseAddr) | (axiMaster.awaddr >= DeviceOTHER.baseAddr)) -> DeviceID.OTHER
+    ))
 
     val skipDiff = Module(new SkipDiff())
-    skipDiff.io.en := (deviceID =/= DeviceID.INIT) & 
+    assert(deviceID != DeviceID.ERROR);
+    skipDiff.io.en := !((deviceID >= DeviceID.SRAM) & (deviceID <= DeviceID.ERROR)) & 
 	((axiMaster.wvalid & axiMaster.wready) | (axiMaster.rvalid & axiMaster.rready));
     when(deviceID === DeviceID.CLINT) {
          /* AW */
