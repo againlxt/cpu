@@ -18,10 +18,10 @@
         "classpath": [
             "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-sbt/sbt/1.9.7/sbt-1.9.7.jar",
             "/home/lxt/.sbt/boot/scala-2.12.18/lib/scala-library.jar",
-            "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/ch/epfl/scala/sbt-bloop_2.12_1.0/1.6.0/sbt-bloop_2.12_1.0-1.6.0.jar",
+            "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/ch/epfl/scala/sbt-bloop_2.12_1.0/2.0.10/sbt-bloop_2.12_1.0-2.0.10.jar",
             "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-sbt/main_2.12/1.9.7/main_2.12-1.9.7.jar",
             "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-sbt/io_2.12/1.9.7/io_2.12-1.9.7.jar",
-            "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/ch/epfl/scala/bloop-config_2.12/2.0.2/bloop-config_2.12-2.0.2.jar",
+            "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/ch/epfl/scala/bloop-config_2.12/2.3.2/bloop-config_2.12-2.3.2.jar",
             "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-sbt/logic_2.12/1.9.7/logic_2.12-1.9.7.jar",
             "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-sbt/actions_2.12/1.9.7/actions_2.12-1.9.7.jar",
             "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-sbt/main-settings_2.12/1.9.7/main-settings_2.12-1.9.7.jar",
@@ -45,7 +45,7 @@
             "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/com/swoval/file-tree-views/2.1.12/file-tree-views-2.1.12.jar",
             "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/net/java/dev/jna/jna/5.13.0/jna-5.13.0.jar",
             "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/net/java/dev/jna/jna-platform/5.13.0/jna-platform-5.13.0.jar",
-            "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/com/github/plokhotnyuk/jsoniter-scala/jsoniter-scala-core_2.12/2.4.0/jsoniter-scala-core_2.12-2.4.0.jar",
+            "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/com/github/plokhotnyuk/jsoniter-scala/jsoniter-scala-core_2.12/2.13.5.2/jsoniter-scala-core_2.12-2.13.5.2.jar",
             "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/unroll-annotation_2.12/0.1.12/unroll-annotation_2.12-0.1.12.jar",
             "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-sbt/util-relation_2.12/1.9.7/util-relation_2.12-1.9.7.jar",
             "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-sbt/completion_2.12/1.9.7/completion_2.12-1.9.7.jar",
@@ -229,9 +229,9 @@
             },
             "classpath": [
                 "/home/lxt/ysyx-workbench/npc/chisel/cpu/project/.bloop/cpu-build/scala-2.12/sbt-1.0/classes",
-                "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/ch/epfl/scala/sbt-bloop_2.12_1.0/1.6.0/sbt-bloop_2.12_1.0-1.6.0.jar",
-                "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/ch/epfl/scala/bloop-config_2.12/2.0.2/bloop-config_2.12-2.0.2.jar",
-                "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/com/github/plokhotnyuk/jsoniter-scala/jsoniter-scala-core_2.12/2.4.0/jsoniter-scala-core_2.12-2.4.0.jar",
+                "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/ch/epfl/scala/sbt-bloop_2.12_1.0/2.0.10/sbt-bloop_2.12_1.0-2.0.10.jar",
+                "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/ch/epfl/scala/bloop-config_2.12/2.3.2/bloop-config_2.12-2.3.2.jar",
+                "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/com/github/plokhotnyuk/jsoniter-scala/jsoniter-scala-core_2.12/2.13.5.2/jsoniter-scala-core_2.12-2.13.5.2.jar",
                 "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/unroll-annotation_2.12/0.1.12/unroll-annotation_2.12-0.1.12.jar",
                 "/home/lxt/.sbt/boot/scala-2.12.18/lib/scala-library.jar"
             ]
@@ -241,51 +241,51 @@
                 {
                     "organization": "ch.epfl.scala",
                     "name": "sbt-bloop",
-                    "version": "1.6.0",
+                    "version": "2.0.10",
                     "configurations": "default",
                     "artifacts": [
                         {
                             "name": "sbt-bloop",
-                            "path": "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/ch/epfl/scala/sbt-bloop_2.12_1.0/1.6.0/sbt-bloop_2.12_1.0-1.6.0.jar"
+                            "path": "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/ch/epfl/scala/sbt-bloop_2.12_1.0/2.0.10/sbt-bloop_2.12_1.0-2.0.10.jar"
                         },
                         {
                             "name": "sbt-bloop",
                             "classifier": "sources",
-                            "path": "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/ch/epfl/scala/sbt-bloop_2.12_1.0/1.6.0/sbt-bloop_2.12_1.0-1.6.0-sources.jar"
+                            "path": "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/ch/epfl/scala/sbt-bloop_2.12_1.0/2.0.10/sbt-bloop_2.12_1.0-2.0.10-sources.jar"
                         }
                     ]
                 },
                 {
                     "organization": "ch.epfl.scala",
                     "name": "bloop-config_2.12",
-                    "version": "2.0.2",
+                    "version": "2.3.2",
                     "configurations": "default",
                     "artifacts": [
                         {
                             "name": "bloop-config_2.12",
-                            "path": "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/ch/epfl/scala/bloop-config_2.12/2.0.2/bloop-config_2.12-2.0.2.jar"
+                            "path": "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/ch/epfl/scala/bloop-config_2.12/2.3.2/bloop-config_2.12-2.3.2.jar"
                         },
                         {
                             "name": "bloop-config_2.12",
                             "classifier": "sources",
-                            "path": "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/ch/epfl/scala/bloop-config_2.12/2.0.2/bloop-config_2.12-2.0.2-sources.jar"
+                            "path": "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/ch/epfl/scala/bloop-config_2.12/2.3.2/bloop-config_2.12-2.3.2-sources.jar"
                         }
                     ]
                 },
                 {
                     "organization": "com.github.plokhotnyuk.jsoniter-scala",
                     "name": "jsoniter-scala-core_2.12",
-                    "version": "2.4.0",
+                    "version": "2.13.5.2",
                     "configurations": "default",
                     "artifacts": [
                         {
                             "name": "jsoniter-scala-core_2.12",
-                            "path": "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/com/github/plokhotnyuk/jsoniter-scala/jsoniter-scala-core_2.12/2.4.0/jsoniter-scala-core_2.12-2.4.0.jar"
+                            "path": "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/com/github/plokhotnyuk/jsoniter-scala/jsoniter-scala-core_2.12/2.13.5.2/jsoniter-scala-core_2.12-2.13.5.2.jar"
                         },
                         {
                             "name": "jsoniter-scala-core_2.12",
                             "classifier": "sources",
-                            "path": "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/com/github/plokhotnyuk/jsoniter-scala/jsoniter-scala-core_2.12/2.4.0/jsoniter-scala-core_2.12-2.4.0-sources.jar"
+                            "path": "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/com/github/plokhotnyuk/jsoniter-scala/jsoniter-scala-core_2.12/2.13.5.2/jsoniter-scala-core_2.12-2.13.5.2-sources.jar"
                         }
                     ]
                 },

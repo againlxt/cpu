@@ -12,6 +12,7 @@ import _root_.interface.IDU2EXU
 import _root_.interface.EXU2WBU
 import _root_.interface.EXU2CSR
 import cpu.Config
+import dpic._
 
 class EXU extends Module {
 	val io = IO(new Bundle {
@@ -147,13 +148,17 @@ class EXU extends Module {
 
 	/* Counter */
 	if (Config.hasPerformanceCounter) {
-		val exCounter = RegInit(0.U(32.W))
-		val valid2WBURegReg = RegInit(0.U(1.W))
-		valid2WBURegReg := valid2WBUReg
-		when (valid2WBUReg.asBool && (!valid2WBURegReg.asBool)) {
-			exCounter := exCounter + 1.U
+		val exuFinCalCnt = RegInit(0.U(32.W))
+		when (io.idu2EXU.valid & io.idu2EXU.ready) {
+			exuFinCalCnt := 0.U
+		} .otherwise {
+			exuFinCalCnt := exuFinCalCnt + 1.U
 		}
-	} 
+		val EFCC 			= Module(new PerformanceCounter)
+		EFCC.io.valid		:= io.exu2WBU.valid
+		EFCC.io.counterType	:= PerformanceCounterType.EXUFINCAL.asUInt
+		EFCC.io.data 		:= exuFinCalCnt
+	}	
 
 	io.exu2WBU.bits.pc 			:= pcWire
 	io.exu2WBU.bits.memData		:= rs2DataWire

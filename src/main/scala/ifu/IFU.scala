@@ -9,7 +9,8 @@ import javax.management.modelmbean.ModelMBean
 import basemode.Delay
 import basemode.AXIAccessFault
 import cpu.Config
-
+import dpic._
+import dpic.PerformanceCounterType.{IFUGETINST => IFUGETINST}
 class IFU extends Module {
     val io = IO(new Bundle {
 		val pc  	 	= Input(UInt(32.W))
@@ -47,39 +48,39 @@ class IFU extends Module {
 
 	/* Signal Connection */
 	/* AW */
-	val awreadyWire		 		= io.ifu2Mem.awready
+	val awreadyWire		 = io.ifu2Mem.awready
 	io.ifu2Mem.awvalid	:= awvalidReg
 	io.ifu2Mem.awaddr	:= awaddrReg
-	io.ifu2Mem.awid 		:= awidReg
+	io.ifu2Mem.awid 	:= awidReg
 	io.ifu2Mem.awlen 	:= awlenReg
 	io.ifu2Mem.awsize 	:= awsizeReg
 	io.ifu2Mem.awburst	:= awburstReg
 	/* W */
-	val wreadyWire 				= io.ifu2Mem.wready
+	val wreadyWire 		= io.ifu2Mem.wready
 	io.ifu2Mem.wvalid 	:= wvalidReg
 	io.ifu2Mem.wdata 	:= wdataReg
 	io.ifu2Mem.wstrb 	:= wstrbReg
 	io.ifu2Mem.wlast 	:= wlastReg
 	/* B */
 	io.ifu2Mem.bready	:= breadyReg
-	val bvalidWire 				= io.ifu2Mem.bvalid
-	val brespWire 				= io.ifu2Mem.bresp
-	val bidWire 				= io.ifu2Mem.bid
+	val bvalidWire 		= io.ifu2Mem.bvalid
+	val brespWire 		= io.ifu2Mem.bresp
+	val bidWire 		= io.ifu2Mem.bid
 	/* AR */
-	val arreadyWire 			= io.ifu2Mem.arready
+	val arreadyWire 	= io.ifu2Mem.arready
 	io.ifu2Mem.arvalid	:= arvalidReg
 	io.ifu2Mem.araddr	:= araddrReg
-	io.ifu2Mem.arid 		:= aridReg
+	io.ifu2Mem.arid 	:= aridReg
 	io.ifu2Mem.arlen 	:= arlenReg
 	io.ifu2Mem.arsize 	:= arsizeReg
 	io.ifu2Mem.arburst	:= arburstReg
 	/* R */
 	io.ifu2Mem.rready 	:= rreadyReg
-	val rvalidWire 				= io.ifu2Mem.rvalid
-	val rrespWire 				= io.ifu2Mem.rresp
-	val rdataWire 				= io.ifu2Mem.rdata
-	val rlastWire 				= io.ifu2Mem.rlast
-	val ridWire 				= io.ifu2Mem.rid
+	val rvalidWire 		= io.ifu2Mem.rvalid
+	val rrespWire 		= io.ifu2Mem.rresp
+	val rdataWire 		= io.ifu2Mem.rdata
+	val rlastWire 		= io.ifu2Mem.rlast
+	val ridWire 		= io.ifu2Mem.rid
 	
 	/* HeadShake Signals */
 	/* AW */
@@ -115,10 +116,16 @@ class IFU extends Module {
 
 	/* Counter */
 	if (Config.hasPerformanceCounter) {
-		val instCounter = RegInit(0.U(32.W))
-		when (rvalidWire.asBool && rreadyReg.asBool) {
-			instCounter := instCounter + 1.U
+		val ifuGetInstCounter = RegInit(0.U(32.W))
+		when (arvalidReg.asBool && arreadyWire.asBool) {
+			ifuGetInstCounter := 0.U
+		} .otherwise {
+			ifuGetInstCounter := ifuGetInstCounter + 1.U
 		}
+		val IGIC 			= Module(new PerformanceCounter)
+		IGIC.io.valid		:= rvalidWire.asBool && rreadyReg.asBool
+		IGIC.io.counterType	:= PerformanceCounterType.IFUGETINST.asUInt
+		IGIC.io.data 		:= ifuGetInstCounter
 	}
 
 	io.inst.valid		:= rvalidWire && rreadyReg

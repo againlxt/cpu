@@ -12,6 +12,7 @@ import basemode.AXIAccessFault
 import dataclass.data
 import basemode.LFSR
 import cpu.Config
+import dpic._
 
 class WBU extends Module {
 	val io = IO(new Bundle {
@@ -306,11 +307,17 @@ class WBU extends Module {
 
 	/* Counter */
 	if (Config.hasPerformanceCounter) {
-		val lsCounter = RegInit(0.U(32.W))
-		when (rvalidWire && io.wbu2Mem.rready) {
-			lsCounter := lsCounter + 1.U
+		val lsuGetDataCnt = RegInit(0.U(32.W))
+		when ((io.wbu2Mem.arvalid && io.wbu2Mem.arready) || (io.wbu2Mem.awready && io.wbu2Mem.awvalid)) {
+			lsuGetDataCnt := 0.U
+		} .otherwise {
+			lsuGetDataCnt := lsuGetDataCnt + 1.U
 		}
-	}
+		val LGDC 			= Module(new PerformanceCounter)
+		LGDC.io.valid		:= ((io.wbu2Mem.rvalid && io.wbu2Mem.rready) || (io.wbu2Mem.wready && io.wbu2Mem.wvalid)) && memValidReg.asBool
+		LGDC.io.counterType	:= PerformanceCounterType.LSUGETDATA.asUInt
+		LGDC.io.data 		:= lsuGetDataCnt
+	}		
 
 	// Output
     io.wbu2CSR.pc       := pcWire

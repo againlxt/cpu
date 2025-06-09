@@ -107,7 +107,10 @@
                 "addExtraJarsToClasspath": false,
                 "manageBootClasspath": true,
                 "filterLibraryFromClasspath": true
-            }
+            },
+            "bridgeJars": [
+                "/home/lxt/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala2-sbt-bridge/2.13.12/scala2-sbt-bridge-2.13.12.jar"
+            ]
         },
         "java": {
             "options": [

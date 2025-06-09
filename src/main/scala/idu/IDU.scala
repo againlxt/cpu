@@ -9,6 +9,7 @@ import cpu.Config
 
 import idu._
 import _root_.interface._
+import dpic._
 
 class IDU extends Module {
     val io = IO(new Bundle{
@@ -104,22 +105,17 @@ class IDU extends Module {
 
     /* Counter */
 	if (Config.hasPerformanceCounter) {
-		val calculateInstCounter = RegInit(0.U(32.W))
-        val memInstCounter       = RegInit(0.U(32.W))
-        val csrInstCounter       = RegInit(0.U(32.W))
-        val validReg             = RegInit(0.B)
-        validReg                 := io.idu2EXU.valid
-		when (!validReg & io.idu2EXU.valid) {
-            when(opcodeWire === "b0010011".U || opcodeWire === "b0110011".U) {
-                calculateInstCounter := calculateInstCounter + 1.U
-            }
-            when(opcodeWire === "b0000011".U || opcodeWire === "b0100011".U) {
-                memInstCounter := memInstCounter + 1.U
-            }
-            when(opcodeWire === "b1110011".U) {
-                csrInstCounter := csrInstCounter + 1.U
-            }
-		}
+        val instType = MuxCase(PerformanceCounterType.OTHER.asUInt, Seq(
+            (opcodeWire === "b1100111".U || opcodeWire === "b1101111".U).asBool -> PerformanceCounterType.JUMP.asUInt,
+            (opcodeWire === "b0100011".U).asBool                                -> PerformanceCounterType.STROE.asUInt,
+            (opcodeWire === "b0000011".U).asBool                                -> PerformanceCounterType.LOAD.asUInt,
+            (opcodeWire === "b0010011".U || opcodeWire === "b0110011".U).asBool -> PerformanceCounterType.CAL.asUInt,
+            (opcodeWire === "b1110011".U).asBool                                -> PerformanceCounterType.CSR.asUInt
+        ))
+        val instTypeCnt             = Module(new PerformanceCounter)
+        instTypeCnt.io.valid        := io.idu2EXU.valid
+        instTypeCnt.io.counterType  := instType
+        instTypeCnt.io.data         := 0.U
 	}
 
 	// Output
