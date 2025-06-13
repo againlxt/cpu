@@ -312,9 +312,11 @@ class WBU extends Module {
 	}
 
 	/* DPIC */
-	if(Config.hasDPIC) {
+	if(Config.isSTA) {
 		val getCmd 			= Module(new GetCommond)
 		getCmd.io.cmd 		:= instWire
+	}
+	if(Config.hasDPIC) {
 		val mTrace 			= Module(new MTrace)
 		mTrace.io.data 		:= Mux(memWRReg.asBool, io.wbu2Mem.wdata, Mux(sOrUWire.asBool, signDataWire.asUInt, rdataShiftWire))
 		mTrace.io.addr 		:= aluDataWire

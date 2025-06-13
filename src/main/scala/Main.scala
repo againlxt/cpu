@@ -16,7 +16,7 @@ import _root_.interface._
 import java.time.Clock
 
 object Main extends App {
-	emitVerilog(new top, Array(/*"--split-verilog" ,*/ "--target-dir", "generated"))
+	emitVerilog(new top, Array("--split-verilog" , "--target-dir", "generated"))
 }
 
 class top extends Module {
@@ -67,7 +67,7 @@ class top extends Module {
 	axiLiteClint.io.axiLiteMaster 	<> xbarAXI.io.axiLiteClint
 
 	/* DPI-C */
-	if (Config.hasDPIC) {
+	if(Config.isSTA) {
 		val getCurPC	= Module(new GetCurPC)
 		val getNextPC 	= Module(new GetNextPC)
 		getCurPC.io.pc 		:= pcWire
