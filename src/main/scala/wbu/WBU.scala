@@ -108,9 +108,6 @@ class WBU extends Module {
 		(memOPWire === "b100".U).asBool -> 0.U(1.W)
 	))
 
-	val getCmd 			= Module(new GetCommond)
-	getCmd.io.cmd 		:= instWire
-
 	// Branch Cond
 	val branchCond 		= Module(new BranchCond)
 	// Input
@@ -245,10 +242,12 @@ class WBU extends Module {
 		wlastReg 	:= 0.U
 	}
 	/* B */
-	val axiAccessFault = Module(new AXIAccessFault())
-	axiAccessFault.io.ready := breadyReg
-	axiAccessFault.io.valid := bvalidWire
-	axiAccessFault.io.resp	:= brespWire
+	if(Config.hasDPIC) {
+		val axiAccessFault = Module(new AXIAccessFault())
+		axiAccessFault.io.ready := breadyReg
+		axiAccessFault.io.valid := bvalidWire
+		axiAccessFault.io.resp	:= brespWire
+	}	
 	when(~resetnWire.asBool) {
 		breadyReg	:= 1.U
 	} .elsewhen(bvalidWire && io.wbu2Mem.bready) {
@@ -298,13 +297,6 @@ class WBU extends Module {
 		validPC2Reg 	:= 1.U
 	}
 
-	val mTrace 			= Module(new MTrace)
-	mTrace.io.data 		:= Mux(memWRReg.asBool, io.wbu2Mem.wdata, Mux(sOrUWire.asBool, signDataWire.asUInt, rdataShiftWire))
-	mTrace.io.addr 		:= aluDataWire
-	mTrace.io.memop 	:= memOPWire(1,0)
-	mTrace.io.wOrR 		:= memWRReg.asBool
-	mTrace.io.enable	:= ((wvalidReg & wreadyWire) | (rreadyReg & rvalidWire)) & memValidReg
-
 	/* Counter */
 	if (Config.hasPerformanceCounter) {
 		val lsuGetDataCnt = RegInit(0.U(32.W))
@@ -316,10 +308,22 @@ class WBU extends Module {
 		val LGDC 			= Module(new PerformanceCounter)
 		LGDC.io.valid		:= ((io.wbu2Mem.rvalid && io.wbu2Mem.rready) || (io.wbu2Mem.wready && io.wbu2Mem.wvalid)) && memValidReg.asBool
 		LGDC.io.counterType	:= PerformanceCounterType.LSUGETDATA.asUInt
-		LGDC.io.data 		:= lsuGetDataCnt
-	}		
+		LGDC.io.data 		:= Mux(((io.wbu2Mem.arvalid && io.wbu2Mem.arready) || (io.wbu2Mem.awready && io.wbu2Mem.awvalid)).asBool, 1.U, lsuGetDataCnt + 1.U)
+	}
 
-	// Output
+	/* DPIC */
+	if(Config.hasDPIC) {
+		val getCmd 			= Module(new GetCommond)
+		getCmd.io.cmd 		:= instWire
+		val mTrace 			= Module(new MTrace)
+		mTrace.io.data 		:= Mux(memWRReg.asBool, io.wbu2Mem.wdata, Mux(sOrUWire.asBool, signDataWire.asUInt, rdataShiftWire))
+		mTrace.io.addr 		:= aluDataWire
+		mTrace.io.memop 	:= memOPWire(1,0)
+		mTrace.io.wOrR 		:= memWRReg.asBool
+		mTrace.io.enable	:= ((wvalidReg & wreadyWire) | (rreadyReg & rvalidWire)) & memValidReg	
+	}
+
+	/* Output */
     io.wbu2CSR.pc       := pcWire
     io.wbu2CSR.csrWData := csrWDataWire
     io.wbu2CSR.csr      := instWire(31,20)

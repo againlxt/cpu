@@ -86,10 +86,12 @@ class IFU extends Module {
 	/* AW */
 	/* W */
 	/* B */
-	val axiAccessFault = Module(new AXIAccessFault())
-	axiAccessFault.io.ready := breadyReg
-	axiAccessFault.io.valid := bvalidWire
-	axiAccessFault.io.resp	:= brespWire
+	if(Config.hasDPIC) {
+		val axiAccessFault = Module(new AXIAccessFault())
+		axiAccessFault.io.ready := breadyReg
+		axiAccessFault.io.valid := bvalidWire
+		axiAccessFault.io.resp	:= brespWire
+	}
 	when(~resetnWire.asBool) {
 		breadyReg	:= 1.U
 	} .elsewhen(bvalidWire && io.ifu2Mem.bready) {

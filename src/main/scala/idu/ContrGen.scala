@@ -5,6 +5,7 @@ import chisel3.util._
 import scala.collection.immutable.ArraySeq
 import common._
 import common.InstructionType
+import cpu.Config
 
 class ContrGen extends Module {
 	val io = IO(new Bundle{
@@ -1003,11 +1004,14 @@ class ContrGen extends Module {
 		
 	}
 
-	val cgDPIC = Module(new CGDPIC())
-	cgDPIC.io.instructionFormat 	:= instructionFormatWire.asUInt
-	cgDPIC.io.instructionFormatJAL 	:= InstructionFormat.JAL.asUInt
-	cgDPIC.io.instructionFormatJALR := InstructionFormat.JALR.asUInt
-	cgDPIC.io.instructionFormatRET 	:= InstructionFormat.RET.asUInt
+	/* DPIC */
+	if(Config.hasDPIC) {
+		val cgDPIC = Module(new CGDPIC())
+		cgDPIC.io.instructionFormat 	:= instructionFormatWire.asUInt
+		cgDPIC.io.instructionFormatJAL 	:= InstructionFormat.JAL.asUInt
+		cgDPIC.io.instructionFormatJALR := InstructionFormat.JALR.asUInt
+		cgDPIC.io.instructionFormatRET 	:= InstructionFormat.RET.asUInt
+	}
 }
 
 class CGDPIC extends BlackBox with HasBlackBoxInline {

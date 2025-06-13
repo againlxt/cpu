@@ -4,6 +4,7 @@ import chisel3._
 import chisel3.util._
 import _root_.interface._
 import memory._
+import cpu.Config 
 
 object DeviceID extends ChiselEnum{
 	val CLINT, UART16550, MSPI, GPIO, PS2, VGA, SRAM, MROM, OTHER, ERROR = Value
@@ -107,10 +108,15 @@ class XbarAXI extends Module {
         ((axiMaster.araddr >= DeviceOTHER.baseAddr) | (axiMaster.awaddr >= DeviceOTHER.baseAddr)) -> DeviceID.OTHER
     ))
 
-    val skipDiff = Module(new SkipDiff())
     assert(deviceID != DeviceID.ERROR);
-    skipDiff.io.en := !((deviceID >= DeviceID.SRAM) & (deviceID <= DeviceID.ERROR)) & 
-	((axiMaster.wvalid & axiMaster.wready) | (axiMaster.rvalid & axiMaster.rready));
+
+    /* DPIC */
+    if(Config.hasDPIC) {
+        val skipDiff = Module(new SkipDiff())
+        skipDiff.io.en := !((deviceID >= DeviceID.SRAM) & (deviceID <= DeviceID.ERROR)) & 
+        ((axiMaster.wvalid & axiMaster.wready) | (axiMaster.rvalid & axiMaster.rready));
+    }
+
     when(deviceID === DeviceID.CLINT) {
          /* AW */
         axiMaster.awready    := io.axiLiteClint.awReady
