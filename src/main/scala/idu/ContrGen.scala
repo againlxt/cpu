@@ -1005,7 +1005,7 @@ class ContrGen extends Module {
 	}
 
 	/* DPIC */
-	if(Config.hasDPIC) {
+	if(!Config.isSTA) {
 		val cgDPIC = Module(new CGDPIC())
 		cgDPIC.io.instructionFormat 	:= instructionFormatWire.asUInt
 		cgDPIC.io.instructionFormatJAL 	:= InstructionFormat.JAL.asUInt

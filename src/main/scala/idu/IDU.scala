@@ -104,7 +104,7 @@ class IDU extends Module {
     val immWire 	= immGen.io.imm
 
     /* Counter */
-	if (Config.hasPerformanceCounter) {
+	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
         val instType = MuxCase(PerformanceCounterType.OTHER.asUInt, Seq(
             (opcodeWire === "b1100111".U || opcodeWire === "b1101111".U).asBool -> PerformanceCounterType.JUMP.asUInt,
             (opcodeWire === "b0100011".U).asBool                                -> PerformanceCounterType.STROE.asUInt,

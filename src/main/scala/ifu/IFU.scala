@@ -86,7 +86,7 @@ class IFU extends Module {
 	/* AW */
 	/* W */
 	/* B */
-	if(Config.hasDPIC) {
+	if(Config.hasDPIC & (!Config.isSTA)) {
 		val axiAccessFault = Module(new AXIAccessFault())
 		axiAccessFault.io.ready := breadyReg
 		axiAccessFault.io.valid := bvalidWire
@@ -117,7 +117,7 @@ class IFU extends Module {
 	}
 
 	/* Counter */
-	if (Config.hasPerformanceCounter) {
+	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
 		val ifuGetInstCounter = RegInit(0.U(32.W))
 		when (arvalidReg.asBool && arreadyWire.asBool) {
 			ifuGetInstCounter := 0.U

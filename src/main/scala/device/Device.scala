@@ -111,7 +111,7 @@ class XbarAXI extends Module {
     assert(deviceID != DeviceID.ERROR);
 
     /* DPIC */
-    if(Config.hasDPIC) {
+    if(Config.hasDPIC & (!Config.isSTA)) {
         val skipDiff = Module(new SkipDiff())
         skipDiff.io.en := !((deviceID >= DeviceID.SRAM) & (deviceID <= DeviceID.ERROR)) & 
         ((axiMaster.wvalid & axiMaster.wready) | (axiMaster.rvalid & axiMaster.rready));

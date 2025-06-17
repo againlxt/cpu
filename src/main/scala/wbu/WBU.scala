@@ -242,7 +242,7 @@ class WBU extends Module {
 		wlastReg 	:= 0.U
 	}
 	/* B */
-	if(Config.hasDPIC) {
+	if(Config.hasDPIC & (!Config.isSTA)) {
 		val axiAccessFault = Module(new AXIAccessFault())
 		axiAccessFault.io.ready := breadyReg
 		axiAccessFault.io.valid := bvalidWire
@@ -298,7 +298,7 @@ class WBU extends Module {
 	}
 
 	/* Counter */
-	if (Config.hasPerformanceCounter) {
+	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
 		val lsuGetDataCnt = RegInit(0.U(32.W))
 		when ((io.wbu2Mem.arvalid && io.wbu2Mem.arready) || (io.wbu2Mem.awready && io.wbu2Mem.awvalid)) {
 			lsuGetDataCnt := 0.U
@@ -312,11 +312,11 @@ class WBU extends Module {
 	}
 
 	/* DPIC */
-	if(Config.isSTA) {
+	if(!Config.isSTA) {
 		val getCmd 			= Module(new GetCommond)
 		getCmd.io.cmd 		:= instWire
 	}
-	if(Config.hasDPIC) {
+	if(Config.hasDPIC & (!Config.isSTA)) {
 		val mTrace 			= Module(new MTrace)
 		mTrace.io.data 		:= Mux(memWRReg.asBool, io.wbu2Mem.wdata, Mux(sOrUWire.asBool, signDataWire.asUInt, rdataShiftWire))
 		mTrace.io.addr 		:= aluDataWire
