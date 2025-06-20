@@ -16,7 +16,7 @@ import _root_.interface._
 import java.time.Clock
 
 object Main extends App {
-	emitVerilog(new top, Array("--split-verilog" , "--target-dir", "generated"))
+	emitVerilog(new top, Array("--emit-modules", "verilog", "--target-dir", "generated"))
 }
 
 class top extends Module {
