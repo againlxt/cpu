@@ -94,6 +94,20 @@ class CLA4 extends Module {
   io.GG := g3 | (g2 & p3) | (g1 & p3 & p2) | (g0 & p3 & p2 & p1)
 }
 
+class FullAdder32 extends Module {
+  val io = IO(new Bundle {
+    val a    = Input(UInt(32.W))
+    val b    = Input(UInt(32.W))
+    val cin  = Input(UInt(1.W))
+    val sum  = Output(UInt(32.W))
+    val cout = Output(UInt(1.W))
+  })
+
+  val result = Cat(0.U(1.W), io.a) + Cat(0.U(1.W), io.b) + io.cin
+  io.sum := result(31, 0)       // 低 32 位为和
+  io.cout := result(32)         // 第 33 位为进位
+}
+
 class CLAGen(val n: Int) extends Module {
   val io = IO(new Bundle {
     val a    = Input(UInt(n.W))

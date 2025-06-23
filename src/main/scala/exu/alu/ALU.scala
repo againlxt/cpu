@@ -31,7 +31,7 @@ class ALU extends Module {
 	shifter.io.shamt 		:= io.srcBData(4,0)
 	val shiftDataWire 		= shifter.io.dOut
 
-	val aluAdder 			= Module(new ALUAdder)
+	val aluAdder 			= Module(new ALUAdderCLA)
 	aluAdder.io.subOrAdd 	:= subOrAddCtrWire
 	aluAdder.io.srcAData 	:= io.srcAData
 	aluAdder.io.srcBData 	:= io.srcBData
@@ -69,7 +69,7 @@ object ALUOutType extends ChiselEnum {
 	val ADDER, LSHIFT, SLT, B, XOR, RSHIFT, OR, AND, NOP=Value
 }
 
-class ALUAdder extends Module {
+class ALUAdderCLA extends Module {
 	val io = IO(new Bundle {
 		val subOrAdd 	= Input(UInt(1.W))
 		val srcAData 	= Input(UInt(32.W))
@@ -81,7 +81,7 @@ class ALUAdder extends Module {
 		val result 		= Output(UInt(32.W))
 	})
 
-	val cla32Add 	= Module(new CLAGen(32))
+	val cla32Add 	= Module(new FullAdder32)
 	val subOrAddWire= Cat(Fill(31, io.subOrAdd), io.subOrAdd)
 	val aAddWire 	= io.srcAData
 	val bAddWire 	= io.srcBData
