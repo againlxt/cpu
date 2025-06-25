@@ -16,13 +16,14 @@ import _root_.interface._
 import java.time.Clock
 
 object Main extends App {
-	emitVerilog(new top, Array("--emit-modules", "verilog", "--target-dir", "generated"))
+	emitVerilog(new top, Array(/*"--emit-modules", "verilog",*/ "--target-dir", "generated"))
 }
 
 class top extends Module {
 	val io = IO(new Bundle {
 		val interrupt 	= Input(UInt(1.W))
-		val master 	= new AXI
+		val master 	= if (Config.SoC) Some(new AXI) else None
+		//val slave 	= if (Config.SoC) Some(Flipped(new AXI)) else None
 		val slave 	= Flipped(new AXI)
 	})
 	val pc 				= Module(new PC)
@@ -42,8 +43,8 @@ class top extends Module {
 	/* Input */
 	ifu.io.pc 		:= pcWire
 	/* Output */
-	ifu.io.inst 			<> idu.io.inst
-	ifu.io.ifu2Mem <> xbarAXI.io.axiSlaveIFU
+	ifu.io.inst  	<> idu.io.inst
+	ifu.io.ifu2Mem 	<> xbarAXI.io.axiSlaveIFU
 
 	/* IDU */
 	idu.io.idu2EXU 		<> exu.io.idu2EXU
@@ -60,11 +61,42 @@ class top extends Module {
 
 	/* Device */
 	/* Peripherals */
-	io.master 			<> xbarAXI.io.axiMasterDevice
-	AXIUtils.initializeAXISlave(io.slave)
+	io.master.foreach { m => m <> xbarAXI.io.axiMasterDevice}
+	AXIUtils.initializeAXISlave(io.slave)	
 	/* Clint */
 	val axiLiteClint = Module(new AXILiteClint)
 	axiLiteClint.io.axiLiteMaster 	<> xbarAXI.io.axiLiteClint
+	/* Memory */
+	if(!Config.SoC) {
+		val dataSramAXILite			= Module(new AXILiteSram(0.B))
+		AXIUtils.initializeAXISlave(xbarAXI.io.axiMasterDevice)
+		xbarAXI.io.axiMasterDevice.awready    := dataSramAXILite.io.axiLiteM.awReady
+        dataSramAXILite.io.axiLiteM.awValid      := xbarAXI.io.axiMasterDevice.awvalid
+        dataSramAXILite.io.axiLiteM.awAddr       := xbarAXI.io.axiMasterDevice.awaddr
+        /* W */
+        xbarAXI.io.axiMasterDevice.wready     := dataSramAXILite.io.axiLiteM.wReady
+        dataSramAXILite.io.axiLiteM.wValid       := xbarAXI.io.axiMasterDevice.wvalid
+        dataSramAXILite.io.axiLiteM.wData        := xbarAXI.io.axiMasterDevice.wdata
+        dataSramAXILite.io.axiLiteM.wStrb        := xbarAXI.io.axiMasterDevice.wstrb
+        /* B */
+        xbarAXI.io.axiMasterDevice.bresp      := dataSramAXILite.io.axiLiteM.bResp
+        xbarAXI.io.axiMasterDevice.bvalid     := dataSramAXILite.io.axiLiteM.bValid
+        dataSramAXILite.io.axiLiteM.bReady       := xbarAXI.io.axiMasterDevice.bready
+        /* AR */
+        xbarAXI.io.axiMasterDevice.arready    := dataSramAXILite.io.axiLiteM.arReady
+        dataSramAXILite.io.axiLiteM.arValid      := xbarAXI.io.axiMasterDevice.arvalid
+        dataSramAXILite.io.axiLiteM.arAddr       := xbarAXI.io.axiMasterDevice.araddr
+        /* R */
+        xbarAXI.io.axiMasterDevice.rdata      := dataSramAXILite.io.axiLiteM.rData
+        xbarAXI.io.axiMasterDevice.rresp      := dataSramAXILite.io.axiLiteM.rrEsp
+        xbarAXI.io.axiMasterDevice.rvalid     := dataSramAXILite.io.axiLiteM.rValid
+        dataSramAXILite.io.axiLiteM.rReady       := xbarAXI.io.axiMasterDevice.rready
+	}
+	/* Uart */
+	if(!Config.SoC) {
+		val axiLiteUart = Module(new AXILiteUart)
+		xbarAXI.io.axiLiteUart.foreach {uart => uart <> axiLiteUart.io.axiLiteMaster}
+	}
 
 	/* DPI-C */
 	if(!Config.isSTA) {

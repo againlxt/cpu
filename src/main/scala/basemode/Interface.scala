@@ -232,4 +232,16 @@ object AXIUtils {
         /* R */
         axi.rready := false.B
     }
+
+	def initializeAXILite(axiLite: AXILite): Unit = {
+		axiLite.arAddr := 0.U
+		axiLite.arValid := false.B
+		axiLite.rReady := false.B
+		axiLite.awAddr := 0.U
+		axiLite.awValid := false.B
+		axiLite.wData := 0.U
+		axiLite.wStrb := 0.U
+		axiLite.wValid := false.B
+		axiLite.bReady := false.B
+	}
 }

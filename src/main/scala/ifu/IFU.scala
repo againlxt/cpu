@@ -37,7 +37,7 @@ class IFU extends Module {
 	val breadyReg		= RegInit(1.B)
 	/* AR */
 	val arvalidReg		= RegInit(1.U(1.W))
-	val araddrReg		= RegInit(BigInt("80000000", 16).U(32.W))
+	val araddrReg		= RegInit(Mux(Config.SoC.asBool, "h30000000".U(32.W), "h80000000".U(32.W))) 
 	val aridReg 		= RegInit(0.U(4.W))
 	val arlenReg 		= RegInit(0.U(8.W))
 	val arsizeReg 		= RegInit(2.U(3.W))

@@ -5,19 +5,30 @@ import chisel3.util._
 import _root_.interface._
 import memory._
 import cpu.Config 
+import _root_.interface.AXIUtils.initializeAXIMaster
 
 object DeviceID extends ChiselEnum{
 	val CLINT, UART16550, MSPI, GPIO, PS2, VGA, SRAM, MROM, OTHER, ERROR = Value
 }
 
+// object DeviceClint {
+// 	val baseAddr 	= 0x02000000.U
+// 	val size 		= 0x10000.U
+// }
+
+// object DeviceUart16550 {
+// 	val baseAddr	= 0x10000000.U
+// 	val size 		= 0x1000.U
+// }
+
 object DeviceClint {
-	val baseAddr 	= 0x02000000.U
-	val size 		= 0x10000.U
+    val baseAddr 	= BigInt("A0000048", 16).U(32.W)
+    val size 		= 8.U
 }
 
 object DeviceUart16550 {
-	val baseAddr	= 0x10000000.U
-	val size 		= 0x1000.U
+    val baseAddr	= BigInt("A00003F8", 16).U(32.W)
+    val size 		= 1.U
 }
 
 object DeviceMSPI {
@@ -60,6 +71,7 @@ class XbarAXI extends Module {
         val axiSlaveWBU     = Flipped(new AXI)
         val axiMasterDevice = new AXI
 		val axiLiteClint	= new AXILite
+        val axiLiteUart     = if (!Config.SoC) Some(new AXILite) else None
     })
 
     def initializeAXILite(axiLite: AXILite): Unit = {
@@ -79,14 +91,13 @@ class XbarAXI extends Module {
     AXIUtils.initializeAXIMaster(io.axiMasterDevice)
 
 	initializeAXILite(io.axiLiteClint)
+    if(!Config.SoC) io.axiLiteUart.foreach(uart => initializeAXILite(uart))
 
     val axiBusarbiter   = Module(new AXIBusArbiter)
     io.axiSlaveIFU  <> axiBusarbiter.io.axiSlave0
     io.axiSlaveWBU  <> axiBusarbiter.io.axiSlave1
     val axiMaster       = axiBusarbiter.io.axiMaster
-    axiMaster.bid    := 0.U
-    axiMaster.rlast  := 0.B
-    axiMaster.rid    := 0.U
+    AXIUtils.initializeAXISlave(axiMaster)
 
     val deviceID = MuxCase(DeviceID.ERROR, Seq(
 		(((axiMaster.araddr < DeviceClint.baseAddr + DeviceClint.size) & (axiMaster.araddr >= DeviceClint.baseAddr)) | 
@@ -118,7 +129,7 @@ class XbarAXI extends Module {
     }
 
     when(deviceID === DeviceID.CLINT) {
-         /* AW */
+        /* AW */
         axiMaster.awready    := io.axiLiteClint.awReady
         io.axiLiteClint.awValid      := axiMaster.awvalid
         io.axiLiteClint.awAddr       := axiMaster.awaddr
@@ -140,7 +151,39 @@ class XbarAXI extends Module {
         axiMaster.rresp      := io.axiLiteClint.rrEsp
         axiMaster.rvalid     := io.axiLiteClint.rValid
         io.axiLiteClint.rReady       := axiMaster.rready
-	}.otherwise {
+	} .elsewhen(deviceID === DeviceID.UART16550 && 
+    ((axiMaster.araddr === BigInt("a00003f8", 16).U(32.W)) ||
+    (axiMaster.awaddr === BigInt("a00003f8", 16).U(32.W)))) {
+        io.axiLiteUart.foreach { axiLite =>
+            /* AW */
+            axiMaster.awready := axiLite.awReady
+            axiLite.awValid   := axiMaster.awvalid
+            axiLite.awAddr    := axiMaster.awaddr
+
+            /* W */
+            axiMaster.wready := axiLite.wReady
+            axiLite.wValid    := axiMaster.wvalid
+            axiLite.wData     := axiMaster.wdata
+            axiLite.wStrb     := axiMaster.wstrb
+
+            /* B */
+            axiMaster.bresp := axiLite.bResp
+            axiMaster.bvalid := axiLite.bValid
+            axiLite.bReady    := axiMaster.bready
+
+            /* AR */
+            axiMaster.arready := axiLite.arReady
+            axiLite.arValid   := axiMaster.arvalid
+            axiLite.arAddr    := axiMaster.araddr
+
+            /* R */
+            axiMaster.rdata := axiLite.rData
+            axiMaster.rresp := axiLite.rrEsp
+            axiMaster.rvalid := axiLite.rValid
+            axiLite.rReady    := axiMaster.rready
+        }
+ 
+    } .otherwise {
         axiMaster <> io.axiMasterDevice
 	}
 }
