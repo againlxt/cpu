@@ -72,7 +72,12 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int) extends Module {
     val s_output = "b1000".U
     val state       = RegInit(1.U(4.W))
     val hitWire     = (addrReg(31,m+n) === tagReg) && cacheValidReg(addrReg(m+n-1, m))
-    val findEndWire = io.icache2Mem.rvalid & io.icache2Mem.rready & io.icache2Mem.rlast
+    val findEndWire = Wire(Bool())
+	if(Config.SoC) {
+		findEndWire := io.icache2Mem.rvalid & io.icache2Mem.rready & io.icache2Mem.rlast
+	} else {
+		findEndWire := io.icache2Mem.rvalid & io.icache2Mem.rready
+	}
     state := MuxLookup(state, s_idle)(List(
         s_idle      -> Mux(io.enable, s_check, s_idle),
         s_check     -> Mux(hitWire, s_output, s_find),
