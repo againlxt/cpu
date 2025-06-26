@@ -17,125 +17,39 @@ class IFU extends Module {
         val inst     	= Decoupled(new IFU2IDU)
 		val ifu2Mem		= new AXI 
     })
-	/* Clock and Reset */
-	val clockWire		= this.clock.asUInt
-	val resetnWire		= ~this.reset.asUInt
-
-	/* AW */
-	val awvalidReg		= RegInit(0.B)
-	val awaddrReg		= RegInit(0.U(32.W))
-	val awidReg 		= RegInit(0.U(4.W))
-	val awlenReg 		= RegInit(0.U(8.W))
-	val awsizeReg 		= RegInit(2.U(3.W))
-	val awburstReg 		= RegInit(1.U(2.W))
-	/* W */
-	val wvalidReg		= RegInit(0.B)
-	val wdataReg		= RegInit(0.U(32.W))
-	val wstrbReg		= RegInit(15.U(4.W))
-	val wlastReg 		= RegInit(0.B)
-	/* B */
-	val breadyReg		= RegInit(1.B)
-	/* AR */
-	val arvalidReg		= RegInit(1.U(1.W))
-	val araddrReg		= RegInit(Mux(Config.SoC.asBool, "h30000000".U(32.W), "h80000000".U(32.W))) 
-	val aridReg 		= RegInit(0.U(4.W))
-	val arlenReg 		= RegInit(0.U(8.W))
-	val arsizeReg 		= RegInit(2.U(3.W))
-	val arburstReg 		= RegInit(1.U(2.W))
-	araddrReg			:= io.pc
-	/* R */
-	val rreadyReg		= RegInit(0.B)
-
-	/* Icache */
 	
+	val pcReg = RegInit(0.U(32.W))
+	pcReg := io.pc
 
-	/* Signal Connection */
-	/* AW */
-	val awreadyWire		 = io.ifu2Mem.awready
-	io.ifu2Mem.awvalid	:= awvalidReg
-	io.ifu2Mem.awaddr	:= awaddrReg
-	io.ifu2Mem.awid 	:= awidReg
-	io.ifu2Mem.awlen 	:= awlenReg
-	io.ifu2Mem.awsize 	:= awsizeReg
-	io.ifu2Mem.awburst	:= awburstReg
-	/* W */
-	val wreadyWire 		= io.ifu2Mem.wready
-	io.ifu2Mem.wvalid 	:= wvalidReg
-	io.ifu2Mem.wdata 	:= wdataReg
-	io.ifu2Mem.wstrb 	:= wstrbReg
-	io.ifu2Mem.wlast 	:= wlastReg
-	/* B */
-	io.ifu2Mem.bready	:= breadyReg
-	val bvalidWire 		= io.ifu2Mem.bvalid
-	val brespWire 		= io.ifu2Mem.bresp
-	val bidWire 		= io.ifu2Mem.bid
-	/* AR */
-	val arreadyWire 	= io.ifu2Mem.arready
-	io.ifu2Mem.arvalid	:= arvalidReg
-	io.ifu2Mem.araddr	:= araddrReg
-	io.ifu2Mem.arid 	:= aridReg
-	io.ifu2Mem.arlen 	:= arlenReg
-	io.ifu2Mem.arsize 	:= arsizeReg
-	io.ifu2Mem.arburst	:= arburstReg
-	/* R */
-	io.ifu2Mem.rready 	:= rreadyReg
-	val rvalidWire 		= io.ifu2Mem.rvalid
-	val rrespWire 		= io.ifu2Mem.rresp
-	val rdataWire 		= io.ifu2Mem.rdata
-	val rlastWire 		= io.ifu2Mem.rlast
-	val ridWire 		= io.ifu2Mem.rid
-	
-	/* HeadShake Signals */
-	/* AW */
-	/* W */
-	/* B */
+	val icache = Module(new Icache(16, 32, 2, 4))
+	icache.io.addr 		:= io.pc
+	icache.io.enable	:= (pcReg =/= io.pc)
+	icache.io.icache2Mem <> io.ifu2Mem
+
 	if(Config.hasDPIC & (!Config.isSTA)) {
 		val axiAccessFault = Module(new AXIAccessFault())
-		axiAccessFault.io.ready := breadyReg
-		axiAccessFault.io.valid := bvalidWire
-		axiAccessFault.io.resp	:= brespWire
-	}
-	when(~resetnWire.asBool) {
-		breadyReg	:= 1.U
-	} .elsewhen(bvalidWire && io.ifu2Mem.bready) {
-		breadyReg	:= 0.U
-	} .elsewhen(bvalidWire) {
-		breadyReg	:= 1.U
-	}
-	/* AR */
-	when(~resetnWire.asBool) {
-		arvalidReg := 1.U
-	} .elsewhen(araddrReg =/= io.pc) {
-		arvalidReg := 1.U
-	} .elsewhen(arreadyWire.asBool) {
-		arvalidReg := 0.U
-	}
-	/* R */
-	when(~resetnWire.asBool) {
-		rreadyReg := 1.U
-	} .elsewhen(rvalidWire.asBool && rreadyReg.asBool) {
-		rreadyReg := 0.U
-	} .elsewhen(rvalidWire.asBool) {
-		rreadyReg := 1.U
+		axiAccessFault.io.ready := io.ifu2Mem.bready
+		axiAccessFault.io.valid := io.ifu2Mem.bready
+		axiAccessFault.io.resp	:= io.ifu2Mem.bresp
 	}
 
 	/* Counter */
 	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
 		val ifuGetInstCounter = RegInit(0.U(32.W))
-		when (arvalidReg.asBool && arreadyWire.asBool) {
+		when (io.ifu2Mem.arvalid && io.ifu2Mem.arready) {
 			ifuGetInstCounter := 0.U
 		} .otherwise {
 			ifuGetInstCounter := ifuGetInstCounter + 1.U
 		}
 		val IGIC 			= Module(new PerformanceCounter)
-		IGIC.io.valid		:= rvalidWire.asBool && rreadyReg.asBool
+		IGIC.io.valid		:= io.ifu2Mem.rvalid && io.ifu2Mem.rready
 		IGIC.io.counterType	:= PerformanceCounterType.IFUGETINST.asUInt
 		IGIC.io.data 		:= ifuGetInstCounter
 	}
 
-	io.inst.valid		:= rvalidWire && rreadyReg
-	io.inst.bits.inst	:= rdataWire
-	io.inst.bits.pc		:= araddrReg			
+	io.inst.valid		:= icache.io.oEnable
+	io.inst.bits.inst	:= icache.io.inst
+	io.inst.bits.pc		:= pcReg
 }
 
 class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int) extends Module {
@@ -149,15 +63,16 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int) extends Module {
 
     val cache           = RegInit(VecInit(Seq.fill(numOfCache)(0.U(sizeOfCache.W))))
     val addrReg         = RegInit(0.U(sizeOfCache.W))
+	val tagReg 			= RegInit(0.U((32-m-n).W))
     val cacheValidReg   = RegInit(VecInit(Seq.fill(numOfCache)(false.B)))
 
     val s_idle   = "b0001".U
     val s_check  = "b0010".U
     val s_find   = "b0100".U
     val s_output = "b1000".U
-    val state       = RegInit(s_idle)
-    val hitWire     = (addrReg(31,m+n) === io.addr(31,m+n)) && cacheValidReg(addrReg(m+n-1, m))
-    val findEndWire = io.icache2Mem.rready & io.icache2Mem.rready & io.icache2Mem.rlast
+    val state       = RegInit(1.U(4.W))
+    val hitWire     = (addrReg(31,m+n) === tagReg) && cacheValidReg(addrReg(m+n-1, m))
+    val findEndWire = io.icache2Mem.rvalid & io.icache2Mem.rready & io.icache2Mem.rlast
     state := MuxLookup(state, s_idle)(List(
         s_idle      -> Mux(io.enable, s_check, s_idle),
         s_check     -> Mux(hitWire, s_output, s_find),
@@ -226,11 +141,17 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int) extends Module {
 
     /* State Machine */
     when(io.enable) { addrReg := io.addr }
+	when(io.icache2Mem.rvalid & io.icache2Mem.rready) { 
+		cache(addrReg(m+n-1, m)) := rdataWire
+	}
     switch(state) {
         is(s_check) { cacheValidReg                     := 
-        Mux(addrReg(31,m+n) === io.addr(31,m+n), cacheValidReg, VecInit(Seq.fill(numOfCache)(false.B))) }
+        Mux(addrReg(31,m+n) === tagReg, cacheValidReg, VecInit(Seq.fill(numOfCache)(false.B))) }
         is(s_find)  { cacheValidReg(addrReg(m+n-1, m))  := findEndWire}
     }
+	switch(state) {
+		is(s_find) { tagReg := addrReg(31,m+n) }
+	}
     switch(state) {
         is(s_check) { arvalidReg := !hitWire }
         is(s_find)  { arvalidReg := !arreadyWire }
@@ -239,7 +160,17 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int) extends Module {
         is(0.B) { rreadyReg := rvalidWire }
         is(1.B) { rreadyReg := !(rvalidWire & rlastWire) }
     }
+	switch(breadyReg) {
+		is(0.B) { breadyReg := bvalidWire }
+		is(1.B) { breadyReg := !(bvalidWire) }
+	}
+	if(Config.hasDPIC & (!Config.isSTA)) {
+		val axiAccessFault = Module(new AXIAccessFault())
+		axiAccessFault.io.ready := breadyReg
+		axiAccessFault.io.valid := bvalidWire
+		axiAccessFault.io.resp	:= brespWire
+	}
 
-    io.oEnable := state(3).asBool
+    io.oEnable := (state === s_output)
     io.inst    := cache(addrReg(m+n-1, m))
 }

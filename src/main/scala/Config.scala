@@ -7,5 +7,5 @@ object Config {
   def hasPerformanceCounter:  Boolean = true
   def hasDPIC:                Boolean = true
   def isSTA:                  Boolean = false
-  def SoC:                    Boolean = false
+  def SoC:                    Boolean = true
 }
