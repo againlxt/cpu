@@ -135,21 +135,26 @@ class WBU extends Module {
 	val wreadyWire 		= io.wbu2Mem.wready
 	val wvalidReg 		= RegInit(0.B)
 	io.wbu2Mem.wvalid 	:= wvalidReg
-	io.wbu2Mem.wdata 	:= MuxCase(memDataWire, Seq(
-		(aluDataWire(1,0) === 0.U && memOPWire(1,0) === 2.U).asBool	-> memDataWire,
-		(aluDataWire(1,0) === 0.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), memDataWire(15,0)),
-		(aluDataWire(1,0) === 0.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), memDataWire(7,0)),
-		(aluDataWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), Cat(memDataWire(7,0), 0.U(8.W))),
-		(aluDataWire(1,0) === 2.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(8.W), Cat(memDataWire(7,0), 0.U(16.W))),
-		(aluDataWire(1,0) === 2.U && memOPWire(1,0) === 1.U).asBool	-> Cat(memDataWire(15,0), 0.U(16.W)),
-		(aluDataWire(1,0) === 3.U).asBool	-> Cat(memDataWire(7,0), 0.U(24.W))
-	))
-	io.wbu2Mem.wstrb 	:= MuxCase(wMaskWire, Seq(
-		(aluDataWire(1,0) === 0.U & memWRWire.asBool).asBool	-> wMaskWire,
-		(aluDataWire(1,0) === 1.U & memWRWire.asBool).asBool	-> Cat(wMaskWire(2,0), 0.U(1.W)),
-		(aluDataWire(1,0) === 2.U & memWRWire.asBool).asBool	-> Cat(wMaskWire(1,0), 0.U(2.W)),
-		(aluDataWire(1,0) === 3.U & memWRWire.asBool).asBool	-> Cat(wMaskWire(0), 0.U(3.W))
-	))
+	if (Config.SoC) {
+		io.wbu2Mem.wdata 	:= MuxCase(memDataWire, Seq(
+			(aluDataWire(1,0) === 0.U && memOPWire(1,0) === 2.U).asBool	-> memDataWire,
+			(aluDataWire(1,0) === 0.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), memDataWire(15,0)),
+			(aluDataWire(1,0) === 0.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), memDataWire(7,0)),
+			(aluDataWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), Cat(memDataWire(7,0), 0.U(8.W))),
+			(aluDataWire(1,0) === 2.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(8.W), Cat(memDataWire(7,0), 0.U(16.W))),
+			(aluDataWire(1,0) === 2.U && memOPWire(1,0) === 1.U).asBool	-> Cat(memDataWire(15,0), 0.U(16.W)),
+			(aluDataWire(1,0) === 3.U).asBool	-> Cat(memDataWire(7,0), 0.U(24.W))
+		))
+		io.wbu2Mem.wstrb 	:= MuxCase(wMaskWire, Seq(
+			(aluDataWire(1,0) === 0.U & memWRWire.asBool).asBool	-> wMaskWire,
+			(aluDataWire(1,0) === 1.U & memWRWire.asBool).asBool	-> Cat(wMaskWire(2,0), 0.U(1.W)),
+			(aluDataWire(1,0) === 2.U & memWRWire.asBool).asBool	-> Cat(wMaskWire(1,0), 0.U(2.W)),
+			(aluDataWire(1,0) === 3.U & memWRWire.asBool).asBool	-> Cat(wMaskWire(0), 0.U(3.W))
+		))
+	} else {
+		io.wbu2Mem.wdata	:= memDataWire
+		io.wbu2Mem.wstrb	:= wMaskWire
+	}
 	val wlastReg 		= RegInit(0.B)
 	io.wbu2Mem.wlast 	:= wlastReg
 	/* B */
@@ -177,40 +182,54 @@ class WBU extends Module {
 	val rrespWire 		= io.wbu2Mem.rresp
 	val rdataWire 		= io.wbu2Mem.rdata
 	val rdataShiftWire  = Wire(UInt(32.W))
-	rdataShiftWire 	:= MuxCase(rdataWire, Seq(
-		/* MROM Read */
-		((aluDataWire <= "h20000fff".U) && (aluDataWire >= "h20000000".U) && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(7,0)),
-		((aluDataWire <= "h20000fff".U) && (aluDataWire >= "h20000000".U) && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(15,0)),
-		((aluDataWire <= "h20000fff".U) && (aluDataWire >= "h20000000".U) && memOPWire(1,0) === 2.U).asBool	-> rdataWire,
+	val signDataWire 	= Wire(SInt(32.W))
+	if(Config.SoC) {
+		rdataShiftWire 	:= MuxCase(rdataWire, Seq(
+			/* MROM Read */
+			((aluDataWire <= "h20000fff".U) && (aluDataWire >= "h20000000".U) && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(7,0)),
+			((aluDataWire <= "h20000fff".U) && (aluDataWire >= "h20000000".U) && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(15,0)),
+			((aluDataWire <= "h20000fff".U) && (aluDataWire >= "h20000000".U) && memOPWire(1,0) === 2.U).asBool	-> rdataWire,
 
-		/* FLASH Read */
-		((aluDataWire <= "h3fffffff".U) && (aluDataWire >= "h30000000".U) && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(7,0)),
-		((aluDataWire <= "h3fffffff".U) && (aluDataWire >= "h30000000".U) && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(15,0)),
-		((aluDataWire <= "h3fffffff".U) && (aluDataWire >= "h30000000".U) && memOPWire(1,0) === 2.U).asBool	-> rdataWire,
+			/* FLASH Read */
+			((aluDataWire <= "h3fffffff".U) && (aluDataWire >= "h30000000".U) && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(7,0)),
+			((aluDataWire <= "h3fffffff".U) && (aluDataWire >= "h30000000".U) && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(15,0)),
+			((aluDataWire <= "h3fffffff".U) && (aluDataWire >= "h30000000".U) && memOPWire(1,0) === 2.U).asBool	-> rdataWire,
 
-		/* PSRAM Read */
-		((aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 2.U).asBool -> rdataWire,
-		((aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(7,0)),
-		((aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(15,0)),
-		((aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 1.U).asBool	-> Cat(0.U(24.W), rdataWire(15,8)),
-		((aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 2.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(23,16)),
-		((aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 2.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(31,16)),
-		((aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 3.U).asBool	-> Cat(0.U(24.W), rdataWire(31,24)),
-		
-		/* SRAM Read */
-		((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 2.U).asBool -> rdataWire,
-		((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(7,0)),
-		((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(15,0)),
-		((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 1.U).asBool	-> Cat(0.U(24.W), rdataWire(15,8)),
-		((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 2.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(23,16)),
-		((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 2.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(31,16)),
-		((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 3.U).asBool	-> Cat(0.U(24.W), rdataWire(31,24)),
-	))
-	val signDataWire					= MuxCase(rdataShiftWire.asSInt, Seq(
-		(wMaskWire === "b0001".U).asBool 	-> Cat(Fill(24, rdataShiftWire(7)), rdataShiftWire(7, 0)).asSInt,
-		(wMaskWire === "b0011".U).asBool 	-> Cat(Fill(16, rdataShiftWire(15)), rdataShiftWire(15, 0)).asSInt,
-		(wMaskWire === "b1111".U).asBool 	-> rdataShiftWire.asSInt
-	))
+			/* PSRAM Read */
+			((aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 2.U).asBool -> rdataWire,
+			((aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(7,0)),
+			((aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(15,0)),
+			((aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 1.U).asBool	-> Cat(0.U(24.W), rdataWire(15,8)),
+			((aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 2.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(23,16)),
+			((aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 2.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(31,16)),
+			((aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 3.U).asBool	-> Cat(0.U(24.W), rdataWire(31,24)),
+			
+			/* SRAM Read */
+			((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 2.U).asBool -> rdataWire,
+			((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(7,0)),
+			((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(15,0)),
+			((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 1.U).asBool	-> Cat(0.U(24.W), rdataWire(15,8)),
+			((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 2.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataWire(23,16)),
+			((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 2.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataWire(31,16)),
+			((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 3.U).asBool	-> Cat(0.U(24.W), rdataWire(31,24)),
+		))
+		signDataWire					:= MuxCase(rdataShiftWire.asSInt, Seq(
+			(wMaskWire === "b0001".U).asBool 	-> Cat(Fill(24, rdataShiftWire(7)), rdataShiftWire(7, 0)).asSInt,
+			(wMaskWire === "b0011".U).asBool 	-> Cat(Fill(16, rdataShiftWire(15)), rdataShiftWire(15, 0)).asSInt,
+			(wMaskWire === "b1111".U).asBool 	-> rdataShiftWire.asSInt
+		))
+	} else {
+		rdataShiftWire 	:= MuxCase(rdataWire, Seq(
+			(wMaskWire === "b0001".U).asBool 	-> Cat(0.U(24.W), rdataWire(7, 0)),
+			(wMaskWire === "b0011".U).asBool 	-> Cat(0.U(16.W), rdataWire(15, 0)),
+			(wMaskWire === "b1111".U).asBool 	-> rdataWire
+		))
+		signDataWire					:= MuxCase(rdataWire.asSInt, Seq(
+			(wMaskWire === "b0001".U).asBool 	-> Cat(Fill(24, rdataWire(7)), rdataWire(7, 0)).asSInt,
+			(wMaskWire === "b0011".U).asBool 	-> Cat(Fill(16, rdataWire(15)), rdataWire(15, 0)).asSInt,
+			(wMaskWire === "b1111".U).asBool 	-> rdataWire.asSInt
+		))
+	}
 	val memRdDataReg	= RegInit(0.U(32.W))
 	val memRdDataWire 	= Mux(sOrUWire.asBool, signDataWire.asUInt, rdataShiftWire)
 	val rlastWire 		= io.wbu2Mem.rlast
