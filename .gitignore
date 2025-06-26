@@ -1,6 +1,6 @@
 *.*
 *
-!src/*
+!*.scala
 !*.sh
 !*.sbt
 !*.sc

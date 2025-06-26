@@ -46,6 +46,9 @@ class IFU extends Module {
 	/* R */
 	val rreadyReg		= RegInit(0.B)
 
+	/* Icache */
+	
+
 	/* Signal Connection */
 	/* AW */
 	val awreadyWire		 = io.ifu2Mem.awready

@@ -18,7 +18,7 @@ class IDU extends Module {
 		val idu2BaseReg 	= new IDU2BaseReg
 	})
 
-    val pcReg       = RegInit(BigInt("80000000", 16).U(32.W))
+    val pcReg       = RegInit(Mux(Config.SoC.asBool, "h30000000".U(32.W), "h80000000".U(32.W)))
     val instReg     = RegInit(0.U(32.W))
     val ready2IFUReg= RegInit(1.U(1.W))
     io.inst.ready   := ready2IFUReg.asBool

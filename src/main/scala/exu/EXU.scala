@@ -21,7 +21,7 @@ class EXU extends Module {
 		val exu2CSR 	= new EXU2CSR
 	})
 
-	val pcReg 		= RegInit(BigInt("80000000", 16).U(32.W))
+	val pcReg 		= RegInit(Mux(Config.SoC.asBool, "h30000000".U(32.W), "h80000000".U(32.W))) 
 	val rs1DataReg 	= RegInit(0.U(32.W))
 	val rs2DataReg 	= RegInit(0.U(32.W))
 	val immReg 		= RegInit(0.U(32.W))

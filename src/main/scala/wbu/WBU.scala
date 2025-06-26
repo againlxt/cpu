@@ -25,7 +25,7 @@ class WBU extends Module {
 	val clockWire 		= this.clock.asBool
 	val resetnWire		= ~this.reset.asBool
 
-    val pcReg 			= RegInit(BigInt("20000000", 16).U(32.W))
+    val pcReg 			= RegInit(Mux(Config.SoC.asBool, "h30000000".U(32.W), "h80000000".U(32.W))) 
 	val memDataReg		= RegInit(0.U(32.W))
 	val aluDataReg		= RegInit(0.U(32.W))
 	val csrWDataReg		= RegInit(0.U(32.W))
