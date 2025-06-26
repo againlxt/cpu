@@ -154,7 +154,11 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int) extends Module {
 	}
     switch(state) {
         is(s_check) { arvalidReg := !hitWire }
-        is(s_find)  { arvalidReg := !arreadyWire }
+        is(s_find)  {
+			when (io.icache2Mem.arvalid & io.icache2Mem.arready) {
+				arvalidReg := 0.B
+			}
+		}
     }
     switch(rreadyReg) {
         is(0.B) { rreadyReg := rvalidWire }

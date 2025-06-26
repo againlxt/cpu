@@ -11,25 +11,25 @@ object DeviceID extends ChiselEnum{
 	val CLINT, UART16550, MSPI, GPIO, PS2, VGA, SRAM, MROM, OTHER, ERROR = Value
 }
 
-object DeviceClint {
-	val baseAddr 	= 0x02000000.U
-	val size 		= 0x10000.U
-}
-
-object DeviceUart16550 {
-	val baseAddr	= 0x10000000.U
-	val size 		= 0x1000.U
-}
-
 // object DeviceClint {
-//     val baseAddr 	= BigInt("A0000048", 16).U(32.W)
-//     val size 		= 8.U
+// 	val baseAddr 	= 0x02000000.U
+// 	val size 		= 0x10000.U
 // }
 
 // object DeviceUart16550 {
-//     val baseAddr	= BigInt("A00003F8", 16).U(32.W)
-//     val size 		= 1.U
+// 	val baseAddr	= 0x10000000.U
+// 	val size 		= 0x1000.U
 // }
+
+object DeviceClint {
+    val baseAddr 	= BigInt("A0000048", 16).U(32.W)
+    val size 		= 8.U
+}
+
+object DeviceUart16550 {
+    val baseAddr	= BigInt("A00003F8", 16).U(32.W)
+    val size 		= 1.U
+}
 
 object DeviceMSPI {
 	val baseAddr	= 0x10001000.U
