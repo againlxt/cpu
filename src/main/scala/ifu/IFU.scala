@@ -63,7 +63,8 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int) extends Module {
 
     val cache           = RegInit(VecInit(Seq.fill(numOfCache)(0.U(sizeOfCache.W))))
     val addrReg         = RegInit(0.U(sizeOfCache.W))
-	val tagReg 			= RegInit(0.U((32-m-n).W))
+	val tagReg 			= RegInit(VecInit(Seq.fill(numOfCache)(0.U((32-m-n).W))))
+	val indexWire 		= addrReg(m+n-1, m)
     val cacheValidReg   = RegInit(VecInit(Seq.fill(numOfCache)(false.B)))
 
     val s_idle   = "b0001".U
@@ -71,7 +72,7 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int) extends Module {
     val s_find   = "b0100".U
     val s_output = "b1000".U
     val state       = RegInit(1.U(4.W))
-    val hitWire     = (addrReg(31,m+n) === tagReg) && cacheValidReg(addrReg(m+n-1, m))
+    val hitWire     = (addrReg(31,m+n) === tagReg(indexWire)) && cacheValidReg(indexWire)
     val findEndWire = Wire(Bool())
 	if(Config.SoC) {
 		findEndWire := io.icache2Mem.rvalid & io.icache2Mem.rready & io.icache2Mem.rlast
@@ -151,11 +152,11 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int) extends Module {
 	}
     switch(state) {
         is(s_check) { cacheValidReg                     := 
-        Mux(addrReg(31,m+n) === tagReg, cacheValidReg, VecInit(Seq.fill(numOfCache)(false.B))) }
+        Mux(addrReg(31,m+n) === tagReg(indexWire), cacheValidReg, VecInit(Seq.fill(numOfCache)(false.B))) }
         is(s_find)  { cacheValidReg(addrReg(m+n-1, m))  := findEndWire}
     }
 	switch(state) {
-		is(s_find) { tagReg := addrReg(31,m+n) }
+		is(s_find) { tagReg(indexWire) := addrReg(31,m+n) }
 	}
     switch(state) {
         is(s_check) { arvalidReg := !hitWire }
