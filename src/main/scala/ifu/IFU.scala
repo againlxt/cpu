@@ -179,6 +179,35 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int) extends Module {
 		axiAccessFault.io.valid := bvalidWire
 		axiAccessFault.io.resp	:= brespWire
 	}
+	/* Counter */
+	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
+		val accessTimeCounter 	= RegInit(0.U(32.W))
+		val missPenaltyCounter	= RegInit(0.U(32.W))
+		val hitRateCounter 		= RegInit(0.U(32.W))
+
+		val hitReg 				= RegInit(0.B)
+
+		switch(state) {
+			is(s_check) { 
+				hitReg := hitWire 
+				accessTimeCounter := hitReg
+			}
+		}
+		switch(state) {
+			is(s_find) { missPenaltyCounter := missPenaltyCounter + 1.U }
+			is(s_output) { missPenaltyCounter := 0.U }
+		}
+		
+
+		val ATC 			= Module(new PerformanceCounter)
+		ATC.io.valid		:= hitReg & (state === s_output)
+		ATC.io.counterType	:= PerformanceCounterType.ICACHE_ACCESS_TIME.asUInt
+		ATC.io.data 		:= accessTimeCounter
+		val MPC 			= Module(new PerformanceCounter)
+		MPC.io.valid		:= !hitReg & (state === s_output)
+		MPC.io.counterType	:= PerformanceCounterType.ICACHE_MISS_PENALTY.asUInt
+		MPC.io.data 		:= missPenaltyCounter
+	}
 
     io.oEnable := (state === s_output)
     io.inst    := cache(addrReg(m+n-1, m))

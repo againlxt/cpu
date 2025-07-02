@@ -4,7 +4,8 @@ import chisel3._
 import chisel3.util._
 
 object PerformanceCounterType extends ChiselEnum {
-    val OTHER, JUMP, STROE, LOAD, CAL, CSR, IFUGETINST, LSUGETDATA, EXUFINCAL = Value
+    val OTHER, JUMP, STROE, LOAD, CAL, CSR, IFUGETINST, LSUGETDATA, EXUFINCAL,
+	ICACHE_ACCESS_TIME, ICACHE_MISS_PENALTY = Value
 }
 
 class PerformanceCounter extends BlackBox with HasBlackBoxInline {
