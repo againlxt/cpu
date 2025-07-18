@@ -21,7 +21,7 @@ class IFU extends Module {
 	val pcReg = RegInit(0.U(32.W))
 	pcReg := io.pc
 
-	val icache = Module(new Icache(16, 32, 2, 4))
+	val icache = Module(new Icache(16, 128, 4, 4, 4, 16))
 	icache.io.addr 		:= io.pc
 	icache.io.enable	:= (pcReg =/= io.pc)
 	icache.io.icache2Mem <> io.ifu2Mem
@@ -52,7 +52,15 @@ class IFU extends Module {
 	io.inst.bits.pc		:= pcReg
 }
 
-class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int) extends Module {
+/**
+  * @param numOfCaches	:Number of caches
+  * @param sizeOfCache	:Size of cache(bit)
+  * @param m			:sizeOfCache/8 = 2^m
+  * @param n			:numOfCaches = 2^n
+  * @param burstLen		:AXI size
+  * @param burstSize	:burst size(byte)
+  */
+class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, burstSize: Int) extends Module {
     val io = IO(new Bundle {
         val addr        = Input(UInt(32.W))
         val enable      = Input(Bool())
@@ -60,29 +68,33 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int) extends Module {
         val oEnable     = Output(Bool())
         val icache2Mem  = new AXI
     })
-
-    val cache           = RegInit(VecInit(Seq.fill(numOfCache)(0.U(sizeOfCache.W))))
-    val addrReg         = RegInit(0.U(sizeOfCache.W))
+	val cacheValidReg   = RegInit(VecInit(Seq.fill(numOfCache)(false.B)))
 	val tagReg 			= RegInit(VecInit(Seq.fill(numOfCache)(0.U((32-m-n).W))))
+    val cache           = RegInit(VecInit(Seq.fill(numOfCache)(VecInit(Seq.fill(burstSize >> 2)(0.U(32.W))))))
+    val addrReg         = RegInit(0.U(32.W))
 	val indexWire 		= addrReg(m+n-1, m)
-    val cacheValidReg   = RegInit(VecInit(Seq.fill(numOfCache)(false.B)))
+	val offset 			= addrReg(m-1,0) >> 2
 
-    val s_idle   = "b0001".U
-    val s_check  = "b0010".U
-    val s_find   = "b0100".U
-    val s_output = "b1000".U
-    val state       = RegInit(1.U(4.W))
+    val s_idle   = "b00001".U
+    val s_check  = "b00010".U
+    val s_find   = "b00100".U
+	val s_find_b = "b01000".U
+    val s_output = "b10000".U
+    val state       = RegInit(1.U(5.W))
     val hitWire     = (addrReg(31,m+n) === tagReg(indexWire)) && cacheValidReg(indexWire)
     val findEndWire = Wire(Bool())
+	val busrtCnt 	  	= RegInit(0.U(8.W))
 	if(Config.SoC) {
-		findEndWire := io.icache2Mem.rvalid & io.icache2Mem.rready & io.icache2Mem.rlast
+		findEndWire := io.icache2Mem.rvalid & io.icache2Mem.rready & io.icache2Mem.rlast & (busrtCnt === ((burstSize.U >> 2)-1.U))
 	} else {
 		findEndWire := io.icache2Mem.rvalid & io.icache2Mem.rready
 	}
+	val isSdram 	= (addrReg(31,28) >= 10.U)
     state := MuxLookup(state, s_idle)(List(
         s_idle      -> Mux(io.enable, s_check, s_idle),
-        s_check     -> Mux(hitWire, s_output, s_find),
+        s_check     -> Mux(hitWire, s_output, Mux(isSdram, s_find_b, s_find)),
         s_find      -> Mux(findEndWire, s_output, s_find),
+		s_find_b    -> Mux(findEndWire, s_output, s_find_b),
         s_output    -> s_idle
     ))
 
@@ -132,7 +144,7 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int) extends Module {
 	/* AR */
 	val arreadyWire 	    = io.icache2Mem.arready
 	io.icache2Mem.arvalid	:= arvalidReg
-	io.icache2Mem.araddr	:= addrReg
+	io.icache2Mem.araddr	:= Mux(isSdram, Cat(addrReg(31,4), 0.U(4.W)), Cat(addrReg(31,4), 0.U(4.W)) + (busrtCnt << 2)) 
 	io.icache2Mem.arid 	    := aridReg
 	io.icache2Mem.arlen 	:= arlenReg
 	io.icache2Mem.arsize 	:= arsizeReg
@@ -146,21 +158,40 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int) extends Module {
 	val ridWire 		= io.icache2Mem.rid
 
     /* State Machine */
-    when(io.enable) { addrReg := io.addr }
+    when(io.enable) {
+		addrReg := io.addr
+	}
 	when(io.icache2Mem.rvalid & io.icache2Mem.rready) { 
-		cache(addrReg(m+n-1, m)) := rdataWire
+		cache(addrReg(m+n-1, m))(busrtCnt) := rdataWire
+		when(busrtCnt === ((burstSize.U >> 2)-1.U)) {
+			busrtCnt := 0.U
+		} .otherwise {
+			busrtCnt := busrtCnt + 1.U
+		}
 	}
     switch(state) {
-        is(s_check) { cacheValidReg                     := 
-        Mux(addrReg(31,m+n) === tagReg(indexWire), cacheValidReg, VecInit(Seq.fill(numOfCache)(false.B))) }
-        is(s_find)  { cacheValidReg(addrReg(m+n-1, m))  := findEndWire}
+        is(s_check) { cacheValidReg(indexWire)                     := 
+        Mux(addrReg(31,m+n) === tagReg(indexWire), cacheValidReg(indexWire), false.B) }
+        is(s_find) { cacheValidReg(addrReg(m+n-1, m))  := findEndWire}
+		is(s_find_b) { cacheValidReg(addrReg(m+n-1, m))  := findEndWire }
     }
 	switch(state) {
 		is(s_find) { tagReg(indexWire) := addrReg(31,m+n) }
+		is(s_find_b) { tagReg(indexWire) := addrReg(31,m+n) }
 	}
     switch(state) {
-        is(s_check) { arvalidReg := !hitWire }
+        is(s_check) {
+			arvalidReg 	:= !hitWire
+			arlenReg 	:= Mux(isSdram, burstLen.U-1.U, 0.U)
+		}
         is(s_find)  {
+			when (io.icache2Mem.arvalid & io.icache2Mem.arready) {
+				arvalidReg := 0.B
+			} .elsewhen(io.icache2Mem.rvalid & io.icache2Mem.rready & (busrtCnt < ((burstSize.U >> 2)-1.U))) {
+				arvalidReg := 1.B
+			}
+		}
+		is(s_find_b) {
 			when (io.icache2Mem.arvalid & io.icache2Mem.arready) {
 				arvalidReg := 0.B
 			}
@@ -211,5 +242,5 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int) extends Module {
 	}
 
     io.oEnable := (state === s_output)
-    io.inst    := cache(addrReg(m+n-1, m))
+    io.inst    := cache(addrReg(m+n-1, m))(offset)
 }
