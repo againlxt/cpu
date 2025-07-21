@@ -222,11 +222,16 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 		switch(state) {
 			is(s_check) { 
 				hitReg := hitWire 
-				accessTimeCounter := hitReg
+				accessTimeCounter := 2.U
 			}
 		}
 		switch(state) {
-			is(s_find) { missPenaltyCounter := missPenaltyCounter + 1.U }
+			is(s_find) { 
+				missPenaltyCounter := missPenaltyCounter + 1.U
+			}
+			is(s_find_b) {
+				missPenaltyCounter := missPenaltyCounter + 1.U
+			}
 			is(s_output) { missPenaltyCounter := 0.U }
 		}
 		
