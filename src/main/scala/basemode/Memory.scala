@@ -566,20 +566,83 @@ class AXILiteReg(memorySize: Int) extends Module {
   }
 }
 
-import chisel3._
-import chisel3.util._
+class SkidBuffer(val DATA_WIDTH: Int) extends BlackBox(
+    Map("DATA_WIDTH" -> IntParam(DATA_WIDTH))) with HasBlackBoxInline{
+    val io = IO(new Bundle {
+        val clock       = Input(Clock())
+        val reset       = Input(Reset())
+        val flush       = Input(Bool())
+        
+        val input_valid = Input(Bool())
+        val input_ready = Output(Bool())
+        val input_data  = Input(UInt(DATA_WIDTH.W))
 
-class SkidBuffer(val DATA_WIDTH: Int) extends Module {
-  val io = IO(new Bundle {
-    val input_valid  = Input(Bool())
-    val input_ready  = Output(Bool())
-    val input_data   = Input(UInt(DATA_WIDTH.W))
+        val output_valid= Output(Bool())
+        val output_ready= Input(Bool())
+        val output_data = Output(UInt(DATA_WIDTH.W))   
+    })
 
-    val output_valid = Output(Bool())
-    val output_ready = Input(Bool())
-    val output_data  = Output(UInt(DATA_WIDTH.W))
-  })
-  
+    setInline("SkidBuffer.v",
+    """module SkidBuffer
+    |#(
+    |    parameter DATA_WIDTH = 8
+    |)
+    |(
+    |    input   wire                        clock,
+    |    input   wire                        reset,
+    |    input   wire                        flush,
+
+    |    input   wire                        input_valid,
+    |    output  wire                        input_ready,
+    |    input   wire    [DATA_WIDTH-1:0]    input_data,
+
+    |    output  wire                        output_valid,
+    |    input   wire                        output_ready,
+    |    output  wire    [DATA_WIDTH-1:0]    output_data
+    |);
+
+    |/* The A register */
+    |reg [DATA_WIDTH-1:0] a_data_q;
+    |reg a_full_q;
+    |wire a_fill, a_drain;
+    |always @(posedge clock) begin
+    |    if(reset)       a_data_q <= '0;
+    |    else if(a_fill) a_data_q <= input_data;
+    |end
+    |always @(posedge clock) begin
+    |    if(reset)       a_full_q <= '0;
+    |    else if(a_fill || a_drain)
+    |        a_full_q <= a_fill;
+    |end
+    |/* Fill the A register when the A or B register is empty. Drain the A register
+    |whenever it is full and being filled, or if a flush is requested. */
+    |assign a_fill = input_valid && input_ready && (!flush);
+    |assign a_drain = (a_full_q && !b_full_q) || flush;
+
+    |/* The B register */
+    |reg [DATA_WIDTH-1:0] b_data_q;
+    |reg b_full_q;
+    |wire b_fill, b_drain;
+    |always @(posedge clock) begin
+    |    if(reset)       b_data_q <= '0;
+    |    else if(b_fill) b_data_q <= a_data_q;
+    |end
+    |always @(posedge clock) begin
+    |    if(reset)       b_full_q <= '0;
+    |    else if(b_fill || b_drain)
+    |        b_full_q <= b_fill;
+    |end
+    |/* Fill the B register whenever the A register is drained, but the downstream
+    |circuit is not ready. Drain the B register whenever it is full and the
+    |downstream circuit is ready, or if a flush is requested. */
+    |assign b_fill = a_drain && (!output_ready) && (!flush);
+    |assign b_drain = (b_full_q && output_ready) || flush;
+
+    |assign input_ready  = !a_full_q || !b_full_q;
+    |assign output_valid = a_full_q | b_full_q;
+    |assign output_data  = b_full_q ? b_data_q : a_data_q;
+    |endmodule
+	  """.stripMargin)
 }
 
 class AXISkidBuffer(val AW: Boolean, val W: Boolean, val B: Boolean, val AR: Boolean, val R: Boolean) extends Module {
@@ -589,6 +652,10 @@ class AXISkidBuffer(val AW: Boolean, val W: Boolean, val B: Boolean, val AR: Boo
     })
     if(AW) {
         val awSkidBuffer    = Module(new SkidBuffer(49))
+        awSkidBuffer.io.clock       := clock
+        awSkidBuffer.io.reset       := reset
+        awSkidBuffer.io.flush       := 0.B
+
         awSkidBuffer.io.input_valid := io.axiSlave.awvalid
         io.axiSlave.awready         := awSkidBuffer.io.input_ready
         awSkidBuffer.io.input_data  := Cat(io.axiSlave.awaddr, io.axiSlave.awid
@@ -612,6 +679,10 @@ class AXISkidBuffer(val AW: Boolean, val W: Boolean, val B: Boolean, val AR: Boo
     }
     if(W) {
         val wSkidBuffer     = Module(new SkidBuffer(37))
+        wSkidBuffer.io.clock        := clock
+        wSkidBuffer.io.reset       := reset
+        wSkidBuffer.io.flush       := 0.B
+
         wSkidBuffer.io.input_valid  := io.axiSlave.wvalid
         io.axiSlave.wready          := wSkidBuffer.io.input_ready
         wSkidBuffer.io.input_data   := Cat(
@@ -633,6 +704,10 @@ class AXISkidBuffer(val AW: Boolean, val W: Boolean, val B: Boolean, val AR: Boo
 
     if(B) {
         val bSkidBuffer     = Module(new SkidBuffer(6))
+        bSkidBuffer.io.clock        := clock
+        bSkidBuffer.io.reset        := reset
+        bSkidBuffer.io.flush        := 0.B
+
         bSkidBuffer.io.input_valid  := io.axiMaster.bvalid
         io.axiMaster.bready         := bSkidBuffer.io.input_ready
         bSkidBuffer.io.input_data   := Cat(io.axiMaster.bresp, io.axiMaster.bid)
@@ -650,6 +725,10 @@ class AXISkidBuffer(val AW: Boolean, val W: Boolean, val B: Boolean, val AR: Boo
 
     if(AR) {
         val arSkidBuffer    = Module(new SkidBuffer(49))
+        arSkidBuffer.io.clock       := clock
+        arSkidBuffer.io.reset       := reset
+        arSkidBuffer.io.flush       := 0.B
+
         arSkidBuffer.io.input_valid := io.axiSlave.arvalid
         io.axiSlave.arready         := arSkidBuffer.io.input_ready
         arSkidBuffer.io.input_data  := Cat(io.axiSlave.araddr, io.axiSlave.arid
@@ -674,6 +753,10 @@ class AXISkidBuffer(val AW: Boolean, val W: Boolean, val B: Boolean, val AR: Boo
 
     if(R) {
         val rSkidBuffer     = Module(new SkidBuffer(39))
+        rSkidBuffer.io.clock        := clock
+        rSkidBuffer.io.reset        := reset
+        rSkidBuffer.io.flush        := 0.B
+
         rSkidBuffer.io.input_valid  := io.axiMaster.rvalid
         io.axiMaster.rready         := rSkidBuffer.io.input_ready
         rSkidBuffer.io.input_data   := Cat(

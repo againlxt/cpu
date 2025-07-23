@@ -96,9 +96,7 @@ class XbarAXI extends Module {
     val axiBusarbiter   = Module(new AXIBusArbiter)
     io.axiSlaveIFU  <> axiBusarbiter.io.axiSlave0
     io.axiSlaveWBU  <> axiBusarbiter.io.axiSlave1
-    val arbiterSkidBuffer	= Module(new AXISkidBuffer(false, false, false, false, false))
-    arbiterSkidBuffer.io.axiSlave <> axiBusarbiter.io.axiMaster
-    val axiMaster       = arbiterSkidBuffer.io.axiMaster
+    val axiMaster       = axiBusarbiter.io.axiMaster
     AXIUtils.initializeAXISlave(axiMaster)
 
     val deviceID = MuxCase(DeviceID.ERROR, Seq(
