@@ -18,7 +18,8 @@ class IFU extends Module {
     val io = IO(new Bundle {
 		val pc  	 	= Input(UInt(32.W))
         val inst     	= Decoupled(new IFU2IDU)
-		val ifu2Mem		= new AXI 
+		val ifu2Mem		= new AXI
+		val wbu2Icache	= Input(Bool()) 
     })
 	
 	val pcReg = RegInit(0.U(32.W))
@@ -35,6 +36,7 @@ class IFU extends Module {
 	icache.io.addr 		:= io.pc
 	icache.io.enable	:= (pcReg =/= io.pc)
 	icache.io.icache2Mem <> io.ifu2Mem
+	icache.io.wbu2Icache:= io.wbu2Icache
 
 	if(Config.hasDPIC & (!Config.isSTA)) {
 		val axiAccessFault = Module(new AXIAccessFault())
@@ -77,6 +79,7 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
         val inst        = Output(UInt(32.W))
         val oEnable     = Output(Bool())
         val icache2Mem  = new AXI
+		val wbu2Icache	= Input(Bool())
     })
 	val cacheValidReg 	= RegInit(VecInit(Seq.fill(numOfCache/way)(VecInit(Seq.fill(way)(false.B)))))
 	val tagReg   		= RegInit(VecInit(Seq.fill(numOfCache/way)(VecInit(Seq.fill(way)(0.U((32-m-n).W))))))
@@ -194,12 +197,20 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 			busrtCnt := busrtCnt + 1.U
 		}
 	}
-    switch(state) {
-        is(s_check) { cacheValidReg(indexWire)(wayIndex)	:= 
-        Mux(addrReg(31,m+n) === tagReg(indexWire)(wayIndex), cacheValidReg(indexWire)(wayIndex), false.B)}
-        is(s_find) { cacheValidReg(addrReg(m+n-1, m))(wayIndex)  	:= findEndWire}
-		is(s_find_b) { cacheValidReg(addrReg(m+n-1, m))(wayIndex)  	:= findEndWire }
-    }
+	when(io.wbu2Icache) {
+		for (i <- 0 until (numOfCache / way)) {
+			for (j <- 0 until way) {
+			cacheValidReg(i)(j) := false.B
+			}
+		}
+	} .otherwise {
+		switch(state) {
+			is(s_check) { cacheValidReg(indexWire)(wayIndex)	:= 
+			Mux(addrReg(31,m+n) === tagReg(indexWire)(wayIndex), cacheValidReg(indexWire)(wayIndex), false.B)}
+			is(s_find) { cacheValidReg(addrReg(m+n-1, m))(wayIndex)  	:= findEndWire}
+			is(s_find_b) { cacheValidReg(addrReg(m+n-1, m))(wayIndex)  	:= findEndWire }
+		}
+	}
 	switch(state) {
 		is(s_find) { tagReg(indexWire)(wayIndex) := addrReg(31,m+n) }
 		is(s_find_b) { tagReg(indexWire)(wayIndex) := addrReg(31,m+n) }

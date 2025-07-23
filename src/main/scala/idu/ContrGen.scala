@@ -43,6 +43,7 @@ class ContrGen extends Module {
 		(cmdWire(31,15) === 0.U && cmdWire(11,7) === 0.U && func3Wire === "b000".U && opcodeWire === "b0010011".U).asBool -> InstructionFormat.NOP,
 		(io.cmd(31,0) === "b00000000000000000000000001110011".U).asBool -> InstructionFormat.ECALL,
 		(io.cmd(31,0) === "b00110000001000000000000001110011".U).asBool -> InstructionFormat.MRET,
+		(io.cmd(31,0) === "b00000000000000000001000000001111".U).asBool	-> InstructionFormat.FENCEI,
 
 		// CSR Instructions
 		(func3Wire === "b011".U & opcodeWire === "b1110011".U).asBool -> InstructionFormat.CSRRC,
@@ -107,6 +108,7 @@ class ContrGen extends Module {
 
 		// Normal-Instructions
 		(io.cmd(31,0) === "b00000000000000000000000001110011".U).asBool -> InstructionType.I,
+		(io.cmd(31,0) === "b00000000000000000001000000001111".U).asBool	-> InstructionType.I,
 		(io.cmd(31,0) === "b00110000001000000000000001110011".U).asBool -> InstructionType.R,
 
 		// CSR Instructions
@@ -253,7 +255,23 @@ class ContrGen extends Module {
             io.csrEn    := 1.U
             io.csrALUOP := 0.U
         }
-
+		is(InstructionFormat.FENCEI) {
+			io.regWR 	:= 0.U
+			io.srcAALU 	:= 0.U
+			io.srcBALU 	:= 0.U
+			io.ctrALU 	:= 0.U
+			io.branch 	:= 0.U
+			io.memToReg := 0.U
+			io.memWR 	:= 0.U
+			io.memValid := 0.U
+			io.memOP 	:= 7.U
+		    io.csrWr    := 0.U
+            io.csrOP    := 0.U
+            io.ecall    := 0.U
+            io.mret     := 0.U
+            io.csrEn    := 0.U
+            io.csrALUOP := 0.U
+		}
 
 		/* CSR Instructions */
 		is(InstructionFormat.CSRRC) {
@@ -862,7 +880,6 @@ class ContrGen extends Module {
             io.csrEn    := 0.U
             io.csrALUOP := 0.U
         }
-		
 		// Load and Store Instructions
 		is(InstructionFormat.LW) {
 			io.regWR 	:= 1.U
@@ -949,7 +966,6 @@ class ContrGen extends Module {
             io.csrEn    := 0.U
             io.csrALUOP := 0.U
         }
-		
 		is(InstructionFormat.SW) {
 			io.regWR 	:= 0.U
 			io.srcAALU 	:= 0.U

@@ -21,6 +21,7 @@ class WBU extends Module {
         val wbu2BaseReg = new WBU2BaseReg
 		val wbu2Mem 	= new AXI
         val wbu2PC      = Decoupled(new WBU2PC)
+		val wbu2Icache	= Output(Bool())
 	})
 	val clockWire 		= this.clock.asBool
 	val resetnWire		= ~this.reset.asBool
@@ -45,6 +46,7 @@ class WBU extends Module {
 	val ecallReg 		= RegInit(0.U(1.W))
 	val csrEnReg 		= RegInit(0.U(1.W))
 	val csrWrReg 		= RegInit(0.U(1.W))
+	val wbu2IcacheReg	= RegInit(0.U(1.W))
 
     val pcWire          = pcReg
     val memDataWire     = memDataReg
@@ -315,6 +317,12 @@ class WBU extends Module {
 		ready2EXUReg 	:= 0.U
 		validPC2Reg 	:= 1.U
 	}
+	when(io.exu2WBU.valid & io.exu2WBU.ready & (io.exu2WBU.bits.memOP === 7.U)) {
+		wbu2IcacheReg 	:= 1.U
+	} .otherwise {
+		wbu2IcacheReg	:= 0.U	
+	}
+
 
 	/* Counter */
 	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
@@ -369,6 +377,8 @@ class WBU extends Module {
 		(pcBSrcWire === "b01".U).asBool -> rs1DataWire,
 		(pcBSrcWire === "b10".U).asBool -> csrWDataWire
     ))
+
+	io.wbu2Icache	:= wbu2IcacheReg
 }
 
 class BranchCond extends Module {

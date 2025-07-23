@@ -58,6 +58,8 @@ class top extends Module {
 	wbu.io.wbu2CSR			<> csrReg.io.wbu2CSR
 	wbu.io.wbu2BaseReg		<> riscv32BaseReg.io.wbu2BaseReg
 	wbu.io.wbu2Mem 			<> xbarAXI.io.axiSlaveWBU
+	val wbu2Icache 			= wbu.io.wbu2Icache
+	ifu.io.wbu2Icache		:= wbu2Icache
 
 	/* Device */
 	/* Peripherals */
