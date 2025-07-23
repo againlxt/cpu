@@ -319,15 +319,15 @@ class WBU extends Module {
 	/* Counter */
 	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
 		val lsuGetDataCnt = RegInit(0.U(32.W))
-		when ((io.wbu2Mem.arvalid && io.wbu2Mem.arready) || (io.wbu2Mem.awready && io.wbu2Mem.awvalid)) {
-			lsuGetDataCnt := 0.U
-		} .otherwise {
+		when (state === s_sram_op) {
 			lsuGetDataCnt := lsuGetDataCnt + 1.U
+		} .otherwise {
+			lsuGetDataCnt := 0.U
 		}
 		val LGDC 			= Module(new PerformanceCounter)
-		LGDC.io.valid		:= ((io.wbu2Mem.rvalid && io.wbu2Mem.rready) || (io.wbu2Mem.wready && io.wbu2Mem.wvalid)) && memValidReg.asBool
+		LGDC.io.valid		:= memEnd
 		LGDC.io.counterType	:= PerformanceCounterType.LSUGETDATA.asUInt
-		LGDC.io.data 		:= Mux(((io.wbu2Mem.arvalid && io.wbu2Mem.arready) || (io.wbu2Mem.awready && io.wbu2Mem.awvalid)).asBool, 1.U, lsuGetDataCnt + 1.U)
+		LGDC.io.data 		:= lsuGetDataCnt+1.U
 	}
 
 	/* DPIC */
