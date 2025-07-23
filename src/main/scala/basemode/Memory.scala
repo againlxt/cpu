@@ -4,6 +4,7 @@ import chisel3.util._
 import _root_.interface._
 import basemode.Delay
 import basemode.LFSR
+import chisel3.experimental.IntParam
 
 class ReadWriteSmem(dataWidth: Int, addrWidth: Int, memorySize: Int) extends Module {
   val io = IO(new Bundle {
@@ -563,4 +564,252 @@ class AXILiteReg(memorySize: Int) extends Module {
       rDataReg := mem(rAddrWire(7,0)) & "hFFFFFFFF".U
     }
   }
+}
+
+class SkidBuffer(val DATA_WIDTH: Int) extends BlackBox(
+    Map("DATA_WIDTH" -> IntParam(DATA_WIDTH))) with HasBlackBoxInline{
+    val io = IO(new Bundle {
+        val clock       = Input(Clock())
+        val clear       = Input(Reset())
+        
+        val input_valid = Input(Bool())
+        val input_ready = Output(Bool())
+        val input_data  = Input(UInt(DATA_WIDTH.W))
+
+        val output_valid= Output(Bool())
+        val output_ready= Input(Bool())
+        val output_data = Output(UInt(DATA_WIDTH.W))   
+    })
+
+    setInline("SkidBuffer.v",
+    """module SkidBuffer #(
+    |    parameter DATA_WIDTH = 8  // 避免非法默认值
+    |)(
+    |    input  wire                    clock,
+    |    input  wire                    clear,
+
+    |    input  wire                    input_valid,
+    |    output wire                    input_ready,
+    |    input  wire  [DATA_WIDTH-1:0] input_data,
+
+    |    output wire                    output_valid,
+    |    input  wire                    output_ready,
+    |    output wire [DATA_WIDTH-1:0]  output_data
+    |);
+
+    |    // -----------------------------
+    |    // Internal Buffer Register
+    |    // -----------------------------
+    |    wire [DATA_WIDTH-1:0] buffer_data_out;
+    |    reg buffer_wren;
+
+    |    Register #(
+    |        .DATA_WIDTH   (DATA_WIDTH),
+    |        .RESET_VALUE  ({DATA_WIDTH{1'b0}})
+    |    ) buffer_reg (
+    |        .clock        (clock),
+    |        .clock_enable (buffer_wren),
+    |        .clear        (clear),
+    |        .data_in      (input_data),
+    |        .data_out     (buffer_data_out)
+    |    );
+
+    |    // -----------------------------
+    |    // Output Register (with bypass path)
+    |    // -----------------------------
+    |    reg output_wren;
+    |    wire [DATA_WIDTH-1:0] selected_data;
+    |    reg use_buffered_data;
+
+    |    assign selected_data = use_buffered_data ? buffer_data_out : input_data;
+
+    |    Register #(
+    |        .DATA_WIDTH   (DATA_WIDTH),
+    |        .RESET_VALUE  ({DATA_WIDTH{1'b0}})
+    |    ) output_reg (
+    |        .clock        (clock),
+    |        .clock_enable (output_wren),
+    |        .clear        (clear),
+    |        .data_in      (selected_data),
+    |        .data_out     (output_data)
+    |    );
+
+    |    // -----------------------------
+    |    // State Machine
+    |    // -----------------------------
+    |    localparam [1:0] EMPTY = 2'd0, BUSY = 2'd1, FULL = 2'd2;
+    |    reg [1:0] state, state_next;
+
+    |    wire insert = input_valid  && input_ready;
+    |    wire remove = output_valid && output_ready;
+
+    |    always @(*) begin
+    |        case (state)
+    |            EMPTY: state_next = insert                ? BUSY  : EMPTY;
+    |            BUSY : state_next = insert && !remove     ? FULL  :
+    |                                !insert && remove     ? EMPTY : BUSY;
+    |            FULL : state_next = remove                ? BUSY  : FULL;
+    |            default: state_next = EMPTY;
+    |        endcase
+    |    end
+
+    |    Register #(
+    |        .DATA_WIDTH   (2),
+    |        .RESET_VALUE  (EMPTY)
+    |    ) state_reg (
+    |        .clock        (clock),
+    |        .clock_enable (1'b1),
+    |        .clear        (clear),
+    |        .data_in      (state_next),
+    |        .data_out     (state)
+    |    );
+
+    |    // -----------------------------
+    |    // Data Path Control
+    |    // -----------------------------
+    |    always @(*) begin
+    |        buffer_wren        = (state == BUSY) && insert && !remove;      // fill
+    |        use_buffered_data  = (state == FULL) && !insert && remove;      // flush
+    |        output_wren        = (state == EMPTY  && insert && !remove) ||  // load
+    |                            (state == BUSY   && insert && remove)  ||  // flow
+    |                            (state == FULL   && !insert && remove);    // flush
+    |    end
+
+    |    // -----------------------------
+    |    // Interface Flags
+    |    // -----------------------------
+    |    assign input_ready  = (state_next != FULL);
+    |    assign output_valid = (state_next != EMPTY);
+
+    |endmodule
+	""".stripMargin)
+}
+
+class AXISkidBuffer(val AW: Boolean, val W: Boolean, val B: Boolean, val AR: Boolean, val R: Boolean) extends Module {
+    val io = IO(new Bundle {
+		val axiMaster   = new AXI
+        val axiSlave    = Flipped(new AXI)
+    })
+    if(AW) {
+        val awSkidBuffer    = Module(new SkidBuffer(49))
+        awSkidBuffer.io.clock       := clock
+        awSkidBuffer.io.clear       := reset
+
+        awSkidBuffer.io.input_valid := io.axiSlave.awvalid
+        io.axiSlave.awready         := awSkidBuffer.io.input_ready
+        awSkidBuffer.io.input_data  := Cat(io.axiSlave.awaddr, io.axiSlave.awid
+        , io.axiSlave.awlen, io.axiSlave.awsize, io.axiSlave.awburst)
+
+        io.axiMaster.awvalid        := awSkidBuffer.io.output_valid
+        awSkidBuffer.io.output_ready:= io.axiMaster.awready
+        io.axiMaster.awaddr         := awSkidBuffer.io.output_data(48, 17)
+        io.axiMaster.awid           := awSkidBuffer.io.output_data(16, 13)
+        io.axiMaster.awlen          := awSkidBuffer.io.output_data(12, 5)
+        io.axiMaster.awsize         := awSkidBuffer.io.output_data(4, 2)
+        io.axiMaster.awburst        := awSkidBuffer.io.output_data(1, 0)
+    } else {
+        io.axiSlave.awready         := io.axiMaster.awready
+        io.axiMaster.awvalid        := io.axiSlave.awvalid
+        io.axiMaster.awaddr         := io.axiSlave.awaddr
+        io.axiMaster.awid           := io.axiSlave.awid
+        io.axiMaster.awlen          := io.axiSlave.awlen
+        io.axiMaster.awsize         := io.axiSlave.awsize
+        io.axiMaster.awburst        := io.axiSlave.awburst
+    }
+    if(W) {
+        val wSkidBuffer     = Module(new SkidBuffer(37))
+        wSkidBuffer.io.clock        := clock
+        wSkidBuffer.io.clear        := reset
+
+        wSkidBuffer.io.input_valid  := io.axiSlave.wvalid
+        io.axiSlave.wready          := wSkidBuffer.io.input_ready
+        wSkidBuffer.io.input_data   := Cat(
+        io.axiSlave.wdata, io.axiSlave.wstrb, io.axiSlave.wlast)
+
+        io.axiMaster.wvalid         := wSkidBuffer.io.output_valid
+        wSkidBuffer.io.output_ready := io.axiMaster.wready
+        io.axiMaster.wdata          := wSkidBuffer.io.output_data(36, 5)
+        io.axiMaster.wstrb          := wSkidBuffer.io.output_data(4, 1)
+        io.axiMaster.wlast          := wSkidBuffer.io.output_data(0).asBool
+    } 
+    else {
+        io.axiSlave.wready          := io.axiMaster.wready
+        io.axiMaster.wvalid         := io.axiSlave.wvalid
+        io.axiMaster.wdata          := io.axiSlave.wdata
+        io.axiMaster.wstrb          := io.axiSlave.wstrb
+        io.axiMaster.wlast          := io.axiSlave.wlast
+    }
+
+    if(B) {
+        val bSkidBuffer     = Module(new SkidBuffer(6))
+        bSkidBuffer.io.clock        := clock
+        bSkidBuffer.io.clear        := reset
+
+        bSkidBuffer.io.input_valid  := io.axiMaster.bvalid
+        io.axiMaster.bready         := bSkidBuffer.io.input_ready
+        bSkidBuffer.io.input_data   := Cat(io.axiMaster.bresp, io.axiMaster.bid)
+
+        io.axiSlave.bvalid          := bSkidBuffer.io.output_valid
+        bSkidBuffer.io.output_ready := io.axiSlave.bready
+        io.axiSlave.bresp           := bSkidBuffer.io.output_data(5, 4)
+        io.axiSlave.bid             := bSkidBuffer.io.output_data(3, 0)
+    } else {
+        io.axiMaster.bready         := io.axiSlave.bready
+        io.axiSlave.bvalid          := io.axiMaster.bvalid
+        io.axiSlave.bresp           := io.axiMaster.bresp
+        io.axiSlave.bid             := io.axiMaster.bid
+    }
+
+    if(AR) {
+        val arSkidBuffer    = Module(new SkidBuffer(49))
+        arSkidBuffer.io.clock       := clock
+        arSkidBuffer.io.clear       := reset
+
+        arSkidBuffer.io.input_valid := io.axiSlave.arvalid
+        io.axiSlave.arready         := arSkidBuffer.io.input_ready
+        arSkidBuffer.io.input_data  := Cat(io.axiSlave.araddr, io.axiSlave.arid
+        , io.axiSlave.arlen, io.axiSlave.arsize, io.axiSlave.arburst)
+
+        io.axiMaster.arvalid        := arSkidBuffer.io.output_valid
+        arSkidBuffer.io.output_ready:= io.axiMaster.arready
+        io.axiMaster.araddr         := arSkidBuffer.io.output_data(48, 17)
+        io.axiMaster.arid           := arSkidBuffer.io.output_data(16, 13)
+        io.axiMaster.arlen          := arSkidBuffer.io.output_data(12, 5)
+        io.axiMaster.arsize         := arSkidBuffer.io.output_data(4, 2)
+        io.axiMaster.arburst        := arSkidBuffer.io.output_data(1, 0)
+    } else {
+        io.axiSlave.arready         := io.axiMaster.arready
+        io.axiMaster.arvalid        := io.axiSlave.arvalid
+        io.axiMaster.araddr         := io.axiSlave.araddr
+        io.axiMaster.arid           := io.axiSlave.arid
+        io.axiMaster.arlen          := io.axiSlave.arlen
+        io.axiMaster.arsize         := io.axiSlave.arsize
+        io.axiMaster.arburst        := io.axiSlave.arburst
+    }
+
+    if(R) {
+        val rSkidBuffer     = Module(new SkidBuffer(39))
+        rSkidBuffer.io.clock        := clock
+        rSkidBuffer.io.clear        := reset
+
+        rSkidBuffer.io.input_valid  := io.axiMaster.rvalid
+        io.axiMaster.rready         := rSkidBuffer.io.input_ready
+        rSkidBuffer.io.input_data   := Cat(
+        io.axiMaster.rresp, io.axiMaster.rdata, io.axiMaster.rlast, io.axiMaster.rid)
+
+        io.axiSlave.rvalid          := rSkidBuffer.io.output_valid
+        rSkidBuffer.io.output_ready := io.axiSlave.rready
+        io.axiSlave.rresp           := rSkidBuffer.io.output_data(38, 37)
+        io.axiSlave.rdata           := rSkidBuffer.io.output_data(36, 5)
+        io.axiSlave.rlast           := rSkidBuffer.io.output_data(4).asBool
+        io.axiSlave.rid             := rSkidBuffer.io.output_data(3, 0)
+    } else {
+        io.axiMaster.rready         := io.axiSlave.rready
+        io.axiSlave.rvalid          := io.axiMaster.rvalid
+        io.axiSlave.rresp           := io.axiMaster.rresp
+        io.axiSlave.rdata           := io.axiMaster.rdata
+        io.axiSlave.rlast           := io.axiMaster.rlast
+        io.axiSlave.rid             := io.axiMaster.rid
+    }
+
 }
