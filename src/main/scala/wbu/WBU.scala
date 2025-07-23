@@ -256,7 +256,7 @@ class WBU extends Module {
 	} .elsewhen(io.exu2WBU.ready && io.exu2WBU.valid && io.exu2WBU.bits.memValid.asBool && io.exu2WBU.bits.memWR.asBool) {
 		wvalidReg	:= 1.U
 		wlastReg 	:= 1.U
-	} .elsewhen(wreadyWire && io.wbu2Mem.wvalid) {
+	} .elsewhen(wreadyWire && io.wbu2Mem.wvalid & io.wbu2Mem.wlast) {
 		wvalidReg	:= 0.U
 		wlastReg 	:= 0.U
 	}
@@ -285,7 +285,7 @@ class WBU extends Module {
 	/* R */
 	when(~resetnWire.asBool) {
 		rreadyReg	:= 1.U(1.W)
-	} .elsewhen(rvalidWire && io.wbu2Mem.rready && io.exu2WBU.bits.memValid.asBool) {
+	} .elsewhen(rvalidWire && io.wbu2Mem.rready && io.wbu2Mem.rlast && io.exu2WBU.bits.memValid.asBool) {
 		rreadyReg	:= 0.U(1.W) 
 	} .elsewhen(rvalidWire) {
 		rreadyReg	:= 1.U(1.W)
