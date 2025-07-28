@@ -647,7 +647,7 @@ class SkidBuffer(val DATA_WIDTH: Int) extends BlackBox(
 
 class AXISkidBuffer(val AW: Boolean, val W: Boolean, val B: Boolean, val AR: Boolean, val R: Boolean) extends Module {
     val io = IO(new Bundle {
-		val axiMaster   = new AXI
+		    val axiMaster   = new AXI
         val axiSlave    = Flipped(new AXI)
     })
     if(AW) {

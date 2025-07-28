@@ -1,7 +1,4 @@
-*.*
-*
-!*.scala
-!*.sh
-!*.sbt
-!*.sc
-!README.md
+.bloop/*
+.metals/*
+project/*
+target/*

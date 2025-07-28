@@ -94,8 +94,8 @@ class XbarAXI extends Module {
     if(!Config.SoC) io.axiLiteUart.foreach(uart => initializeAXILite(uart))
 
     val axiBusarbiter   = Module(new AXIBusArbiter)
-    io.axiSlaveIFU  <> axiBusarbiter.io.axiSlave0
-    io.axiSlaveWBU  <> axiBusarbiter.io.axiSlave1
+    io.axiSlaveIFU      <> axiBusarbiter.io.axiSlave0
+    io.axiSlaveWBU      <> axiBusarbiter.io.axiSlave1
     val axiMaster       = axiBusarbiter.io.axiMaster
     AXIUtils.initializeAXISlave(axiMaster)
 
