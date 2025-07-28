@@ -8,16 +8,14 @@ import common._
 import cpu._
 import chisel3.util.HasBlackBoxResource
 import java.time.Clock
-import _root_.interface.IDU2EXU
-import _root_.interface.EXU2WBU
-import _root_.interface.EXU2CSR
+import _root_.interface._
 import cpu.Config
 import dpic._
 
 class EXU extends Module {
 	val io = IO(new Bundle {
 		val idu2EXU 	= Flipped(Decoupled(new IDU2EXU))
-		val exu2WBU 	= Decoupled(new EXU2WBU)
+		val exu2LSU 	= Decoupled(new EXU2LSU)
 		val exu2CSR 	= new EXU2CSR
 	})
 
@@ -47,7 +45,7 @@ class EXU extends Module {
 	val ready2IDUReg= RegInit(1.U(1.W))
     io.idu2EXU.ready   := ready2IDUReg.asBool
     val valid2WBUReg= RegInit(0.U(1.W))
-    io.exu2WBU.valid:= valid2WBUReg.asBool
+    io.exu2LSU.valid:= valid2WBUReg.asBool
 
 	// State Machine
 	val s_idle :: s_wait_idu_valid :: s_wait_wbu_ready :: Nil = Enum(3)
@@ -55,7 +53,7 @@ class EXU extends Module {
 	state := MuxLookup(state, s_idle)(List(
 		s_idle				-> Mux(reset.asBool, s_idle, s_wait_idu_valid),
 		s_wait_idu_valid	-> Mux(reset.asBool, s_idle, Mux(io.idu2EXU.valid, s_wait_wbu_ready, s_wait_idu_valid)),
-		s_wait_wbu_ready	-> Mux(reset.asBool, s_idle, Mux(io.exu2WBU.ready, s_idle, s_wait_wbu_ready))
+		s_wait_wbu_ready	-> Mux(reset.asBool, s_idle, Mux(io.exu2LSU.ready, s_idle, s_wait_wbu_ready))
 	))
 	// handshake signals control
 	when(state === s_idle) {
@@ -155,31 +153,31 @@ class EXU extends Module {
 			exuFinCalCnt := exuFinCalCnt + 1.U
 		}
 		val EFCC 			= Module(new PerformanceCounter)
-		EFCC.io.valid		:= io.exu2WBU.valid
+		EFCC.io.valid		:= io.exu2LSU.valid
 		EFCC.io.counterType	:= PerformanceCounterType.EXUFINCAL.asUInt
 		EFCC.io.data 		:= exuFinCalCnt
 	}	
 
-	io.exu2WBU.bits.pc 			:= pcWire
-	io.exu2WBU.bits.memData		:= rs2DataWire
-	io.exu2WBU.bits.aluData 	:= resultWire
-	io.exu2WBU.bits.csrWData 	:= csrODataWire
-	io.exu2WBU.bits.csrData 	:= csrDataWire
-	io.exu2WBU.bits.immData 	:= immDataWire
-	io.exu2WBU.bits.rs1Data 	:= rs1DataWire
-	io.exu2WBU.bits.inst 		:= instWire
+	io.exu2LSU.bits.pc 			:= pcWire
+	io.exu2LSU.bits.memData		:= rs2DataWire
+	io.exu2LSU.bits.aluData 	:= resultWire
+	io.exu2LSU.bits.csrWData 	:= csrODataWire
+	io.exu2LSU.bits.csrData 	:= csrDataWire
+	io.exu2LSU.bits.immData 	:= immDataWire
+	io.exu2LSU.bits.rs1Data 	:= rs1DataWire
+	io.exu2LSU.bits.inst 		:= instWire
 
-	io.exu2WBU.bits.regWR 		:= regWRWire
-	io.exu2WBU.bits.memWR 		:= memWRCtrWire
-	io.exu2WBU.bits.memValid	:= memValidCtrWire
-	io.exu2WBU.bits.memOP		:= memOPCtrWire
-	io.exu2WBU.bits.toReg 		:= memToRegCtrWire
-	io.exu2WBU.bits.branchCtr	:= branchCtrWire
-	io.exu2WBU.bits.less 		:= lessWire
-	io.exu2WBU.bits.zero 		:= zeroWire
-	io.exu2WBU.bits.ecall 		:= ecallWire
-	io.exu2WBU.bits.csrEn 		:= csrEnWire
-	io.exu2WBU.bits.csrWr		:= csrWrWire
+	io.exu2LSU.bits.regWR 		:= regWRWire
+	io.exu2LSU.bits.memWR 		:= memWRCtrWire
+	io.exu2LSU.bits.memValid	:= memValidCtrWire
+	io.exu2LSU.bits.memOP		:= memOPCtrWire
+	io.exu2LSU.bits.toReg 		:= memToRegCtrWire
+	io.exu2LSU.bits.branchCtr	:= branchCtrWire
+	io.exu2LSU.bits.less 		:= lessWire
+	io.exu2LSU.bits.zero 		:= zeroWire
+	io.exu2LSU.bits.ecall 		:= ecallWire
+	io.exu2LSU.bits.csrEn 		:= csrEnWire
+	io.exu2LSU.bits.csrWr		:= csrWrWire
 
 	io.exu2CSR.csr 				:= instWire(31,20)
 	io.exu2CSR.mret 			:= mretWire

@@ -150,6 +150,7 @@ class XbarAXI extends Module {
         axiMaster.rdata      := io.axiLiteClint.rData
         axiMaster.rresp      := io.axiLiteClint.rrEsp
         axiMaster.rvalid     := io.axiLiteClint.rValid
+        axiMaster.rlast     := 1.B
         io.axiLiteClint.rReady       := axiMaster.rready
 	} .elsewhen(deviceID === DeviceID.UART16550 && 
     ((axiMaster.araddr === BigInt("a00003f8", 16).U(32.W)) ||
@@ -180,6 +181,7 @@ class XbarAXI extends Module {
             axiMaster.rdata := axiLite.rData
             axiMaster.rresp := axiLite.rrEsp
             axiMaster.rvalid := axiLite.rValid
+            axiMaster.rlast := 1.B
             axiLite.rReady    := axiMaster.rready
         }
  

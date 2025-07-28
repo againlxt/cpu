@@ -5,6 +5,7 @@ import chisel3.util._
 import chisel3.experimental._
 import cpu._
 import ifu._
+import lsu._
 import idu._
 import exu._
 import alu._
@@ -32,6 +33,7 @@ class top extends Module {
 	val csrReg 			= Module(new CSRReg)
 	val idu 			= Module(new IDU)
 	val exu 			= Module(new EXU)
+	val lsu 			= Module(new LSU)
 	val wbu 			= Module(new WBU)
 	val xbarAXI			= Module(new XbarAXI)
 
@@ -51,13 +53,16 @@ class top extends Module {
 	idu.io.idu2BaseReg	<> riscv32BaseReg.io.idu2BaseReg
 
 	/* EXU */
-	exu.io.exu2WBU	<> wbu.io.exu2WBU
+	exu.io.exu2LSU	<> lsu.io.exu2LSU
 	exu.io.exu2CSR 	<> csrReg.io.exu2CSR
+
+	/* LSU */
+	lsu.io.lsu2Mem	<> xbarAXI.io.axiSlaveWBU
+	lsu.io.lsu2WBU	<> wbu.io.lsu2WBU
 
 	/* WBU */
 	wbu.io.wbu2CSR			<> csrReg.io.wbu2CSR
 	wbu.io.wbu2BaseReg		<> riscv32BaseReg.io.wbu2BaseReg
-	wbu.io.wbu2Mem 			<> xbarAXI.io.axiSlaveWBU
 	val wbu2Icache 			= wbu.io.wbu2Icache
 	ifu.io.wbu2Icache		:= wbu2Icache
 

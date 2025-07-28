@@ -35,7 +35,7 @@ class IDU2EXU extends Bundle {
 	val csrALUOP= Output(UInt(2.W))
 }
 
-class EXU2WBU extends Bundle {
+class EXU2LSU extends Bundle {
 	val pc 			= Output(UInt(32.W))
 	val memData		= Output(UInt(32.W))
 	val aluData		= Output(UInt(32.W))
@@ -56,6 +56,27 @@ class EXU2WBU extends Bundle {
 	val ecall 		= Output(UInt(1.W))
 	val csrEn 		= Output(UInt(1.W))
 	val csrWr 		= Output(UInt(1.W))
+}
+
+class LSU2WBU extends Bundle {
+	val pc 			= Output(UInt(32.W))
+	val memData		= Output(UInt(32.W))
+	val aluData		= Output(UInt(32.W))
+	val csrWData	= Output(UInt(32.W))
+	val csrData 	= Output(UInt(32.W))
+	val immData 	= Output(UInt(32.W))
+	val rs1Data 	= Output(UInt(32.W))
+	val inst 		= Output(UInt(32.W))
+
+	val regWR 		= Output(UInt(1.W))
+	val toReg 		= Output(UInt(2.W))
+	val branchCtr 	= Output(UInt(4.W))
+	val less 		= Output(UInt(1.W))
+	val zero 		= Output(UInt(1.W))
+	val ecall 		= Output(UInt(1.W))
+	val csrEn 		= Output(UInt(1.W))
+	val csrWr 		= Output(UInt(1.W))
+	val fencei		= Output(UInt(1.W))
 }
 
 /* Normal */
