@@ -15,6 +15,7 @@ import memory._
 import device._
 import _root_.interface._
 import java.time.Clock
+import java.awt.MouseInfo
 
 object Main extends App {
 	emitVerilog(new top, Array("--emit-modules", "verilog", "--target-dir", "generated"))
@@ -36,6 +37,7 @@ class top extends Module {
 	val lsu 			= Module(new LSU)
 	val wbu 			= Module(new WBU)
 	val xbarAXI			= Module(new XbarAXI)
+	val ifuSkidBuffer 	= Module(new AXISkidBuffer(false, false, false, true, true))
 
 	/* PC Reg */
 	pc.io.wbu2PC 	<> wbu.io.wbu2PC
@@ -46,7 +48,8 @@ class top extends Module {
 	ifu.io.pc 		:= pcWire
 	/* Output */
 	ifu.io.inst  	<> idu.io.inst
-	ifu.io.ifu2Mem 	<> xbarAXI.io.axiSlaveIFU
+	ifu.io.ifu2Mem 	<> ifuSkidBuffer.io.axiSlave
+	ifuSkidBuffer.io.axiMaster 	<> xbarAXI.io.axiSlaveIFU
 
 	/* IDU */
 	idu.io.idu2EXU 		<> exu.io.idu2EXU
