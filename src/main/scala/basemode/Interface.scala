@@ -175,7 +175,7 @@ class AXI extends Bundle {
 	val awid 	= Output(UInt(4.W))
 	val awlen 	= Output(UInt(8.W))
 	val awsize 	= Output(UInt(3.W))
-	val awburst 	= Output(UInt(2.W))
+	val awburst = Output(UInt(2.W))
 
 	/* W */
 	val wready 	= Input(Bool())
@@ -188,7 +188,7 @@ class AXI extends Bundle {
 	val bready 	= Output(Bool())
 	val bvalid 	= Input(Bool())
 	val bresp 	= Input(UInt(2.W))
-	val bid 		= Input(UInt(4.W))
+	val bid 	= Input(UInt(4.W))
 
 	/* AR */
 	val arready 	= Input(Bool())
