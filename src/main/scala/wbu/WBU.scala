@@ -19,70 +19,62 @@ class WBU extends Module {
 		val wbu2Icache	= Output(Bool())
 	})
 
-    val pcWire 			= io.lsu2WBU.bits.pc
-    val memDataWire		= io.lsu2WBU.bits.memData
-    val aluDataWire		= io.lsu2WBU.bits.aluData
-    val csrWDataWire	= io.lsu2WBU.bits.csrWData
-    val csrDataWire		= io.lsu2WBU.bits.csrData
-    val immDataWire 	= io.lsu2WBU.bits.immData
-    val rs1DataWire 	= io.lsu2WBU.bits.rs1Data
-    val instWire 		= io.lsu2WBU.bits.inst
-    val regWRWire       = io.lsu2WBU.bits.regWR
-    val toRegWire 		= io.lsu2WBU.bits.toReg
-    val branchCtrWire 	= io.lsu2WBU.bits.branchCtr
-    val lessWire 		= io.lsu2WBU.bits.less
-    val zeroWire 		= io.lsu2WBU.bits.zero
-    val ecallWire 		= io.lsu2WBU.bits.ecall
-    val csrEnWire 		= io.lsu2WBU.bits.csrEn
-    val csrWrWire 		= io.lsu2WBU.bits.csrWr
-    val fenceiWire		= io.lsu2WBU.bits.fencei
-
-	// state
-	val s_idle :: s_wb :: Nil = Enum(2)
-	val state 	= RegInit(s_idle)
-	val wb_end	= io.wbu2PC.ready & io.wbu2PC.valid
-	state 		:= MuxLookup(state, s_idle)(List(
-		s_idle	-> Mux(io.lsu2WBU.ready & io.lsu2WBU.valid, s_wb, s_idle),
-		s_wb	-> Mux(wb_end, s_idle, s_wb)
-	))
-
+	val pcReg 			= RegNext(io.lsu2WBU.bits.pc)
+    val memDataReg		= RegNext(io.lsu2WBU.bits.memData)
+    val aluDataReg		= RegNext(io.lsu2WBU.bits.aluData)
+    val csrWDataReg		= RegNext(io.lsu2WBU.bits.csrWData)
+    val csrDataReg		= RegNext(io.lsu2WBU.bits.csrData)
+    val immDataReg 		= RegNext(io.lsu2WBU.bits.immData)
+    val rs1DataReg 		= RegNext(io.lsu2WBU.bits.rs1Data)
+    val instReg 		= RegNext(io.lsu2WBU.bits.inst)
+    val regWRReg       	= RegNext(io.lsu2WBU.bits.regWR)
+    val toRegReg 		= RegNext(io.lsu2WBU.bits.toReg)
+    val branchCtrReg 	= RegNext(io.lsu2WBU.bits.branchCtr)
+    val lessReg 		= RegNext(io.lsu2WBU.bits.less)
+    val zeroReg 		= RegNext(io.lsu2WBU.bits.zero)
+    val ecallReg 		= RegNext(io.lsu2WBU.bits.ecall)
+    val csrEnReg 		= RegNext(io.lsu2WBU.bits.csrEn)
+    val csrWrReg 		= RegNext(io.lsu2WBU.bits.csrWr)
+    val fenceiReg		= RegNext(io.lsu2WBU.bits.fencei)
+	val handReg 		= RegNext(io.lsu2WBU.valid & io.lsu2WBU.ready)
+		
 	// Branch Cond
 	val branchCond 		= Module(new BranchCond)
 	// Input
-	branchCond.io.branch:= branchCtrWire
-	branchCond.io.less 	:= lessWire
-	branchCond.io.zero 	:= zeroWire
+	branchCond.io.branch:= branchCtrReg
+	branchCond.io.less 	:= lessReg
+	branchCond.io.zero 	:= zeroReg
 	// Output
-	val pcASrcWire 		= branchCond.io.pcASrc
-	val pcBSrcWire 		= branchCond.io.pcBSrc
+	val pcASrcReg 		= branchCond.io.pcASrc
+	val pcBSrcReg 		= branchCond.io.pcBSrc
 	
 	/* Output */
-	io.lsu2WBU.ready	:= (state === s_idle)
-    io.wbu2CSR.pc       := pcWire
-    io.wbu2CSR.csrWData := csrWDataWire
-    io.wbu2CSR.csr      := instWire(31,20)
-    io.wbu2CSR.ecall    := ecallWire
-    io.wbu2CSR.csrEn    := csrEnWire
-    io.wbu2CSR.csrWr    := csrWrWire
+	io.lsu2WBU.ready	:= 1.B
+    io.wbu2CSR.pc       := pcReg
+    io.wbu2CSR.csrWData := csrWDataReg
+    io.wbu2CSR.csr      := instReg(31,20)
+    io.wbu2CSR.ecall    := ecallReg
+    io.wbu2CSR.csrEn    := csrEnReg
+    io.wbu2CSR.csrWr    := csrWrReg
     io.wbu2BaseReg.data := MuxCase(	0.U(32.W), Seq(	
-        (toRegWire === "b00".U).asBool -> aluDataWire,
-		(toRegWire === "b01".U).asBool -> memDataWire,
-		(toRegWire === "b10".U).asBool -> csrDataWire
+        (toRegReg === "b00".U).asBool -> aluDataReg,
+		(toRegReg === "b01".U).asBool -> memDataReg,
+		(toRegReg === "b10".U).asBool -> csrDataReg
     ))
-    io.wbu2BaseReg.rdIndex  := instWire(11,7)
-    io.wbu2BaseReg.regWR    := regWRWire
-	io.wbu2PC.valid			:= (state === s_wb)
+    io.wbu2BaseReg.rdIndex  := instReg(11,7)
+    io.wbu2BaseReg.regWR    := regWRReg
+	io.wbu2PC.valid			:= handReg
     io.wbu2PC.bits.nextPC   := MuxCase(	0.U(32.W), Seq(	
-        (pcASrcWire === "b00".U).asBool	-> 4.U,
-		(pcASrcWire === "b01".U).asBool -> immDataWire,
-		(pcASrcWire === "b10".U).asBool -> 0.U
+        (pcASrcReg === "b00".U).asBool	-> 4.U,
+		(pcASrcReg === "b01".U).asBool -> immDataReg,
+		(pcASrcReg === "b10".U).asBool -> 0.U
     )) + MuxCase(	0.U(32.W), Seq(	
-        (pcBSrcWire === "b00".U).asBool	-> pcWire,
-		(pcBSrcWire === "b01".U).asBool -> rs1DataWire,
-		(pcBSrcWire === "b10".U).asBool -> csrWDataWire
+        (pcBSrcReg === "b00".U).asBool	-> pcReg,
+		(pcBSrcReg === "b01".U).asBool -> rs1DataReg,
+		(pcBSrcReg === "b10".U).asBool -> csrWDataReg
     ))
 
-	io.wbu2Icache	:= fenceiWire
+	io.wbu2Icache	:= fenceiReg
 }
 
 class BranchCond extends Module {
