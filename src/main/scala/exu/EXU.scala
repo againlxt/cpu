@@ -19,79 +19,32 @@ class EXU extends Module {
 		val exu2CSR 	= new EXU2CSR
 	})
 
-	val pcReg 		= RegInit(Mux(Config.SoC.asBool, "h30000000".U(32.W), "h80000000".U(32.W))) 
-	val rs1DataReg 	= RegInit(0.U(32.W))
-	val rs2DataReg 	= RegInit(0.U(32.W))
-	val immReg 		= RegInit(0.U(32.W))
-	val instReg 	= RegInit(0.U(32.W))
+	val pcReg 		= RegNext(io.idu2EXU.bits.pc) 
+	val rs1DataReg 	= RegNext(io.idu2EXU.bits.rs1Data)
+	val rs2DataReg 	= RegNext(io.idu2EXU.bits.rs2Data)
+	val immReg 		= RegNext(io.idu2EXU.bits.imm)
+	val instReg 	= RegNext(io.idu2EXU.bits.inst)
 
-	val regWRReg 	= RegInit(0.U(1.W))
-	val srcAALUReg 	= RegInit(0.U(2.W))
-	val srcBALUReg 	= RegInit(0.U(2.W))
-	val ctrALUReg 	= RegInit(0.U(4.W))
-	val branchReg 	= RegInit(0.U(4.W))
-	val toRegReg 	= RegInit(0.U(2.W))
-	val memWRReg 	= RegInit(0.U(1.W))
-	val memValidReg	= RegInit(0.U(1.W))
-	val memOPReg 	= RegInit(0.U(3.W))
-	val rs1IndexReg	= RegInit(0.U(5.W))
-	val ecallReg 	= RegInit(0.U(1.W))
-	val mretReg 	= RegInit(0.U(1.W))
-	val csrEnReg 	= RegInit(0.U(1.W))
-	val csrWrReg 	= RegInit(0.U(1.W))
-	val csrOPReg 	= RegInit(0.U(1.W))
-	val csrALUOPReg	= RegInit(0.U(2.W))
+	val regWRReg 	= RegNext(io.idu2EXU.bits.regWR)
+	val srcAALUReg 	= RegNext(io.idu2EXU.bits.srcAALU)
+	val srcBALUReg 	= RegNext(io.idu2EXU.bits.srcBALU)
+	val ctrALUReg 	= RegNext(io.idu2EXU.bits.ctrALU)
+	val branchReg 	= RegNext(io.idu2EXU.bits.branch)
+	val toRegReg 	= RegNext(io.idu2EXU.bits.toReg)
+	val memWRReg 	= RegNext(io.idu2EXU.bits.memWR)
+	val memValidReg	= RegNext(io.idu2EXU.bits.memValid)
+	val memOPReg 	= RegNext(io.idu2EXU.bits.memOP)
+	val rs1IndexReg	= RegNext(io.idu2EXU.bits.rs1Index)
+	val ecallReg 	= RegNext(io.idu2EXU.bits.ecall)
+	val mretReg 	= RegNext(io.idu2EXU.bits.mret)
+	val csrEnReg 	= RegNext(io.idu2EXU.bits.csrEn)
+	val csrWrReg 	= RegNext(io.idu2EXU.bits.csrWr)
+	val csrOPReg 	= RegNext(io.idu2EXU.bits.csrOP)
+	val csrALUOPReg	= RegNext(io.idu2EXU.bits.csrALUOP)
 
-	val ready2IDUReg= RegInit(1.U(1.W))
-    io.idu2EXU.ready   := ready2IDUReg.asBool
-    val valid2WBUReg= RegInit(0.U(1.W))
-    io.exu2LSU.valid:= valid2WBUReg.asBool
-
-	// State Machine
-	val s_idle :: s_wait_idu_valid :: s_wait_wbu_ready :: Nil = Enum(3)
-	val state = RegInit(s_idle)
-	state := MuxLookup(state, s_idle)(List(
-		s_idle				-> Mux(reset.asBool, s_idle, s_wait_idu_valid),
-		s_wait_idu_valid	-> Mux(reset.asBool, s_idle, Mux(io.idu2EXU.valid, s_wait_wbu_ready, s_wait_idu_valid)),
-		s_wait_wbu_ready	-> Mux(reset.asBool, s_idle, Mux(io.exu2LSU.ready, s_idle, s_wait_wbu_ready))
-	))
-	// handshake signals control
-	when(state === s_idle) {
-		ready2IDUReg := 1.U
-		valid2WBUReg := 0.U
-	} .elsewhen(state === s_wait_idu_valid) {
-		ready2IDUReg := 1.U
-		valid2WBUReg := 0.U
-	} .elsewhen(state === s_wait_wbu_ready) {
-		ready2IDUReg := 0.U
-		valid2WBUReg := 1.U
-	}
-
-	// Data signal storage
-	when(io.idu2EXU.ready && io.idu2EXU.valid) {
-        pcReg 		:= io.idu2EXU.bits.pc
-		rs1DataReg 	:= io.idu2EXU.bits.rs1Data
-		rs2DataReg 	:= io.idu2EXU.bits.rs2Data
-		immReg 		:= io.idu2EXU.bits.imm
-		instReg 	:= io.idu2EXU.bits.inst
-
-		regWRReg 	:= io.idu2EXU.bits.regWR
-		srcAALUReg 	:= io.idu2EXU.bits.srcAALU
-		srcBALUReg 	:= io.idu2EXU.bits.srcBALU
-		ctrALUReg 	:= io.idu2EXU.bits.ctrALU
-		branchReg 	:= io.idu2EXU.bits.branch
-		toRegReg 	:= io.idu2EXU.bits.toReg
-		memWRReg 	:= io.idu2EXU.bits.memWR
-		memValidReg	:= io.idu2EXU.bits.memValid
-		memOPReg 	:= io.idu2EXU.bits.memOP
-		rs1IndexReg	:= io.idu2EXU.bits.rs1Index
-		ecallReg 	:= io.idu2EXU.bits.ecall
-		mretReg 	:= io.idu2EXU.bits.mret
-		csrEnReg 	:= io.idu2EXU.bits.csrEn
-		csrWrReg 	:= io.idu2EXU.bits.csrWr
-		csrOPReg 	:= io.idu2EXU.bits.csrOP
-		csrALUOPReg	:= io.idu2EXU.bits.csrALUOP
-    }
+	val handReg 	= RegNext(io.idu2EXU.ready & io.idu2EXU.valid)
+    io.idu2EXU.ready   	:= 1.B
+    io.exu2LSU.valid	:= handReg
 
 	// Wire
 	val pcWire			= pcReg
@@ -140,7 +93,10 @@ class EXU extends Module {
 	val csrALU 		= Module(new CSRALU)
 	// Input
 	csrALU.io.srcAData	:= csrDataWire
-	csrALU.io.srcBData 	:= Mux(csrOPWire.asBool, rs1IndexWire, rs1DataWire)
+	csrALU.io.srcBData 	:= MuxCase(rs1IndexWire, Seq(
+		(csrOPWire === 1.U).asBool	-> rs1IndexWire,
+		(csrOPWire === 0.U).asBool	-> rs1DataWire
+	))
 	csrALU.io.csrALUOP 	:= csrALUOPWire
 	val csrODataWire= csrALU.io.oData
 
