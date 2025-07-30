@@ -13,6 +13,8 @@ class Riscv32BaseReg extends Module {
 	})
 
 	val riscv32BaseReg 	= RegInit(VecInit(Seq.fill(16)(0.U(32.W))))
+	val rs1DataReg 		= RegNext(riscv32BaseReg(io.idu2BaseReg.rs1Index))
+	val rs2DataReg 		= RegNext(riscv32BaseReg(io.idu2BaseReg.rs2Index))
 
 	when(io.wbu2BaseReg.regWR === 1.U) {
 		when(io.wbu2BaseReg.rdIndex =/= 0.U) {
