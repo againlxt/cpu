@@ -104,7 +104,7 @@ class EXU extends Module {
 	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
 		val exuFinCalCnt = RegInit(0.U(32.W))
 		when (io.idu2EXU.valid & io.idu2EXU.ready) {
-			exuFinCalCnt := 0.U
+			exuFinCalCnt := 1.U
 		} .otherwise {
 			exuFinCalCnt := exuFinCalCnt + 1.U
 		}
