@@ -29,25 +29,14 @@ class WBU extends Module {
     val instReg 		= RegNext(io.lsu2WBU.bits.inst)
     val regWRReg       	= RegNext(io.lsu2WBU.bits.regWR)
     val toRegReg 		= RegNext(io.lsu2WBU.bits.toReg)
-    val branchCtrReg 	= RegNext(io.lsu2WBU.bits.branchCtr)
-    val lessReg 		= RegNext(io.lsu2WBU.bits.less)
-    val zeroReg 		= RegNext(io.lsu2WBU.bits.zero)
+    val pcASrcReg 		= RegNext(io.lsu2WBU.bits.pcASrc)
+    val pcBSrcReg 		= RegNext(io.lsu2WBU.bits.pcBSrc)
     val ecallReg 		= RegNext(io.lsu2WBU.bits.ecall)
     val csrEnReg 		= RegNext(io.lsu2WBU.bits.csrEn)
     val csrWrReg 		= RegNext(io.lsu2WBU.bits.csrWr)
     val fenceiReg		= RegNext(io.lsu2WBU.bits.fencei)
 	val handReg 		= RegNext(io.lsu2WBU.valid & io.lsu2WBU.ready)
 		
-	// Branch Cond
-	val branchCond 		= Module(new BranchCond)
-	// Input
-	branchCond.io.branch:= branchCtrReg
-	branchCond.io.less 	:= lessReg
-	branchCond.io.zero 	:= zeroReg
-	// Output
-	val pcASrcReg 		= branchCond.io.pcASrc
-	val pcBSrcReg 		= branchCond.io.pcBSrc
-	
 	/* Output */
 	io.lsu2WBU.ready	:= 1.B
     io.wbu2CSR.pc       := pcReg
@@ -75,50 +64,4 @@ class WBU extends Module {
     ))
 
 	io.wbu2Icache	:= fenceiReg
-}
-
-class BranchCond extends Module {
-	val io = IO(new Bundle {
-		// Input
-		val branch 	= Input(UInt(4.W))
-		val less 	= Input(Bool())
-		val zero 	= Input(Bool())
-
-		// Output
-		val pcASrc 	= Output(UInt(2.W))
-		val pcBSrc 	= Output(UInt(2.W))
-	})
-
-	val branchWire 	= io.branch
-	val lessWire 	= io.less
-	val zeroWire 	= io.zero
-
-	io.pcASrc 	:= MuxCase (0.U, Seq(
-		(branchWire === "b0000".U).asBool -> 0.U,
-		(branchWire === "b0001".U).asBool -> 1.U,
-		(branchWire === "b0010".U).asBool -> 1.U,
-		(branchWire === "b0100".U & !zeroWire).asBool -> 0.U,
-		(branchWire === "b0100".U & zeroWire).asBool -> 1.U,
-		(branchWire === "b0101".U & !zeroWire).asBool -> 1.U,
-		(branchWire === "b0101".U & zeroWire).asBool -> 0.U,
-		(branchWire === "b0110".U & !lessWire).asBool -> 0.U,
-		(branchWire === "b0110".U & lessWire).asBool -> 1.U,
-		(branchWire === "b0111".U & !lessWire).asBool -> 1.U,
-		(branchWire === "b0111".U & lessWire).asBool -> 0.U,
-		(branchWire === "b1000".U).asBool -> 2.U
-	))
-
-	io.pcBSrc 	:= MuxCase (0.U, Seq(
-		(branchWire === "b0000".U).asBool -> 0.U,
-		(branchWire === "b0001".U).asBool -> 0.U,
-		(branchWire === "b0010".U).asBool -> 1.U,
-		(branchWire === "b0100".U & !zeroWire).asBool -> 0.U,
-		(branchWire === "b0100".U & zeroWire).asBool -> 0.U,
-		(branchWire === "b0101".U & !zeroWire).asBool -> 0.U,
-		(branchWire === "b0101".U & zeroWire).asBool -> 0.U,
-		(branchWire === "b0110".U & !lessWire).asBool -> 0.U,
-		(branchWire === "b0110".U & lessWire).asBool -> 0.U,
-		(branchWire === "b0111".U & !lessWire).asBool -> 0.U,
-		(branchWire === "b1000".U).asBool -> 2.U
-	))
 }

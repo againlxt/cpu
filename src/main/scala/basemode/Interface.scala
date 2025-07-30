@@ -70,9 +70,10 @@ class LSU2WBU extends Bundle {
 
 	val regWR 		= Output(UInt(1.W))
 	val toReg 		= Output(UInt(2.W))
-	val branchCtr 	= Output(UInt(4.W))
-	val less 		= Output(UInt(1.W))
-	val zero 		= Output(UInt(1.W))
+
+	val pcASrc 		= Output(UInt(2.W))
+	val pcBSrc 		= Output(UInt(2.W))
+
 	val ecall 		= Output(UInt(1.W))
 	val csrEn 		= Output(UInt(1.W))
 	val csrWr 		= Output(UInt(1.W))

@@ -36,6 +36,16 @@ class LSU extends Module {
 	val csrWrReg 		= RegInit(0.U(1.W))
 	val wbu2IcacheReg	= RegInit(0.U(1.W))
 
+	// Branch Cond
+	val branchCond 		= Module(new BranchCond)
+	// Input
+	branchCond.io.branch:= branchCtrReg
+	branchCond.io.less 	:= lessReg
+	branchCond.io.zero 	:= zeroReg
+	// Output
+	val pcASrcWire 		= branchCond.io.pcASrc
+	val pcBSrcWire 		= branchCond.io.pcBSrc
+
     // Data signal storage
 	when(io.exu2LSU.ready && io.exu2LSU.valid) {
         pcReg 			:= io.exu2LSU.bits.pc
@@ -271,9 +281,8 @@ class LSU extends Module {
     io.lsu2WBU.bits.inst        := instReg
     io.lsu2WBU.bits.regWR       := regWRReg
     io.lsu2WBU.bits.toReg       := toRegReg
-    io.lsu2WBU.bits.branchCtr   := branchCtrReg
-    io.lsu2WBU.bits.less        := lessReg
-    io.lsu2WBU.bits.zero        := zeroReg
+    io.lsu2WBU.bits.pcASrc   	:= pcASrcWire
+    io.lsu2WBU.bits.pcBSrc      := pcBSrcWire
     io.lsu2WBU.bits.ecall       := ecallReg
     io.lsu2WBU.bits.csrEn       := csrEnReg
     io.lsu2WBU.bits.csrWr       := csrWrReg
@@ -325,4 +334,39 @@ class MTrace extends BlackBox with  HasBlackBoxInline {
 	|always @(posedge enable)   MTrace(data, addr, memop_w, wOrR_w);
 	|endmodule
 	""".stripMargin)
+}
+
+class BranchCond extends Module {
+	val io = IO(new Bundle {
+		// Input
+		val branch 	= Input(UInt(4.W))
+		val less 	= Input(Bool())
+		val zero 	= Input(Bool())
+
+		// Output
+		val pcASrc 	= Output(UInt(2.W))
+		val pcBSrc 	= Output(UInt(2.W))
+	})
+
+	val branchWire 	= io.branch
+	val lessWire 	= io.less
+	val zeroWire 	= io.zero
+
+	io.pcASrc := MuxCase(0.U, Seq(
+		(branchWire === "b0000".U) -> 0.U,
+		(branchWire === "b0001".U) -> 1.U,
+		(branchWire === "b0010".U) -> 1.U,
+		(branchWire === "b0100".U) -> zeroWire,
+		(branchWire === "b0101".U) -> (!zeroWire).asUInt,
+		(branchWire === "b0110".U) -> lessWire,
+		(branchWire === "b0111".U) -> (!lessWire).asUInt,
+		(branchWire === "b1000".U) -> 2.U
+	))
+	
+
+	io.pcBSrc := MuxCase(0.U, Seq(
+		(branchWire === "b1000".U) -> 2.U,  // 最高优先级
+		(branchWire === "b0010".U) -> 1.U,  // 只有b0010返回1
+		(branchWire =/= "b1000".U) -> 0.U  // 其他情况返回0
+	))	
 }
