@@ -18,38 +18,11 @@ class IDU extends Module {
 		val idu2BaseReg 	= new IDU2BaseReg
 	})
 
-    val pcReg       = RegInit(Mux(Config.SoC.asBool, "h30000000".U(32.W), "h80000000".U(32.W)))
-    val instReg     = RegInit(0.U(32.W))
-    val ready2IFUReg= RegInit(1.U(1.W))
-    io.inst.ready   := ready2IFUReg.asBool
-    val valid2EXUReg= RegInit(0.U(1.W))
-    io.idu2EXU.valid:= valid2EXUReg.asBool
-
-    // handshake signals control
-    when(ready2IFUReg === 0.U) {
-        when(io.idu2EXU.valid && io.idu2EXU.ready) {
-            ready2IFUReg := 1.U;
-        }
-    } .otherwise {
-        when(io.inst.valid && io.inst.ready) {
-            ready2IFUReg := 0.U
-        }
-    }
-    when(valid2EXUReg === 0.U) {
-        when(io.inst.valid && io.inst.ready) {
-            valid2EXUReg := 1.U
-        }
-    } .otherwise {
-        when(io.idu2EXU.valid && io.idu2EXU.ready) {
-            valid2EXUReg := 0.U;
-        }
-    }
-
-    // Data signal storage
-    when(io.inst.ready && io.inst.valid) {
-        pcReg       := io.inst.bits.pc
-        instReg     := io.inst.bits.inst
-    }
+    val pcReg       = RegNext(io.inst.bits.pc)
+    val instReg     = RegNext(io.inst.bits.inst)
+    io.inst.ready   := 1.B
+    val valid2EXUReg= RegNext(io.inst.ready & io.inst.valid)
+    io.idu2EXU.valid:= valid2EXUReg
     
     val instWire    = instReg
     val pcWire      = pcReg
