@@ -17,9 +17,11 @@ class PC extends Module {
 	
 	val wbu2PCReadyReg 	= RegInit(1.U(1.W))
 	io.wbu2PC.ready 	:= wbu2PCReadyReg
-	val pcUpdate		= Module(new PCUpdate)
-	val pcUpdateWire 	= io.wbu2PC.ready && io.wbu2PC.valid
-	pcUpdate.io.valid	:= pcUpdateWire
+	if(!Config.isSTA) {
+		val pcUpdate		= Module(new PCUpdate)
+		val pcUpdateWire 	= io.wbu2PC.ready && io.wbu2PC.valid
+		pcUpdate.io.valid	:= pcUpdateWire
+	}
 
 	/* 使用 RegNext 更新 PC 值 */
 	when (io.wbu2PC.ready && io.wbu2PC.valid) {
