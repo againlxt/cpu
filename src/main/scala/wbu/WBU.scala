@@ -15,7 +15,7 @@ class WBU extends Module {
 		val lsu2WBU 	= Flipped(Decoupled(new LSU2WBU))	
         val wbu2CSR     = new WBU2CSR
         val wbu2BaseReg = new WBU2BaseReg
-        val wbu2PC      = Decoupled(new WBU2PC)
+        val wbu2IFU     = Decoupled(new WBU2IFU)
 		val wbu2Icache	= Output(Bool())
 	})
 
@@ -52,8 +52,8 @@ class WBU extends Module {
     ))
     io.wbu2BaseReg.rdIndex  := instReg(11,7)
     io.wbu2BaseReg.regWR    := regWRReg
-	io.wbu2PC.valid			:= handReg
-    io.wbu2PC.bits.nextPC   := MuxCase(	0.U(32.W), Seq(	
+	io.wbu2IFU.valid		:= handReg
+    io.wbu2IFU.bits.nextPC  := MuxCase(	0.U(32.W), Seq(	
         (pcASrcReg === "b00".U).asBool	-> 4.U,
 		(pcASrcReg === "b01".U).asBool -> immDataReg,
 		(pcASrcReg === "b10".U).asBool -> 0.U

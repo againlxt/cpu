@@ -16,14 +16,20 @@ object ReplacePolicy extends ChiselEnum {
 }
 class IFU extends Module {
     val io = IO(new Bundle {
-		val pc  	 	= Input(UInt(32.W))
         val inst     	= Decoupled(new IFU2IDU)
 		val ifu2Mem		= new AXI
-		val wbu2Icache	= Input(Bool()) 
+		val wbu2IFU     = Flipped(Decoupled(new WBU2IFU))
+		val wbu2Icache	= Input(Bool())
     })
 	
-	val pcReg = RegInit(0.U(32.W))
-	pcReg := io.pc
+	val pcReg 		= RegInit(Mux(Config.SoC.asBool, "h30000000".U(32.W), "h80000000".U(32.W)))
+	val pcValidReg	= RegNext(io.wbu2IFU.valid & io.wbu2IFU.ready, 1.B)
+	val ifuReadyReg	= RegInit(0.B)
+	switch(ifuReadyReg) {
+		is(0.B) {ifuReadyReg := io.inst.valid & io.inst.ready}
+		is(1.B) {ifuReadyReg := !(io.wbu2IFU.valid & io.wbu2IFU.ready)}
+	}
+	pcReg := Mux(io.wbu2IFU.valid & io.wbu2IFU.ready, io.wbu2IFU.bits.nextPC, pcReg)
 
 	val numOfCache 	= 16
 	val sizeOfCache	= 128
@@ -33,8 +39,8 @@ class IFU extends Module {
 	val burstLen	= 4
 	val burstSize 	= 16
 	val icache = Module(new Icache(numOfCache, sizeOfCache, m, n, burstLen, burstSize, way, ReplacePolicy.LRU))
-	icache.io.addr 		:= io.pc
-	icache.io.enable	:= (pcReg =/= io.pc)
+	icache.io.addr 		:= pcReg 
+	icache.io.enable	:= pcValidReg 
 	icache.io.icache2Mem <> io.ifu2Mem
 	icache.io.wbu2Icache:= io.wbu2Icache
 
@@ -43,6 +49,11 @@ class IFU extends Module {
 		axiAccessFault.io.ready := io.ifu2Mem.bready
 		axiAccessFault.io.valid := io.ifu2Mem.bready
 		axiAccessFault.io.resp	:= io.ifu2Mem.bresp
+	}
+	if(!Config.isSTA) {
+		val pcUpdate		= Module(new PCUpdate)
+		val pcUpdateWire 	= io.wbu2IFU.ready && io.wbu2IFU.valid
+		pcUpdate.io.valid	:= pcUpdateWire
 	}
 
 	/* Counter */
@@ -62,6 +73,24 @@ class IFU extends Module {
 	io.inst.valid		:= icache.io.oEnable
 	io.inst.bits.inst	:= icache.io.inst
 	io.inst.bits.pc		:= pcReg
+	io.wbu2IFU.ready	:= ifuReadyReg
+}
+
+class PCUpdate extends BlackBox with HasBlackBoxInline {
+	val io = IO(new Bundle{
+		val valid	= Input(Bool())
+	})
+
+	setInline("PCUpdate.sv",
+	"""module PCUpdate(
+	|	input valid
+	|);
+	|export "DPI-C" function pcUpdate;
+	|function bit pcUpdate;
+	|	return valid;
+	|endfunction
+	|endmodule
+	""".stripMargin)
 }
 
 /**

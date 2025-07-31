@@ -115,7 +115,7 @@ class WBU2BaseReg extends Bundle {
 	val regWR 	= Output(UInt(1.W))
 }
 
-class WBU2PC extends Bundle {
+class WBU2IFU extends Bundle {
 	val nextPC	= Output(UInt(32.W))
 }
 

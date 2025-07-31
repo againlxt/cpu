@@ -28,7 +28,6 @@ class top extends Module {
 		//val slave 	= if (Config.SoC) Some(Flipped(new AXI)) else None
 		val slave 	= Flipped(new AXI)
 	})
-	val pc 				= Module(new PC)
 	val ifu 			= Module(new IFU)
 	val riscv32BaseReg 	= Module(new Riscv32BaseReg)
 	val csrReg 			= Module(new CSRReg)
@@ -39,17 +38,14 @@ class top extends Module {
 	val xbarAXI			= Module(new XbarAXI)
 	val ifuSkidBuffer 	= Module(new AXISkidBuffer(false, false, false, true, true))
 
-	/* PC Reg */
-	pc.io.wbu2PC 	<> wbu.io.wbu2PC
-	val pcWire 		= pc.io.pc
-
 	/* IFU */
 	/* Input */
-	ifu.io.pc 		:= pcWire
+	val pcWire 		= ifu.io.inst.bits.pc
 	/* Output */
 	ifu.io.inst  	<> idu.io.inst
 	ifu.io.ifu2Mem 	<> ifuSkidBuffer.io.axiSlave
 	ifuSkidBuffer.io.axiMaster 	<> xbarAXI.io.axiSlaveIFU
+	ifu.io.wbu2IFU	<> wbu.io.wbu2IFU
 
 	/* IDU */
 	idu.io.idu2EXU 		<> exu.io.idu2EXU
@@ -113,7 +109,7 @@ class top extends Module {
 		val getCurPC	= Module(new GetCurPC)
 		val getNextPC 	= Module(new GetNextPC)
 		getCurPC.io.pc 		:= pcWire
-		getNextPC.io.nextPC	:= wbu.io.wbu2PC.bits.nextPC
+		getNextPC.io.nextPC	:= wbu.io.wbu2IFU.bits.nextPC
 	}
 }
 
