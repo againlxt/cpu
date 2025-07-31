@@ -55,12 +55,12 @@ class WBU extends Module {
 	io.wbu2IFU.valid		:= handReg
     io.wbu2IFU.bits.nextPC  := MuxCase(	0.U(32.W), Seq(	
         (pcASrcReg === "b00".U).asBool	-> 4.U,
-		(pcASrcReg === "b01".U).asBool -> immDataReg,
-		(pcASrcReg === "b10".U).asBool -> 0.U
+		(pcASrcReg === "b01".U).asBool  -> immDataReg,
+		(pcASrcReg === "b10".U).asBool  -> 0.U
     )) + MuxCase(	0.U(32.W), Seq(	
-        (pcBSrcReg === "b00".U).asBool	-> pcReg,
-		(pcBSrcReg === "b01".U).asBool -> rs1DataReg,
-		(pcBSrcReg === "b10".U).asBool -> csrWDataReg
+        (pcBSrcReg === "b00".U).asBool  -> pcReg,
+		(pcBSrcReg === "b01".U).asBool  -> rs1DataReg,
+		(pcBSrcReg === "b10".U).asBool  -> csrWDataReg
     ))
 
 	io.wbu2Icache	:= fenceiReg
