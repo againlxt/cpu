@@ -50,9 +50,6 @@ class EXU2LSU extends Bundle {
 	val memValid	= Output(UInt(1.W))
 	val memOP 		= Output(UInt(3.W))
 	val toReg 		= Output(UInt(2.W))
-	val branchCtr 	= Output(UInt(4.W))
-	val less 		= Output(UInt(1.W))
-	val zero 		= Output(UInt(1.W))
 	val ecall 		= Output(UInt(1.W))
 	val csrEn 		= Output(UInt(1.W))
 	val csrWr 		= Output(UInt(1.W))
@@ -64,15 +61,11 @@ class LSU2WBU extends Bundle {
 	val aluData		= Output(UInt(32.W))
 	val csrWData	= Output(UInt(32.W))
 	val csrData 	= Output(UInt(32.W))
-	val immData 	= Output(UInt(32.W))
 	val rs1Data 	= Output(UInt(32.W))
 	val inst 		= Output(UInt(32.W))
 
 	val regWR 		= Output(UInt(1.W))
 	val toReg 		= Output(UInt(2.W))
-
-	val pcASrc 		= Output(UInt(2.W))
-	val pcBSrc 		= Output(UInt(2.W))
 
 	val ecall 		= Output(UInt(1.W))
 	val csrEn 		= Output(UInt(1.W))

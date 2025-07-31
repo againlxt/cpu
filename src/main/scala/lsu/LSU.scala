@@ -28,23 +28,10 @@ class LSU extends Module {
 	val memValidReg	    = RegInit(0.U(1.W))
 	val memOPReg 		= RegInit(0.U(3.W))
 	val toRegReg 		= RegInit(0.U(2.W))
-	val branchCtrReg 	= RegInit(0.U(4.W))
-	val lessReg 		= RegInit(0.U(1.W))
-	val zeroReg 		= RegInit(0.U(1.W))
 	val ecallReg 		= RegInit(0.U(1.W))
 	val csrEnReg 		= RegInit(0.U(1.W))
 	val csrWrReg 		= RegInit(0.U(1.W))
 	val wbu2IcacheReg	= RegInit(0.U(1.W))
-
-	// Branch Cond
-	val branchCond 		= Module(new BranchCond)
-	// Input
-	branchCond.io.branch:= branchCtrReg
-	branchCond.io.less 	:= lessReg
-	branchCond.io.zero 	:= zeroReg
-	// Output
-	val pcASrcWire 		= branchCond.io.pcASrc
-	val pcBSrcWire 		= branchCond.io.pcBSrc
 
     // Data signal storage
 	when(io.exu2LSU.ready && io.exu2LSU.valid) {
@@ -61,9 +48,6 @@ class LSU extends Module {
         memValidReg	    := io.exu2LSU.bits.memValid
         memOPReg 		:= io.exu2LSU.bits.memOP
         toRegReg 		:= io.exu2LSU.bits.toReg
-        branchCtrReg 	:= io.exu2LSU.bits.branchCtr
-        lessReg 		:= io.exu2LSU.bits.less
-        zeroReg 		:= io.exu2LSU.bits.zero
         ecallReg 		:= io.exu2LSU.bits.ecall
         csrEnReg 		:= io.exu2LSU.bits.csrEn
         csrWrReg 		:= io.exu2LSU.bits.csrWr
@@ -276,13 +260,10 @@ class LSU extends Module {
     io.lsu2WBU.bits.aluData     := aluDataReg
     io.lsu2WBU.bits.csrWData    := csrWDataReg
     io.lsu2WBU.bits.csrData     := csrDataReg
-    io.lsu2WBU.bits.immData     := immDataReg
     io.lsu2WBU.bits.rs1Data     := rs1DataReg
     io.lsu2WBU.bits.inst        := instReg
     io.lsu2WBU.bits.regWR       := regWRReg
     io.lsu2WBU.bits.toReg       := toRegReg
-    io.lsu2WBU.bits.pcASrc   	:= pcASrcWire
-    io.lsu2WBU.bits.pcBSrc      := pcBSrcWire
     io.lsu2WBU.bits.ecall       := ecallReg
     io.lsu2WBU.bits.csrEn       := csrEnReg
     io.lsu2WBU.bits.csrWr       := csrWrReg

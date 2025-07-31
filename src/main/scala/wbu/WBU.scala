@@ -15,7 +15,6 @@ class WBU extends Module {
 		val lsu2WBU 	= Flipped(Decoupled(new LSU2WBU))	
         val wbu2CSR     = new WBU2CSR
         val wbu2BaseReg = new WBU2BaseReg
-        val wbu2IFU     = Decoupled(new WBU2IFU)
 		val wbu2Icache	= Output(Bool())
 	})
 
@@ -24,18 +23,24 @@ class WBU extends Module {
     val aluDataReg		= RegNext(io.lsu2WBU.bits.aluData)
     val csrWDataReg		= RegNext(io.lsu2WBU.bits.csrWData)
     val csrDataReg		= RegNext(io.lsu2WBU.bits.csrData)
-    val immDataReg 		= RegNext(io.lsu2WBU.bits.immData)
-    val rs1DataReg 		= RegNext(io.lsu2WBU.bits.rs1Data)
     val instReg 		= RegNext(io.lsu2WBU.bits.inst)
     val regWRReg       	= RegNext(io.lsu2WBU.bits.regWR)
     val toRegReg 		= RegNext(io.lsu2WBU.bits.toReg)
-    val pcASrcReg 		= RegNext(io.lsu2WBU.bits.pcASrc)
-    val pcBSrcReg 		= RegNext(io.lsu2WBU.bits.pcBSrc)
     val ecallReg 		= RegNext(io.lsu2WBU.bits.ecall)
     val csrEnReg 		= RegNext(io.lsu2WBU.bits.csrEn)
     val csrWrReg 		= RegNext(io.lsu2WBU.bits.csrWr)
     val fenceiReg		= RegNext(io.lsu2WBU.bits.fencei)
 	val handReg 		= RegNext(io.lsu2WBU.valid & io.lsu2WBU.ready)
+
+    /* DPI-C */
+	if(!Config.isSTA) {
+		val getCurPC	= Module(new GetCurPC)
+		val getNextPC 	= Module(new GetNextPC)
+        val wbuEnd      = Module(new WBUEnd)
+		getCurPC.io.pc 		:= pcReg
+		getNextPC.io.nextPC	:= io.lsu2WBU.bits.pc
+        wbuEnd.io.handshake := handReg
+	}
 		
 	/* Output */
 	io.lsu2WBU.ready	:= 1.B
@@ -52,16 +57,56 @@ class WBU extends Module {
     ))
     io.wbu2BaseReg.rdIndex  := instReg(11,7)
     io.wbu2BaseReg.regWR    := regWRReg
-	io.wbu2IFU.valid		:= handReg
-    io.wbu2IFU.bits.nextPC  := MuxCase(	0.U(32.W), Seq(	
-        (pcASrcReg === "b00".U).asBool	-> 4.U,
-		(pcASrcReg === "b01".U).asBool  -> immDataReg,
-		(pcASrcReg === "b10".U).asBool  -> 0.U
-    )) + MuxCase(	0.U(32.W), Seq(	
-        (pcBSrcReg === "b00".U).asBool  -> pcReg,
-		(pcBSrcReg === "b01".U).asBool  -> rs1DataReg,
-		(pcBSrcReg === "b10".U).asBool  -> csrWDataReg
-    ))
-
 	io.wbu2Icache	:= fenceiReg
+}
+
+class WBUEnd extends BlackBox with HasBlackBoxInline {
+    val io = IO(new Bundle {
+        val handshake = Input(Bool())
+    })
+    setInline("WBUEnd.sv",
+	"""module WBUEnd(
+	   |  input handshake
+	   |);
+	   |
+	   |export "DPI-C" function wbuEnd;
+	   |function bit wbuEnd;
+	   |	return handshake;
+	   |endfunction
+	   |endmodule
+	""".stripMargin)
+}
+
+class GetCurPC extends BlackBox with HasBlackBoxInline {
+	val io = IO(new Bundle {
+		val pc = Input(UInt(32.W))
+	})
+  setInline("GetCurPC.sv",
+	"""module GetCurPC(
+	   |  input [31:0] pc 
+	   |);
+	   |
+	   |export "DPI-C" function get_cur_pc;
+	   |function bit [31:0] get_cur_pc;
+	   |	return pc;
+	   |endfunction
+	   |endmodule
+	""".stripMargin)
+}
+
+class GetNextPC extends BlackBox with HasBlackBoxInline {
+	val io = IO(new Bundle {
+		val nextPC = Input(UInt(32.W))
+	})
+  setInline("GetNextPC.sv",
+	"""module GetNextPC(
+	   |  input	[31:0] nextPC
+	   |);
+	   |
+	   |export "DPI-C" function get_next_pc;
+	   |function bit [31:0] get_next_pc;
+	   |	return nextPC;
+	   |endfunction
+	   |endmodule
+	""".stripMargin)
 }

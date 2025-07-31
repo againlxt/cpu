@@ -17,6 +17,8 @@ class EXU extends Module {
 		val idu2EXU 	= Flipped(Decoupled(new IDU2EXU))
 		val exu2LSU 	= Decoupled(new EXU2LSU)
 		val exu2CSR 	= new EXU2CSR
+		val flush		= Output(Bool())
+		val correctPC 	= Output(UInt(32.W))
 	})
 
 	val pcReg 		= RegNext(io.idu2EXU.bits.pc) 
@@ -41,10 +43,6 @@ class EXU extends Module {
 	val csrWrReg 	= RegNext(io.idu2EXU.bits.csrWr)
 	val csrOPReg 	= RegNext(io.idu2EXU.bits.csrOP)
 	val csrALUOPReg	= RegNext(io.idu2EXU.bits.csrALUOP)
-
-	val handReg 	= RegNext(io.idu2EXU.ready & io.idu2EXU.valid)
-    io.idu2EXU.ready   	:= 1.B
-    io.exu2LSU.valid	:= handReg
 
 	// Wire
 	val pcWire			= pcReg
@@ -100,6 +98,37 @@ class EXU extends Module {
 	csrALU.io.csrALUOP 	:= csrALUOPWire
 	val csrODataWire= csrALU.io.oData
 
+	/* Branch */
+	val branchCond 		= Module(new BranchCond)
+	val branchCheck		= Module(new BranchCheck)
+	branchCond.io.branch	:= branchCtrWire
+	branchCond.io.less 		:= lessWire
+	branchCond.io.zero 		:= zeroWire
+	val pcASrcWire 		= branchCond.io.pcASrc
+	val pcBSrcWire 		= branchCond.io.pcBSrc
+    val nextPC  		= MuxCase(0.U(32.W), Seq(	
+        (pcASrcWire === "b00".U).asBool	-> 4.U,
+		(pcASrcWire === "b01".U).asBool  -> immDataWire,
+		(pcASrcWire === "b10".U).asBool  -> 0.U
+    )) + MuxCase(	0.U(32.W), Seq(	
+        (pcBSrcWire === "b00".U).asBool  -> pcWire,
+		(pcBSrcWire === "b01".U).asBool  -> rs1DataWire,
+		(pcBSrcWire === "b10".U).asBool  -> csrODataWire
+    ))
+	branchCheck.io.predictPC 	:= io.idu2EXU.bits.pc
+	branchCheck.io.correctPC	:= nextPC
+	val branchCorrect 			= branchCheck.io.correct
+
+	val handReg 	= RegNext(io.idu2EXU.ready & io.idu2EXU.valid & branchCorrect)
+
+	/* State */
+	val s_idle :: s_flush :: Nil = Enum(2)
+	val state 	= RegInit(s_flush)
+	state := MuxLookup(state, s_idle)(List(
+		s_idle	-> Mux(!branchCorrect, s_flush, s_idle),
+		s_flush	-> Mux(io.idu2EXU.ready & io.idu2EXU.valid, s_idle, s_flush)
+	))
+
 	/* Counter */
 	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
 		val exuFinCalCnt = RegInit(0.U(32.W))
@@ -128,9 +157,6 @@ class EXU extends Module {
 	io.exu2LSU.bits.memValid	:= memValidCtrWire
 	io.exu2LSU.bits.memOP		:= memOPCtrWire
 	io.exu2LSU.bits.toReg 		:= memToRegCtrWire
-	io.exu2LSU.bits.branchCtr	:= branchCtrWire
-	io.exu2LSU.bits.less 		:= lessWire
-	io.exu2LSU.bits.zero 		:= zeroWire
 	io.exu2LSU.bits.ecall 		:= ecallWire
 	io.exu2LSU.bits.csrEn 		:= csrEnWire
 	io.exu2LSU.bits.csrWr		:= csrWrWire
@@ -138,4 +164,55 @@ class EXU extends Module {
 	io.exu2CSR.csr 				:= instWire(31,20)
 	io.exu2CSR.mret 			:= mretWire
 	io.exu2CSR.ecall 			:= ecallWire
+
+	io.flush 					:= (!branchCorrect) & io.idu2EXU.ready & io.idu2EXU.valid & (state === s_idle)
+	io.correctPC 				:= nextPC
+
+	io.idu2EXU.ready   	:= ((state === s_idle) & branchCorrect) | (state === s_flush)
+    io.exu2LSU.valid	:= handReg
+}
+
+class BranchCond extends Module {
+	val io = IO(new Bundle {
+		// Input
+		val branch 	= Input(UInt(4.W))
+		val less 	= Input(Bool())
+		val zero 	= Input(Bool())
+
+		// Output
+		val pcASrc 	= Output(UInt(2.W))
+		val pcBSrc 	= Output(UInt(2.W))
+	})
+
+	val branchWire 	= io.branch
+	val lessWire 	= io.less
+	val zeroWire 	= io.zero
+
+	io.pcASrc := MuxCase(0.U, Seq(
+		(branchWire === "b0000".U) -> 0.U,
+		(branchWire === "b0001".U) -> 1.U,
+		(branchWire === "b0010".U) -> 1.U,
+		(branchWire === "b0100".U) -> zeroWire,
+		(branchWire === "b0101".U) -> (!zeroWire).asUInt,
+		(branchWire === "b0110".U) -> lessWire,
+		(branchWire === "b0111".U) -> (!lessWire).asUInt,
+		(branchWire === "b1000".U) -> 2.U
+	))
+	
+
+	io.pcBSrc := MuxCase(0.U, Seq(
+		(branchWire === "b1000".U) -> 2.U,  // 最高优先级
+		(branchWire === "b0010".U) -> 1.U,  // 只有b0010返回1
+		(branchWire =/= "b1000".U) -> 0.U  // 其他情况返回0
+	))	
+}
+
+class BranchCheck extends Module {
+	val io = IO(new Bundle {
+		val predictPC 	= Input(UInt(32.W))
+		val correctPC	= Input(UInt(32.W))
+		val correct 	= Output(Bool())
+	})
+
+	io.correct := Mux((io.predictPC === io.correctPC), 1.B, 0.B)
 }

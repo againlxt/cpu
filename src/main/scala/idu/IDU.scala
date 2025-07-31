@@ -16,13 +16,11 @@ class IDU extends Module {
 		val inst 			= Flipped(Decoupled(new IFU2IDU))
 		val idu2EXU			= Decoupled(new IDU2EXU)
 		val idu2BaseReg 	= new IDU2BaseReg
+        val flush           = Input(Bool())
 	})
 
     val pcReg       = RegNext(io.inst.bits.pc)
     val instReg     = RegNext(io.inst.bits.inst)
-    io.inst.ready   := 1.B
-    val valid2EXUReg= RegNext(io.inst.ready & io.inst.valid)
-    io.idu2EXU.valid:= valid2EXUReg
     
     val instWire    = instReg
     val pcWire      = pcReg
@@ -91,6 +89,14 @@ class IDU extends Module {
         instTypeCnt.io.data         := 0.U
 	}
 
+    /* State */
+	val s_idle :: s_flush :: Nil = Enum(2)
+	val state 	= RegInit(s_flush)
+	state := MuxLookup(state, s_idle)(List(
+		s_idle	-> Mux(io.flush, s_flush, s_idle),
+		s_flush	-> Mux(io.inst.ready & io.inst.valid, s_idle, s_flush)
+	))
+
 	// Output
     io.idu2EXU.bits.regWR 	 	:= regWRWire
     io.idu2EXU.bits.srcAALU 	:= srcAALUWire
@@ -117,4 +123,7 @@ class IDU extends Module {
     io.idu2EXU.bits.rs2Data 	:= io.idu2BaseReg.rs2Data
     io.idu2EXU.bits.imm 		:= immWire
     io.idu2EXU.bits.inst        := instWire
+
+    io.inst.ready   := 1.B
+    io.idu2EXU.valid:= (state === s_idle)
 }

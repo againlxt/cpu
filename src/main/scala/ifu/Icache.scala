@@ -30,7 +30,7 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 	val tagReg   		= RegInit(VecInit(Seq.fill(numOfCache/way)(VecInit(Seq.fill(way)(0.U((32-m-n).W))))))
 	val cache  			= RegInit(VecInit(Seq.fill(numOfCache/way)(VecInit(Seq.fill(way)(VecInit(Seq.fill(burstSize >> 2)(0.U(32.W))))))))
 
-    val addrReg         = RegInit(0.U(32.W))
+    val addrReg         = RegEnable(io.addr, io.enable)
 	val tagWire			= addrReg(31, m+n)
 	val indexWire 		= addrReg(m+n-1, m)
 	val offsetWire 		= addrReg(m-1,0) >> 2
@@ -53,7 +53,6 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
     val s_check  = "b00010".U
     val s_find   = "b00100".U
 	val s_find_b = "b01000".U
-    val s_output = "b10000".U
     val state       = RegInit(1.U(5.W))
     val findEndWire = Wire(Bool())
 	val busrtCnt 	  	= RegInit(0.U(8.W))
@@ -65,10 +64,9 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 	val isSdram 	= (addrReg(31,28) >= 10.U)
     state := MuxLookup(state, s_idle)(List(
         s_idle      -> Mux(io.enable, s_check, s_idle),
-        s_check     -> Mux(hitWire, s_output, Mux(isSdram, s_find_b, s_find)),
-        s_find      -> Mux(findEndWire, s_output, s_find),
-		s_find_b    -> Mux(findEndWire, s_output, s_find_b),
-        s_output    -> s_idle
+        s_check     -> Mux(hitWire, s_idle, Mux(isSdram, s_find_b, s_find)),
+        s_find      -> Mux(findEndWire, s_idle, s_find),
+		s_find_b    -> Mux(findEndWire, s_idle, s_find_b)
     ))
 
     /* AW */
@@ -93,6 +91,7 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 	val arburstReg 		= RegInit(1.U(2.W))
 	/* R */
 	val rreadyReg		= RegInit(0.B)
+    val rdataReg        = RegEnable(io.icache2Mem.rdata, io.icache2Mem.rvalid)
 
     /* Signal Connection */
 	/* AW */
@@ -131,9 +130,6 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 	val ridWire 		= io.icache2Mem.rid
 
     /* State Machine */
-    when(io.enable) {
-		addrReg := io.addr
-	}
 	when(io.icache2Mem.rvalid & io.icache2Mem.rready) { 
 		cache(addrReg(m+n-1, m))(wayIndex)(busrtCnt) := rdataWire
 		when(busrtCnt === ((burstSize.U >> 2)-1.U)) {
@@ -145,7 +141,7 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 	when(io.wbu2Icache) {
 		for (i <- 0 until (numOfCache / way)) {
 			for (j <- 0 until way) {
-			cacheValidReg(i)(j) := false.B
+			    cacheValidReg(i)(j) := false.B
 			}
 		}
 	} .otherwise {
@@ -207,28 +203,28 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 			}
 		}
 		switch(state) {
-			is(s_find) { 
-				missPenaltyCounter := missPenaltyCounter + 1.U
+			is(s_find) {
+                missPenaltyCounter := Mux(findEndWire, 0.U, missPenaltyCounter + 1.U) 
 			}
 			is(s_find_b) {
-				missPenaltyCounter := missPenaltyCounter + 1.U
+				missPenaltyCounter := Mux(findEndWire, 0.U, missPenaltyCounter + 1.U) 
 			}
-			is(s_output) { missPenaltyCounter := 0.U }
 		}
 		
 
 		val ATC 			= Module(new PerformanceCounter)
-		ATC.io.valid		:= hitReg & (state === s_output)
+		ATC.io.valid		:= hitWire & (state === s_check)
 		ATC.io.counterType	:= PerformanceCounterType.ICACHE_ACCESS_TIME.asUInt
 		ATC.io.data 		:= accessTimeCounter
 		val MPC 			= Module(new PerformanceCounter)
-		MPC.io.valid		:= !hitReg & (state === s_output)
+		MPC.io.valid		:= !hitReg & (findEndWire)
 		MPC.io.counterType	:= PerformanceCounterType.ICACHE_MISS_PENALTY.asUInt
 		MPC.io.data 		:= missPenaltyCounter
 	}
 
-    io.oEnable := (state === s_output)
-    io.inst    := cache(addrReg(m+n-1, m))(wayIndex)(offsetWire)
+    io.oEnable := (hitWire & (state === s_check)) | findEndWire
+    io.inst    := Mux(((state =/= s_check) & findEndWire & (offsetWire === 3.U))
+    , rdataReg, cache(addrReg(m+n-1, m))(wayIndex)(offsetWire))
 }
 
 class LRU(way: Int, indexWidth: Int) extends Module {

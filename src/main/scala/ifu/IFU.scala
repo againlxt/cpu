@@ -18,28 +18,28 @@ class IFU extends Module {
     val io = IO(new Bundle {
         val inst     	= Decoupled(new IFU2IDU)
 		val ifu2Icache	= new IFU2Icache
-		val wbu2IFU     = Flipped(Decoupled(new WBU2IFU))
+		val flush 		= Input(Bool())
+		val correctPC 	= Input(UInt(32.W))
     })
-	
-	val pcReg 		= RegInit(Mux(Config.SoC.asBool, "h30000000".U(32.W), "h80000000".U(32.W)))
-	val pcValidReg	= RegNext(io.wbu2IFU.valid & io.wbu2IFU.ready, 1.B)
-	val ifuReadyReg	= RegInit(0.B)
-	switch(ifuReadyReg) {
-		is(0.B) {ifuReadyReg := io.inst.valid & io.inst.ready}
-		is(1.B) {ifuReadyReg := !(io.wbu2IFU.valid & io.wbu2IFU.ready)}
-	}
-	pcReg := Mux(io.wbu2IFU.valid & io.wbu2IFU.ready, io.wbu2IFU.bits.nextPC, pcReg)
+	val s_idle :: s_wait_bp :: s_wait_icache :: Nil = Enum(3)
+	val state 	= RegInit(s_idle)
+	state 	:= MuxLookup(state, s_idle)(List(
+		s_idle 			-> s_wait_icache,
+		s_wait_bp 		-> Mux(io.flush, s_wait_bp, s_wait_icache),
+		s_wait_icache	-> Mux(io.ifu2Icache.oEnable | io.flush, 
+		s_wait_bp , s_wait_icache)
+	))
 
-	if(!Config.isSTA) {
-		val pcUpdate		= Module(new PCUpdate)
-		val pcUpdateWire 	= io.wbu2IFU.ready && io.wbu2IFU.valid
-		pcUpdate.io.valid	:= pcUpdateWire
-	}
+	val branchPredict = Module(new BranchPredict)
+	branchPredict.io.correctPC	:= io.correctPC
+	branchPredict.io.flush 		:= io.flush
+	branchPredict.io.next 		:= io.ifu2Icache.oEnable 
+	val pc 	= branchPredict.io.predictPC
 
 	/* Counter */
 	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
 		val ifuGetInstCounter = RegInit(0.U(32.W))
-		when (io.wbu2IFU.valid & io.wbu2IFU.ready) {
+		when (state === s_wait_bp) {
 			ifuGetInstCounter := 0.U
 		} .otherwise {
 			ifuGetInstCounter := ifuGetInstCounter + 1.U
@@ -50,31 +50,22 @@ class IFU extends Module {
 		IGIC.io.data 		:= ifuGetInstCounter
 	}
 
-	io.ifu2Icache.enable:= pcValidReg
-	io.ifu2Icache.addr	:= pcReg
+	io.ifu2Icache.enable:= (state === s_idle) | (state === s_wait_bp)
+	io.ifu2Icache.addr	:= pc
 	io.inst.valid		:= io.ifu2Icache.oEnable
 	io.inst.bits.inst	:= io.ifu2Icache.inst
-	io.inst.bits.pc		:= pcReg
-	io.wbu2IFU.ready	:= ifuReadyReg
+	io.inst.bits.pc		:= pc
 }
 
-class PCUpdate extends BlackBox with HasBlackBoxInline {
-	val io = IO(new Bundle{
-		val valid	= Input(Bool())
+class BranchPredict extends Module {
+	val io = IO(new Bundle {
+		val correctPC 	= Input(UInt(32.W))
+		val flush 		= Input(Bool())
+		val next 		= Input(Bool())
+		val predictPC 	= Output(UInt(32.W))
 	})
+	val pcReg 		= RegInit(Mux(Config.SoC.asBool, "h30000000".U(32.W), "h80000000".U(32.W)))
+	pcReg 			:= Mux(io.next, Mux(io.flush, io.correctPC, pcReg+4.U), pcReg)
 
-	setInline("PCUpdate.sv",
-	"""module PCUpdate(
-	|	input valid
-	|);
-	|export "DPI-C" function pcUpdate;
-	|function bit pcUpdate;
-	|	return valid;
-	|endfunction
-	|endmodule
-	""".stripMargin)
-}
-
-class branch extends Module {
-	
+	io.predictPC	:= pcReg
 }

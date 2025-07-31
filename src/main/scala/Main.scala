@@ -44,8 +44,8 @@ class top extends Module {
 	val pcWire 		= ifu.io.inst.bits.pc
 	/* Output */
 	ifu.io.inst  	<> idu.io.inst
-	ifu.io.wbu2IFU	<> wbu.io.wbu2IFU
-
+	ifu.io.flush 	:= exu.io.flush
+	ifu.io.correctPC:= exu.io.correctPC 	
 	/* Icache */
 	val numOfCache 	= 16
 	val sizeOfCache	= 128
@@ -71,6 +71,7 @@ class top extends Module {
 	/* IDU */
 	idu.io.idu2EXU 		<> exu.io.idu2EXU
 	idu.io.idu2BaseReg	<> riscv32BaseReg.io.idu2BaseReg
+	idu.io.flush 		:= exu.io.flush
 
 	/* EXU */
 	exu.io.exu2LSU	<> lsu.io.exu2LSU
@@ -124,46 +125,4 @@ class top extends Module {
 		val axiLiteUart = Module(new AXILiteUart)
 		xbarAXI.io.axiLiteUart.foreach {uart => uart <> axiLiteUart.io.axiLiteMaster}
 	}
-
-	/* DPI-C */
-	if(!Config.isSTA) {
-		val getCurPC	= Module(new GetCurPC)
-		val getNextPC 	= Module(new GetNextPC)
-		getCurPC.io.pc 		:= pcWire
-		getNextPC.io.nextPC	:= wbu.io.wbu2IFU.bits.nextPC
-	}
-}
-
-class GetCurPC extends BlackBox with HasBlackBoxInline {
-	val io = IO(new Bundle {
-		val pc = Input(UInt(32.W))
-	})
-  setInline("GetCurPC.sv",
-	"""module GetCurPC(
-	   |  input [31:0] pc 
-	   |);
-	   |
-	   |export "DPI-C" function get_cur_pc;
-	   |function bit [31:0] get_cur_pc;
-	   |	return pc;
-	   |endfunction
-	   |endmodule
-	""".stripMargin)
-}
-
-class GetNextPC extends BlackBox with HasBlackBoxInline {
-	val io = IO(new Bundle {
-		val nextPC = Input(UInt(32.W))
-	})
-  setInline("GetNextPC.sv",
-	"""module GetNextPC(
-	   |  input	[31:0] nextPC
-	   |);
-	   |
-	   |export "DPI-C" function get_next_pc;
-	   |function bit [31:0] get_next_pc;
-	   |	return nextPC;
-	   |endfunction
-	   |endmodule
-	""".stripMargin)
 }
