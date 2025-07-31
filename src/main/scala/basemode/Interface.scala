@@ -85,6 +85,13 @@ class C2IFU extends Bundle {
     val memData = Input(UInt(32.W))
 }
 
+class IFU2Icache extends Bundle {
+	val addr 	= Output(UInt(32.W))
+	val enable	= Output(Bool())
+	val oEnable	= Input(Bool())
+	val inst 	= Input(UInt(32.W))
+}
+
 class IDU2BaseReg extends Bundle {
 	val rs1Data = Input(UInt(32.W))
 	val rs2Data = Input(UInt(32.W))
