@@ -18,9 +18,10 @@ class IDU extends Module {
 		val idu2BaseReg 	= new IDU2BaseReg
         val flush           = Input(Bool())
 	})
-
-    val pcReg       = RegNext(io.inst.bits.pc)
-    val instReg     = RegNext(io.inst.bits.inst)
+    val handWire    = io.inst.valid & io.inst.ready
+    val handReg     = RegNext(handWire)
+    val pcReg       = RegEnable(io.inst.bits.pc, handWire)
+    val instReg     = RegEnable(io.inst.bits.inst, handWire)
     
     val instWire    = instReg
     val pcWire      = pcReg
@@ -125,5 +126,5 @@ class IDU extends Module {
     io.idu2EXU.bits.inst        := instWire
 
     io.inst.ready   := 1.B
-    io.idu2EXU.valid:= (state === s_idle)
+    io.idu2EXU.valid:= handReg
 }

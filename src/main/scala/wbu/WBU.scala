@@ -17,20 +17,20 @@ class WBU extends Module {
         val wbu2BaseReg = new WBU2BaseReg
 		val wbu2Icache	= Output(Bool())
 	})
-
-	val pcReg 			= RegNext(io.lsu2WBU.bits.pc)
-    val memDataReg		= RegNext(io.lsu2WBU.bits.memData)
-    val aluDataReg		= RegNext(io.lsu2WBU.bits.aluData)
-    val csrWDataReg		= RegNext(io.lsu2WBU.bits.csrWData)
-    val csrDataReg		= RegNext(io.lsu2WBU.bits.csrData)
-    val instReg 		= RegNext(io.lsu2WBU.bits.inst)
-    val regWRReg       	= RegNext(io.lsu2WBU.bits.regWR)
-    val toRegReg 		= RegNext(io.lsu2WBU.bits.toReg)
-    val ecallReg 		= RegNext(io.lsu2WBU.bits.ecall)
-    val csrEnReg 		= RegNext(io.lsu2WBU.bits.csrEn)
-    val csrWrReg 		= RegNext(io.lsu2WBU.bits.csrWr)
-    val fenceiReg		= RegNext(io.lsu2WBU.bits.fencei)
-	val handReg 		= RegNext(io.lsu2WBU.valid & io.lsu2WBU.ready)
+    val handWire        = io.lsu2WBU.valid & io.lsu2WBU.ready
+	val pcReg 			= RegEnable(io.lsu2WBU.bits.pc, handWire)
+    val memDataReg		= RegEnable(io.lsu2WBU.bits.memData, handWire)
+    val aluDataReg		= RegEnable(io.lsu2WBU.bits.aluData, handWire)
+    val csrWDataReg		= RegEnable(io.lsu2WBU.bits.csrWData, handWire)
+    val csrDataReg		= RegEnable(io.lsu2WBU.bits.csrData, handWire)
+    val instReg 		= RegEnable(io.lsu2WBU.bits.inst, handWire)
+    val regWRReg       	= RegEnable(io.lsu2WBU.bits.regWR, handWire)
+    val toRegReg 		= RegEnable(io.lsu2WBU.bits.toReg, handWire)
+    val ecallReg 		= RegEnable(io.lsu2WBU.bits.ecall, handWire)
+    val csrEnReg 		= RegEnable(io.lsu2WBU.bits.csrEn, handWire)
+    val csrWrReg 		= RegEnable(io.lsu2WBU.bits.csrWr, handWire)
+    val fenceiReg		= RegEnable(io.lsu2WBU.bits.fencei, handWire)
+	val handReg 		= RegNext(handWire)
 
     /* DPI-C */
 	if(!Config.isSTA) {

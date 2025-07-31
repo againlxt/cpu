@@ -21,28 +21,30 @@ class EXU extends Module {
 		val correctPC 	= Output(UInt(32.W))
 	})
 
-	val pcReg 		= RegNext(io.idu2EXU.bits.pc) 
-	val rs1DataReg 	= RegNext(io.idu2EXU.bits.rs1Data)
-	val rs2DataReg 	= RegNext(io.idu2EXU.bits.rs2Data)
-	val immReg 		= RegNext(io.idu2EXU.bits.imm)
-	val instReg 	= RegNext(io.idu2EXU.bits.inst)
+	val idu2EXUHandWire	= io.idu2EXU.valid & io.idu2EXU.ready
+	val pcReg 		= RegEnable(io.idu2EXU.bits.pc, Mux(Config.SoC.asBool, 
+	"h30000000".U(32.W), "h80000000".U(32.W)), idu2EXUHandWire) 
+	val rs1DataReg 	= RegEnable(io.idu2EXU.bits.rs1Data, idu2EXUHandWire)
+	val rs2DataReg 	= RegEnable(io.idu2EXU.bits.rs2Data, idu2EXUHandWire)
+	val immReg 		= RegEnable(io.idu2EXU.bits.imm, idu2EXUHandWire)
+	val instReg 	= RegEnable(io.idu2EXU.bits.inst, idu2EXUHandWire)
 
-	val regWRReg 	= RegNext(io.idu2EXU.bits.regWR)
-	val srcAALUReg 	= RegNext(io.idu2EXU.bits.srcAALU)
-	val srcBALUReg 	= RegNext(io.idu2EXU.bits.srcBALU)
-	val ctrALUReg 	= RegNext(io.idu2EXU.bits.ctrALU)
-	val branchReg 	= RegNext(io.idu2EXU.bits.branch)
-	val toRegReg 	= RegNext(io.idu2EXU.bits.toReg)
-	val memWRReg 	= RegNext(io.idu2EXU.bits.memWR)
-	val memValidReg	= RegNext(io.idu2EXU.bits.memValid)
-	val memOPReg 	= RegNext(io.idu2EXU.bits.memOP)
-	val rs1IndexReg	= RegNext(io.idu2EXU.bits.rs1Index)
-	val ecallReg 	= RegNext(io.idu2EXU.bits.ecall)
-	val mretReg 	= RegNext(io.idu2EXU.bits.mret)
-	val csrEnReg 	= RegNext(io.idu2EXU.bits.csrEn)
-	val csrWrReg 	= RegNext(io.idu2EXU.bits.csrWr)
-	val csrOPReg 	= RegNext(io.idu2EXU.bits.csrOP)
-	val csrALUOPReg	= RegNext(io.idu2EXU.bits.csrALUOP)
+	val regWRReg 	= RegEnable(io.idu2EXU.bits.regWR, idu2EXUHandWire)
+	val srcAALUReg 	= RegEnable(io.idu2EXU.bits.srcAALU, idu2EXUHandWire)
+	val srcBALUReg 	= RegEnable(io.idu2EXU.bits.srcBALU, idu2EXUHandWire)
+	val ctrALUReg 	= RegEnable(io.idu2EXU.bits.ctrALU, idu2EXUHandWire)
+	val branchReg 	= RegEnable(io.idu2EXU.bits.branch, idu2EXUHandWire)
+	val toRegReg 	= RegEnable(io.idu2EXU.bits.toReg, idu2EXUHandWire)
+	val memWRReg 	= RegEnable(io.idu2EXU.bits.memWR, idu2EXUHandWire)
+	val memValidReg	= RegEnable(io.idu2EXU.bits.memValid, idu2EXUHandWire)
+	val memOPReg 	= RegEnable(io.idu2EXU.bits.memOP, idu2EXUHandWire)
+	val rs1IndexReg	= RegEnable(io.idu2EXU.bits.rs1Index, idu2EXUHandWire)
+	val ecallReg 	= RegEnable(io.idu2EXU.bits.ecall, idu2EXUHandWire)
+	val mretReg 	= RegEnable(io.idu2EXU.bits.mret, idu2EXUHandWire)
+	val csrEnReg 	= RegEnable(io.idu2EXU.bits.csrEn, idu2EXUHandWire)
+	val csrWrReg 	= RegEnable(io.idu2EXU.bits.csrWr, idu2EXUHandWire)
+	val csrOPReg 	= RegEnable(io.idu2EXU.bits.csrOP, idu2EXUHandWire)
+	val csrALUOPReg	= RegEnable(io.idu2EXU.bits.csrALUOP, idu2EXUHandWire)
 
 	// Wire
 	val pcWire			= pcReg
@@ -125,7 +127,7 @@ class EXU extends Module {
 	val s_idle :: s_flush :: Nil = Enum(2)
 	val state 	= RegInit(s_flush)
 	state := MuxLookup(state, s_idle)(List(
-		s_idle	-> Mux(!branchCorrect, s_flush, s_idle),
+		s_idle	-> Mux(!branchCorrect & io.idu2EXU.ready & io.idu2EXU.valid, s_flush, s_idle),
 		s_flush	-> Mux(io.idu2EXU.ready & io.idu2EXU.valid, s_idle, s_flush)
 	))
 
