@@ -12,6 +12,7 @@ class LSU extends Module {
         val exu2LSU     = Flipped(Decoupled(new EXU2LSU))
         val lsu2Mem     = new AXI
         val lsu2WBU     = Decoupled(new LSU2WBU)
+		val lsu2BaseReg = new LSU2BaseReg
     })
 
     val pcReg 			= RegInit(Mux(Config.SoC.asBool, "h30000000".U(32.W), "h80000000".U(32.W))) 
@@ -183,24 +184,24 @@ class LSU extends Module {
 	}
 	val memRdDataWire 	= Mux(sOrUWire.asBool, signDataWire.asUInt, rdataShiftWire)
 
-    val s_idle :: s_write :: s_read :: s_end :: Nil = Enum(4)
-    val state   = RegInit(s_idle)
+    val s_wait_valid :: s_write :: s_read :: s_wait_ready :: Nil = Enum(4)
+    val state   = RegInit(s_wait_valid)
     val memEnd  = (io.lsu2Mem.wvalid & io.lsu2Mem.wready & io.lsu2Mem.wlast) || 
     (io.lsu2Mem.rvalid & io.lsu2Mem.rready & io.lsu2Mem.rlast)
-    state       := MuxLookup(state, s_idle)(List(
-        s_idle  -> Mux(io.exu2LSU.ready & io.exu2LSU.valid, 
+    state       := MuxLookup(state, s_wait_valid)(List(
+        s_wait_valid  	-> Mux(io.exu2LSU.ready & io.exu2LSU.valid, 
         Mux(io.exu2LSU.bits.memValid.asBool, 
-        Mux(io.exu2LSU.bits.memWR.asBool, s_write, s_read), s_end), s_idle),
-        s_write -> Mux(memEnd, s_idle, s_write),
-        s_read  -> Mux(memEnd, s_idle, s_read),
-		s_end	-> s_idle
+        Mux(io.exu2LSU.bits.memWR.asBool, s_write, s_read), s_wait_ready), s_wait_valid),
+        s_write 		-> Mux(memEnd, s_wait_valid, s_write),
+        s_read  		-> Mux(memEnd, s_wait_valid, s_read),
+		s_wait_ready	-> Mux(io.lsu2WBU.ready & io.lsu2WBU.valid, s_wait_valid, s_wait_ready)
     ))
     val wOpWire      = io.exu2LSU.ready & io.exu2LSU.valid & 
     io.exu2LSU.bits.memValid.asBool & io.exu2LSU.bits.memWR.asBool
     val rOpWire      = io.exu2LSU.ready & io.exu2LSU.valid & 
     io.exu2LSU.bits.memValid.asBool & (!io.exu2LSU.bits.memWR.asBool)
     switch(state) {
-        is(s_idle) {
+        is(s_wait_valid) {
             awvalidReg  := wOpWire
             wvalidReg   := wOpWire
             wlastReg    := wOpWire
@@ -253,8 +254,8 @@ class LSU extends Module {
 	}
 
     /* IO */
-    io.exu2LSU.ready            := (state === s_idle)
-    io.lsu2WBU.valid            := memEnd || (state === s_end)
+    io.exu2LSU.ready            := (state === s_wait_valid)
+    io.lsu2WBU.valid            := (state === s_wait_ready)
     io.lsu2WBU.bits.pc          := pcReg
     io.lsu2WBU.bits.memData     := memRdDataWire
     io.lsu2WBU.bits.aluData     := aluDataReg
@@ -268,6 +269,9 @@ class LSU extends Module {
     io.lsu2WBU.bits.csrEn       := csrEnReg
     io.lsu2WBU.bits.csrWr       := csrWrReg
     io.lsu2WBU.bits.fencei      := (memOPReg === 7.U)
+	io.lsu2BaseReg.rdIndex 		:= instReg(11,7)
+	io.lsu2BaseReg.regWR 		:= regWRReg
+	io.lsu2BaseReg.handShake	:= io.lsu2WBU.valid & io.lsu2WBU.ready
 }
 
 class GetCommond extends BlackBox with HasBlackBoxInline {

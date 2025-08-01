@@ -16,6 +16,7 @@ class ContrGen extends Module {
 
 		val immType = Output(UInt(3.W))
 		val regWR 	= Output(UInt(1.W))
+		val regOP 	= Output(UInt(1.W))
 		val srcAALU = Output(UInt(2.W))
 		val srcBALU = Output(UInt(2.W))
 		val ctrALU 	= Output(UInt(4.W))
@@ -169,6 +170,7 @@ class ContrGen extends Module {
 	))
 
 	io.regWR    := 0.U
+	io.regOP 	:= 0.U
 	io.srcAALU  := 0.U
 	io.srcBALU  := 0.U
 	io.ctrALU   := 0.U

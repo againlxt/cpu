@@ -17,6 +17,7 @@ class EXU extends Module {
 		val idu2EXU 	= Flipped(Decoupled(new IDU2EXU))
 		val exu2LSU 	= Decoupled(new EXU2LSU)
 		val exu2CSR 	= new EXU2CSR
+		val exu2BaseReg = new EXU2BaseReg
 		val flush		= Output(Bool())
 		val correctPC 	= Output(UInt(32.W))
 	})
@@ -120,15 +121,15 @@ class EXU extends Module {
 	branchCheck.io.predictPC 	:= io.idu2EXU.bits.pc
 	branchCheck.io.correctPC	:= nextPC
 	val branchCorrect 			= branchCheck.io.correct
-
-	val handReg 	= RegNext(io.idu2EXU.ready & io.idu2EXU.valid & branchCorrect)
+	val branchCorrectReg 		= RegEnable(branchCheck.io.correct, idu2EXUHandWire)
 
 	/* State */
-	val s_idle :: s_flush :: Nil = Enum(2)
-	val state 	= RegInit(s_flush)
-	state := MuxLookup(state, s_idle)(List(
-		s_idle	-> Mux(!branchCorrect & io.idu2EXU.ready & io.idu2EXU.valid, s_flush, s_idle),
-		s_flush	-> Mux(io.idu2EXU.ready & io.idu2EXU.valid, s_idle, s_flush)
+	val s_wait_valid :: s_wait_ready :: Nil = Enum(2)
+	val state 	= RegInit(s_wait_valid)
+    val exu2LSUHandWire = io.exu2LSU.valid & io.exu2LSU.ready
+	state := MuxLookup(state, s_wait_valid)(List(
+		s_wait_valid  -> Mux(idu2EXUHandWire, s_wait_ready, s_wait_valid),
+        s_wait_ready  -> Mux(exu2LSUHandWire, s_wait_valid, s_wait_ready)
 	))
 
 	/* Counter */
@@ -143,7 +144,9 @@ class EXU extends Module {
 		EFCC.io.valid		:= io.exu2LSU.valid
 		EFCC.io.counterType	:= PerformanceCounterType.EXUFINCAL.asUInt
 		EFCC.io.data 		:= exuFinCalCnt
-	}	
+	}
+	val flushReg 	= RegInit(0.B)
+	flushReg 		:= Mux(io.flush, 0.B, (!branchCorrect) & (state === s_wait_valid) & idu2EXUHandWire)
 
 	io.exu2LSU.bits.pc 			:= pcWire
 	io.exu2LSU.bits.memData		:= rs2DataWire
@@ -167,11 +170,15 @@ class EXU extends Module {
 	io.exu2CSR.mret 			:= mretWire
 	io.exu2CSR.ecall 			:= ecallWire
 
-	io.flush 					:= (!branchCorrect) & io.idu2EXU.ready & io.idu2EXU.valid & (state === s_idle)
+	io.exu2BaseReg.rdIndex 		:= instReg(11,7)
+	io.exu2BaseReg.regWR 		:= regWRWire
+	io.exu2BaseReg.handShake	:= exu2LSUHandWire
+
+	io.flush 					:= flushReg
 	io.correctPC 				:= nextPC
 
-	io.idu2EXU.ready   	:= ((state === s_idle) & branchCorrect) | (state === s_flush)
-    io.exu2LSU.valid	:= handReg
+	io.idu2EXU.ready   	:= (state === s_wait_valid) 
+    io.exu2LSU.valid	:= (state === s_wait_ready)
 }
 
 class BranchCond extends Module {

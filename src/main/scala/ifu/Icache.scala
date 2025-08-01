@@ -91,7 +91,6 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 	val arburstReg 		= RegInit(1.U(2.W))
 	/* R */
 	val rreadyReg		= RegInit(0.B)
-    val rdataReg        = RegEnable(io.icache2Mem.rdata, io.icache2Mem.rvalid)
 
     /* Signal Connection */
 	/* AW */
@@ -221,8 +220,24 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 		MPC.io.counterType	:= PerformanceCounterType.ICACHE_MISS_PENALTY.asUInt
 		MPC.io.data 		:= missPenaltyCounter
 	}
+	val oValidReg	= RegInit(0.B)
+	val rdataReg    = RegEnable(io.icache2Mem.rdata, findEndWire)	
+	switch(state) {
+		is(s_idle) {
+			oValidReg 	:= Mux(oValidReg, !io.enable, 0.B)
+		}
+		is(s_check){
+			oValidReg := hitWire
+		}
+		is(s_find) {
+			oValidReg := findEndWire
+		}
+		is(s_find_b) {
+			oValidReg := findEndWire
+		}
+	}
 
-    io.oEnable := (hitWire & (state === s_check)) | findEndWire
+    io.oEnable := oValidReg 
     io.inst    := Mux(((state =/= s_check) & findEndWire & (offsetWire === 3.U))
     , rdataReg, cache(addrReg(m+n-1, m))(wayIndex)(offsetWire))
 }

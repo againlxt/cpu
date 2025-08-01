@@ -91,11 +91,13 @@ class IDU extends Module {
 	}
 
     /* State */
-	val s_idle :: s_flush :: Nil = Enum(2)
-	val state 	= RegInit(s_flush)
-	state := MuxLookup(state, s_idle)(List(
-		s_idle	-> Mux(io.flush, s_flush, s_idle),
-		s_flush	-> Mux(io.inst.ready & io.inst.valid, s_idle, s_flush)
+	val s_wait_valid :: s_wait_ready :: s_wait :: Nil = Enum(3)
+	val state 	= RegInit(s_wait_valid)
+    val idu2EXUHandWire = io.idu2EXU.valid & io.idu2EXU.ready
+	state := MuxLookup(state, s_wait_valid)(List(
+		s_wait_valid  -> Mux(io.idu2BaseReg.raw, s_wait, Mux(handWire, s_wait_ready, s_wait_valid)),
+        s_wait_ready  -> Mux(io.idu2BaseReg.raw, s_wait, Mux(idu2EXUHandWire, s_wait_valid, s_wait_ready)),
+        s_wait        -> Mux(io.idu2BaseReg.raw, s_wait, s_wait_ready) 
 	))
 
 	// Output
@@ -118,6 +120,8 @@ class IDU extends Module {
 
     io.idu2BaseReg.rs1Index := rs1IndexWire
     io.idu2BaseReg.rs2Index := rs2IndexWire
+    io.idu2BaseReg.instType := immTypewire
+    io.idu2BaseReg.handShake:= handWire
 
     io.idu2EXU.bits.pc          := pcWire
     io.idu2EXU.bits.rs1Data 	:= io.idu2BaseReg.rs1Data
@@ -125,6 +129,6 @@ class IDU extends Module {
     io.idu2EXU.bits.imm 		:= immWire
     io.idu2EXU.bits.inst        := instWire
 
-    io.inst.ready   := 1.B
-    io.idu2EXU.valid:= handReg
+    io.inst.ready   := (state === s_wait_valid)
+    io.idu2EXU.valid:= (state === s_wait_ready)
 }

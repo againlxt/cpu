@@ -76,10 +76,12 @@ class top extends Module {
 	/* EXU */
 	exu.io.exu2LSU	<> lsu.io.exu2LSU
 	exu.io.exu2CSR 	<> csrReg.io.exu2CSR
+	exu.io.exu2BaseReg	<> riscv32BaseReg.io.exu2BaseReg
 
 	/* LSU */
 	lsu.io.lsu2Mem	<> xbarAXI.io.axiSlaveWBU
 	lsu.io.lsu2WBU	<> wbu.io.lsu2WBU
+	lsu.io.lsu2BaseReg	<> riscv32BaseReg.io.lsu2BaseReg
 
 	/* WBU */
 	wbu.io.wbu2CSR			<> csrReg.io.wbu2CSR
