@@ -192,8 +192,8 @@ class LSU extends Module {
         s_wait_valid  	-> Mux(io.exu2LSU.ready & io.exu2LSU.valid, 
         Mux(io.exu2LSU.bits.memValid.asBool, 
         Mux(io.exu2LSU.bits.memWR.asBool, s_write, s_read), s_wait_ready), s_wait_valid),
-        s_write 		-> Mux(memEnd, s_wait_valid, s_write),
-        s_read  		-> Mux(memEnd, s_wait_valid, s_read),
+        s_write 		-> Mux(memEnd, s_wait_ready, s_write),
+        s_read  		-> Mux(memEnd, s_wait_ready, s_read),
 		s_wait_ready	-> Mux(io.lsu2WBU.ready & io.lsu2WBU.valid, s_wait_valid, s_wait_ready)
     ))
     val wOpWire      = io.exu2LSU.ready & io.exu2LSU.valid & 
