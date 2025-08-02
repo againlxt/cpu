@@ -271,6 +271,7 @@ class LSU extends Module {
     io.lsu2WBU.bits.fencei      := (memOPReg === 7.U)
 	io.lsu2BaseReg.rdIndex 		:= instReg(11,7)
 	io.lsu2BaseReg.regWR 		:= regWRReg
+	io.lsu2BaseReg.pc			:= pcReg
 	io.lsu2BaseReg.handShake	:= io.lsu2WBU.valid & io.lsu2WBU.ready
 }
 

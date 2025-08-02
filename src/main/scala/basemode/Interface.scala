@@ -93,6 +93,7 @@ class IDU2BaseReg extends Bundle {
 	val rs1Index = Output(UInt(4.W))
 	val rs2Index = Output(UInt(4.W))
 	val instType = Output(UInt(3.W))
+	val prePC 	 = Output(UInt(32.W))
 	val handShake = Output(Bool())
 }
 
@@ -106,12 +107,14 @@ class EXU2CSR extends Bundle {
 class EXU2BaseReg extends Bundle {
 	val rdIndex = Output(UInt(4.W))
 	val regWR 	= Output(UInt(1.W))
+	val pc 		= Output(UInt(32.W))
 	val handShake = Output(Bool())
 }
 
 class LSU2BaseReg extends Bundle {
 	val rdIndex = Output(UInt(4.W))
 	val regWR 	= Output(UInt(1.W))
+	val pc 		= Output(UInt(32.W))
 	val handShake = Output(Bool())
 }
 
@@ -128,6 +131,7 @@ class WBU2BaseReg extends Bundle {
 	val rdIndex = Output(UInt(4.W))
 	val data 	= Output(UInt(32.W))
 	val regWR 	= Output(UInt(1.W))
+	val pc 		= Output(UInt(32.W))
 }
 
 class WBU2IFU extends Bundle {
@@ -140,7 +144,6 @@ class IFUSRAM extends Bundle {
 	val valid 	= Output(UInt(1.W))
 	val data 	= Output(UInt(32.W))
 }
-
 class WBUSRAM extends Bundle {
 	val clk 	= Output(UInt(1.W))
 	val raddr	= Output(UInt(32.W))

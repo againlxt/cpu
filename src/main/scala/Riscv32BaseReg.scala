@@ -45,13 +45,14 @@ class Riscv32BaseReg extends Module {
 	))
 	val ifu2IDUHandshakeReg = RegNext(io.idu2BaseReg.handShake)
 
-	val s_idle :: s_wait_exu :: s_wait_lsu :: s_wait_wbu :: s_wait_idu :: Nil = Enum(5)
+	val s_idle :: s_wait :: s_wait_idu :: Nil = Enum(3)
 	val state 	= RegInit(s_idle)
+	val waitEnd = (io.idu2BaseReg.prePC === io.exu2BaseReg.pc) &
+	(io.idu2BaseReg.prePC === io.lsu2BaseReg.pc) & 
+	(io.idu2BaseReg.prePC === io.wbu2BaseReg.pc)
 	state := MuxLookup(state, s_idle)(List(
-		s_idle		-> Mux(rawWire.asBool & ifu2IDUHandshakeReg, s_wait_exu, s_idle),
-		s_wait_exu	-> Mux(io.exu2BaseReg.handShake, s_wait_lsu, s_wait_exu),
-		s_wait_lsu	-> Mux(io.lsu2BaseReg.handShake, s_wait_wbu, s_wait_lsu),
-		s_wait_wbu	-> s_wait_idu,
+		s_idle		-> Mux(rawWire.asBool & ifu2IDUHandshakeReg, s_wait, s_idle),
+		s_wait		-> Mux(waitEnd, s_wait_idu, s_wait),
 		s_wait_idu	-> Mux(io.idu2BaseReg.handShake, s_idle, s_wait_idu)
 	))
 

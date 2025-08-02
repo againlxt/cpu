@@ -57,6 +57,7 @@ class WBU extends Module {
     ))
     io.wbu2BaseReg.rdIndex  := instReg(11,7)
     io.wbu2BaseReg.regWR    := regWRReg
+	io.wbu2BaseReg.pc		:= pcReg
 	io.wbu2Icache	:= fenceiReg
 }
 

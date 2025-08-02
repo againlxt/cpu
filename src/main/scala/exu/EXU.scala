@@ -172,6 +172,7 @@ class EXU extends Module {
 
 	io.exu2BaseReg.rdIndex 		:= instReg(11,7)
 	io.exu2BaseReg.regWR 		:= regWRWire
+	io.exu2BaseReg.pc			:= pcReg
 	io.exu2BaseReg.handShake	:= exu2LSUHandWire
 
 	io.flush 					:= flushReg

@@ -122,6 +122,7 @@ class IDU extends Module {
     io.idu2BaseReg.rs1Index := rs1IndexWire
     io.idu2BaseReg.rs2Index := rs2IndexWire
     io.idu2BaseReg.instType := immTypewire
+    io.idu2BaseReg.prePC    := prePCReg
     io.idu2BaseReg.handShake:= handWire
 
     io.idu2EXU.bits.pc          := pcWire
