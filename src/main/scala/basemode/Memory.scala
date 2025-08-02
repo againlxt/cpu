@@ -160,6 +160,7 @@ class AXIBusArbiter extends Module {
   val arreadyWire0  = io.axiSlave0.arready
   val rvalidWire0   = io.axiSlave0.rvalid
   val rreadyWire0   = io.axiSlave0.rready
+  val rrlastWire0   = io.axiSlave0.rlast
 
   val awvalidWire1  = io.axiSlave1.awvalid
   val awreadyWire1  = io.axiSlave1.awready
@@ -171,13 +172,14 @@ class AXIBusArbiter extends Module {
   val arreadyWire1  = io.axiSlave1.arready
   val rvalidWire1   = io.axiSlave1.rvalid
   val rreadyWire1   = io.axiSlave1.rready
+  val rrlastWire1   = io.axiSlave1.rlast
 
   val s_idle :: s_wait :: s_ifu :: s_lsu :: Nil = Enum(4)
   val state = RegInit(s_idle)
   val wait2LSUWire  = arvalidWire1.asBool || awvalidWire1.asBool || wvalidWire1.asBool
   val wait2IFUWire  = arvalidWire0.asBool || awvalidWire0.asBool || wvalidWire0.asBool
-  val ifu2WaitWire  = (rvalidWire0.asBool && rreadyWire0.asBool) || (wvalidWire0.asBool && wreadyWire0.asBool)
-  val lsu2WaitWire  = (rvalidWire1.asBool && rreadyWire1.asBool) || (wvalidWire1.asBool && wreadyWire1.asBool)
+  val ifu2WaitWire  = (rvalidWire0.asBool && rreadyWire0.asBool && rrlastWire0) || (wvalidWire0.asBool && wreadyWire0.asBool)
+  val lsu2WaitWire  = (rvalidWire1.asBool && rreadyWire1.asBool && rrlastWire1) || (wvalidWire1.asBool && wreadyWire1.asBool)
 
   state := MuxLookup(state, s_idle)(List(
     s_idle  -> Mux(this.reset.asBool, s_idle, s_wait),

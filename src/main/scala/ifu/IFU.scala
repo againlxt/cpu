@@ -25,7 +25,7 @@ class IFU extends Module {
 	val state 	= RegInit(s_idle)
 	state 	:= MuxLookup(state, s_idle)(List(
 		s_idle 			-> s_wait_icache,
-		s_wait_bp 		-> s_wait_icache,
+		s_wait_bp 		-> Mux(io.flush, s_wait_bp, s_wait_icache),
 		s_wait_icache	-> Mux(io.flush, s_wait, 
 		Mux(io.inst.valid & io.inst.ready, s_wait_bp, s_wait_icache)),
 		s_wait			-> Mux(io.ifu2Icache.oEnable, s_wait_bp, s_wait)
@@ -52,7 +52,7 @@ class IFU extends Module {
 		IGIC.io.data 		:= ifuGetInstCounter
 	}
 
-	io.ifu2Icache.enable:= (state === s_idle) | (state === s_wait_bp)
+	io.ifu2Icache.enable:= ((state === s_idle) | (state === s_wait_bp)) & (!io.flush)
 	io.ifu2Icache.addr	:= pc
 	io.inst.valid		:= io.ifu2Icache.oEnable & (state === s_wait_icache) & (!io.flush)
 	io.inst.bits.inst	:= io.ifu2Icache.inst

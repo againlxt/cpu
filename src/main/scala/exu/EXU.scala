@@ -132,7 +132,7 @@ class EXU extends Module {
 	val flushReg 	= RegInit(0.B)
 	val flushWire 	= Wire(Bool())
 	flushWire 		:= (!branchCorrectReg) & (state === s_wait_ready) &
-	 idu2EXUHandReg & (state =/= s_flush_wait_ready) & (state =/= s_flush_wait_valid)
+	idu2EXUHandReg & (state =/= s_flush_wait_ready) & (state =/= s_flush_wait_valid)
 	flushReg 		:= Mux(io.flush, 0.B, flushWire)
 	state := MuxLookup(state, s_wait_valid)(List(
 		s_idle0 	  -> Mux(idu2EXUHandWire, s_idle1, s_idle0),
@@ -187,7 +187,7 @@ class EXU extends Module {
 	io.flush 					:= flushReg
 	io.correctPC 				:= correctPCReg 
 
-	io.idu2EXU.ready   	:= ((state === s_wait_valid) | (state === s_idle0) & (!flushWire)) | (state === s_flush_wait_valid)
+	io.idu2EXU.ready   	:= ((state === s_wait_valid) & (!flushWire)) | (state === s_flush_wait_valid & (!flushReg)) | (state === s_idle0)
     io.exu2LSU.valid	:= (((state === s_wait_ready) & (!flushWire)) | (state === s_idle1)) | (state === s_flush_wait_ready)
 }
 
@@ -207,17 +207,20 @@ class BranchCond extends Module {
 	val lessWire 	= io.less
 	val zeroWire 	= io.zero
 
-	io.pcASrc := MuxCase(0.U, Seq(
-		(branchWire === "b0000".U) -> 0.U,
-		(branchWire === "b0001".U) -> 1.U,
-		(branchWire === "b0010".U) -> 1.U,
-		(branchWire === "b0100".U) -> zeroWire,
-		(branchWire === "b0101".U) -> (!zeroWire).asUInt,
-		(branchWire === "b0110".U) -> lessWire,
-		(branchWire === "b0111".U) -> (!lessWire).asUInt,
-		(branchWire === "b1000".U) -> 2.U
+	io.pcASrc 	:= MuxCase (0.U, Seq(
+		(branchWire === "b0000".U).asBool -> 0.U,
+		(branchWire === "b0001".U).asBool -> 1.U,
+		(branchWire === "b0010".U).asBool -> 1.U,
+		(branchWire === "b0100".U & !zeroWire).asBool -> 0.U,
+		(branchWire === "b0100".U & zeroWire).asBool -> 1.U,
+		(branchWire === "b0101".U & !zeroWire).asBool -> 1.U,
+		(branchWire === "b0101".U & zeroWire).asBool -> 0.U,
+		(branchWire === "b0110".U & !lessWire).asBool -> 0.U,
+		(branchWire === "b0110".U & lessWire).asBool -> 1.U,
+		(branchWire === "b0111".U & !lessWire).asBool -> 1.U,
+		(branchWire === "b0111".U & lessWire).asBool -> 0.U,
+		(branchWire === "b1000".U).asBool -> 2.U
 	))
-	
 
 	io.pcBSrc := MuxCase(0.U, Seq(
 		(branchWire === "b1000".U) -> 2.U,  // 最高优先级

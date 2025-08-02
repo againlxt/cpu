@@ -37,7 +37,7 @@ class top extends Module {
 	val lsu 			= Module(new LSU)
 	val wbu 			= Module(new WBU)
 	val xbarAXI			= Module(new XbarAXI)
-	val icacheSkidBuffer= Module(new AXISkidBuffer(false, false, false, true, true))
+	val icacheSkidBuffer= Module(new AXISkidBuffer(false, false, false, false, false))
 
 	/* IFU */
 	/* Input */

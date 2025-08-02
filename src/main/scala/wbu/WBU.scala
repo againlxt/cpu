@@ -36,10 +36,12 @@ class WBU extends Module {
 	if(!Config.isSTA) {
 		val getCurPC	= Module(new GetCurPC)
 		val getNextPC 	= Module(new GetNextPC)
+		val getCmd 		= Module(new GetCmd)
         val wbuEnd      = Module(new WBUEnd)
 		getCurPC.io.pc 		:= pcReg
 		getNextPC.io.nextPC	:= io.lsu2WBU.bits.pc
-        wbuEnd.io.handshake := handReg
+		getCmd.io.cmd 		:= instReg
+        wbuEnd.io.handshake := handReg 
 	}
 		
 	/* Output */
@@ -90,6 +92,23 @@ class GetCurPC extends BlackBox with HasBlackBoxInline {
 	   |export "DPI-C" function get_cur_pc;
 	   |function bit [31:0] get_cur_pc;
 	   |	return pc;
+	   |endfunction
+	   |endmodule
+	""".stripMargin)
+}
+
+class GetCmd extends BlackBox with HasBlackBoxInline {
+	val io = IO(new Bundle {
+		val cmd = Input(UInt(32.W))
+	})
+  setInline("GetCmd.sv",
+	"""module GetCmd(
+	   |  input [31:0] cmd
+	   |);
+	   |
+	   |export "DPI-C" function getCommond;
+	   |function bit [31:0] getCommond;
+	   |	return cmd;
 	   |endfunction
 	   |endmodule
 	""".stripMargin)
