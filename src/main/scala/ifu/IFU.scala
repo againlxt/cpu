@@ -54,7 +54,7 @@ class IFU extends Module {
 
 	io.ifu2Icache.enable:= (state === s_idle) | (state === s_wait_bp)
 	io.ifu2Icache.addr	:= pc
-	io.inst.valid		:= io.ifu2Icache.oEnable & (state === s_wait_icache)
+	io.inst.valid		:= io.ifu2Icache.oEnable & (state === s_wait_icache) & (!io.flush)
 	io.inst.bits.inst	:= io.ifu2Icache.inst
 	io.inst.bits.pc		:= pc
 }

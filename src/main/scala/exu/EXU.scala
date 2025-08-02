@@ -23,6 +23,7 @@ class EXU extends Module {
 	})
 
 	val idu2EXUHandWire	= io.idu2EXU.valid & io.idu2EXU.ready
+	val idu2EXUHandReg 	= RegNext(idu2EXUHandWire)
 	val pcReg 		= RegEnable(io.idu2EXU.bits.pc, Mux(Config.SoC.asBool, 
 	"h30000000".U(32.W), "h80000000".U(32.W)), idu2EXUHandWire) 
 	val rs1DataReg 	= RegEnable(io.idu2EXU.bits.rs1Data, idu2EXUHandWire)
@@ -121,15 +122,25 @@ class EXU extends Module {
 	branchCheck.io.predictPC 	:= io.idu2EXU.bits.pc
 	branchCheck.io.correctPC	:= nextPC
 	val branchCorrect 			= branchCheck.io.correct
-	val branchCorrectReg 		= RegEnable(branchCheck.io.correct, idu2EXUHandWire)
+	val branchCorrectReg 		= RegEnable(branchCorrect, idu2EXUHandWire)
+	val correctPCReg 			= RegEnable(nextPC, idu2EXUHandWire) 
 
 	/* State */
-	val s_wait_valid :: s_wait_ready :: Nil = Enum(2)
-	val state 	= RegInit(s_wait_valid)
+	val s_idle0 :: s_idle1 :: s_wait_valid :: s_wait_ready :: s_flush_wait_valid :: s_flush_wait_ready :: Nil = Enum(6)
+	val state 	= RegInit(s_idle0)
     val exu2LSUHandWire = io.exu2LSU.valid & io.exu2LSU.ready
+	val flushReg 	= RegInit(0.B)
+	val flushWire 	= Wire(Bool())
+	flushWire 		:= (!branchCorrectReg) & (state === s_wait_ready) &
+	 idu2EXUHandReg & (state =/= s_flush_wait_ready) & (state =/= s_flush_wait_valid)
+	flushReg 		:= Mux(io.flush, 0.B, flushWire)
 	state := MuxLookup(state, s_wait_valid)(List(
+		s_idle0 	  -> Mux(idu2EXUHandWire, s_idle1, s_idle0),
+		s_idle1		  -> Mux(exu2LSUHandWire, s_wait_valid, s_wait_ready),
 		s_wait_valid  -> Mux(idu2EXUHandWire, s_wait_ready, s_wait_valid),
-        s_wait_ready  -> Mux(exu2LSUHandWire, s_wait_valid, s_wait_ready)
+		s_wait_ready  -> Mux(flushWire, s_flush_wait_valid, Mux(exu2LSUHandWire, s_wait_valid, s_wait_ready)),
+		s_flush_wait_valid -> Mux(idu2EXUHandWire, s_flush_wait_ready, s_flush_wait_valid),
+		s_flush_wait_ready -> Mux(exu2LSUHandWire, s_wait_valid, s_flush_wait_ready)
 	))
 
 	/* Counter */
@@ -145,8 +156,6 @@ class EXU extends Module {
 		EFCC.io.counterType	:= PerformanceCounterType.EXUFINCAL.asUInt
 		EFCC.io.data 		:= exuFinCalCnt
 	}
-	val flushReg 	= RegInit(0.B)
-	flushReg 		:= Mux(io.flush, 0.B, (!branchCorrect) & (state === s_wait_valid) & idu2EXUHandWire)
 
 	io.exu2LSU.bits.pc 			:= pcWire
 	io.exu2LSU.bits.memData		:= rs2DataWire
@@ -176,10 +185,10 @@ class EXU extends Module {
 	io.exu2BaseReg.handShake	:= exu2LSUHandWire
 
 	io.flush 					:= flushReg
-	io.correctPC 				:= nextPC
+	io.correctPC 				:= correctPCReg 
 
-	io.idu2EXU.ready   	:= (state === s_wait_valid) 
-    io.exu2LSU.valid	:= (state === s_wait_ready)
+	io.idu2EXU.ready   	:= ((state === s_wait_valid) | (state === s_idle0) & (!flushWire)) | (state === s_flush_wait_valid)
+    io.exu2LSU.valid	:= (((state === s_wait_ready) & (!flushWire)) | (state === s_idle1)) | (state === s_flush_wait_ready)
 }
 
 class BranchCond extends Module {

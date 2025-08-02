@@ -95,10 +95,11 @@ class IDU extends Module {
 	val s_wait_valid :: s_wait_ready :: s_wait :: Nil = Enum(3)
 	val state 	= RegInit(s_wait_valid)
     val idu2EXUHandWire = io.idu2EXU.valid & io.idu2EXU.ready
-	state := MuxLookup(state, s_wait_valid)(List(
-		s_wait_valid  -> Mux(handWire, s_wait_ready, s_wait_valid),
-        s_wait_ready  -> Mux(io.idu2BaseReg.raw, s_wait, Mux(idu2EXUHandWire, s_wait_valid, s_wait_ready)),
-        s_wait        -> Mux(io.idu2BaseReg.raw, s_wait, s_wait_ready) 
+    state := MuxLookup(state, s_wait_valid)(List(
+		s_wait_valid  -> Mux(io.flush, s_wait_valid, Mux(handWire, s_wait_ready, s_wait_valid)),
+        s_wait_ready  -> Mux(io.flush, s_wait_valid, 
+        Mux(io.idu2BaseReg.raw, s_wait, Mux(idu2EXUHandWire, s_wait_valid, s_wait_ready))),
+        s_wait        -> Mux(io.flush, s_wait_valid, Mux(io.idu2BaseReg.raw, s_wait, s_wait_ready))
 	))
 
 	// Output
