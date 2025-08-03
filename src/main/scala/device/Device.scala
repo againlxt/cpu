@@ -68,7 +68,7 @@ object DeviceOTHER {
 class XbarAXI extends Module {
     val io = IO(new Bundle {
         val axiSlaveIFU     = Flipped(new AXI)
-        val axiSlaveWBU     = Flipped(new AXI)
+        val axiSlaveLSU     = Flipped(new AXI)
         val axiMasterDevice = new AXI
 		val axiLiteClint	= new AXILite
         val axiLiteUart     = if (!Config.SoC) Some(new AXILite) else None
@@ -87,7 +87,7 @@ class XbarAXI extends Module {
 	}
     
     AXIUtils.initializeAXISlave(io.axiSlaveIFU)
-    AXIUtils.initializeAXISlave((io.axiSlaveWBU))
+    AXIUtils.initializeAXISlave((io.axiSlaveLSU))
     AXIUtils.initializeAXIMaster(io.axiMasterDevice)
 
 	initializeAXILite(io.axiLiteClint)
@@ -95,7 +95,7 @@ class XbarAXI extends Module {
 
     val axiBusarbiter   = Module(new AXIBusArbiter)
     io.axiSlaveIFU      <> axiBusarbiter.io.axiSlave0
-    io.axiSlaveWBU      <> axiBusarbiter.io.axiSlave1
+    io.axiSlaveLSU      <> axiBusarbiter.io.axiSlave1
     val axiMaster       = axiBusarbiter.io.axiMaster
     AXIUtils.initializeAXISlave(axiMaster)
 
