@@ -186,7 +186,7 @@ class LSU extends Module {
 
     val s_wait_valid :: s_write :: s_read :: s_wait_ready :: Nil = Enum(4)
     val state   = RegInit(s_wait_valid)
-    val memEnd  = (io.lsu2Mem.wvalid & io.lsu2Mem.wready & io.lsu2Mem.wlast) || 
+    val memEnd  = (io.lsu2Mem.bvalid & io.lsu2Mem.bready) || 
     (io.lsu2Mem.rvalid & io.lsu2Mem.rready & io.lsu2Mem.rlast)
     state       := MuxLookup(state, s_wait_valid)(List(
         s_wait_valid  	-> Mux(io.exu2LSU.ready & io.exu2LSU.valid, 
@@ -210,7 +210,7 @@ class LSU extends Module {
         }
         is(s_write) {
 			switch(awvalidReg) {
-				is(1.B) {awvalidReg := !(io.lsu2Mem.awvalid & io.lsu2Mem.awready)}
+				is(1.B) {awvalidReg := (!(io.lsu2Mem.awvalid & io.lsu2Mem.awready)) & (!memEnd)}
 				is(0.B)	{awvalidReg := 0.B}
 			}
             wvalidReg   := !memEnd
