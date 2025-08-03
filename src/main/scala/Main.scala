@@ -39,13 +39,23 @@ class top extends Module {
 	val xbarAXI			= Module(new XbarAXI)
 	val icacheSkidBuffer= Module(new AXISkidBuffer(false, false, false, false, false))
 
+	/* PipeLine */
+	def pipelineConnect[T <: Data, T2 <: Data](prevOut: DecoupledIO[T],
+	thisIn: DecoupledIO[T], thisOut: DecoupledIO[T2]) = {
+		prevOut.ready 	:= thisIn.ready
+		thisIn.bits 	:= RegEnable(prevOut.bits, prevOut.valid & thisIn.ready)
+		thisIn.valid 	:= prevOut.valid
+		thisOut.valid 	:= RegNext(prevOut.valid & thisIn.ready)
+	}
+	pipelineConnect(ifu.io.inst, idu.io.inst, idu.io.idu2EXU)
+	pipelineConnect(idu.io.idu2EXU, exu.io.idu2EXU, exu.io.exu2LSU)
+	pipelineConnect(exu.io.exu2LSU, lsu.io.exu2LSU, lsu.io.lsu2WBU)
+
+
 	/* IFU */
 	/* Input */
 	val pcWire 		= ifu.io.inst.bits.pc
 	/* Output */
-	ifu.io.inst  	<> idu.io.inst
-	ifu.io.flush 	:= exu.io.flush
-	ifu.io.correctPC:= exu.io.correctPC 	
 	/* Icache */
 	val numOfCache 	= 16
 	val sizeOfCache	= 128
@@ -69,19 +79,13 @@ class top extends Module {
 	}
 
 	/* IDU */
-	idu.io.idu2EXU 		<> exu.io.idu2EXU
 	idu.io.idu2BaseReg	<> riscv32BaseReg.io.idu2BaseReg
-	idu.io.flush 		:= exu.io.flush
 
 	/* EXU */
-	exu.io.exu2LSU	<> lsu.io.exu2LSU
 	exu.io.exu2CSR 	<> csrReg.io.exu2CSR
-	exu.io.exu2BaseReg	<> riscv32BaseReg.io.exu2BaseReg
 
 	/* LSU */
 	lsu.io.lsu2Mem	<> xbarAXI.io.axiSlaveLSU
-	lsu.io.lsu2WBU	<> wbu.io.lsu2WBU
-	lsu.io.lsu2BaseReg	<> riscv32BaseReg.io.lsu2BaseReg
 
 	/* WBU */
 	wbu.io.wbu2CSR			<> csrReg.io.wbu2CSR

@@ -18,14 +18,8 @@ class IDU extends Module {
 		val idu2BaseReg 	= new IDU2BaseReg
         val flush           = Input(Bool())
 	})
-    val handWire    = io.inst.valid & io.inst.ready
-    val handReg     = RegNext(handWire)
-    val pcReg       = RegEnable(io.inst.bits.pc, handWire)
-    val prePCReg    = RegEnable(pcReg, handWire)
-    val instReg     = RegEnable(io.inst.bits.inst, handWire)
-    
-    val instWire    = instReg
-    val pcWire      = pcReg
+    val instWire    = io.inst.bits.inst
+    val pcWire      = io.inst.bits.pc
 
     val func7Wire  	= instWire(31, 25)
     val rs2IndexWire= instWire(24, 20)
@@ -92,18 +86,6 @@ class IDU extends Module {
 	}
 
     /* State */
-	val s_wait_valid :: s_wait_ready :: s_flush_wait_valid :: s_flush_wait_ready :: s_wait :: Nil = Enum(5)
-	val state 	= RegInit(s_wait_valid)
-    val idu2EXUHandWire = io.idu2EXU.valid & io.idu2EXU.ready
-    state := MuxLookup(state, s_wait_valid)(List(
-		s_wait_valid  -> Mux(io.flush, s_flush_wait_valid, Mux(handWire, s_wait_ready, s_wait_valid)),
-        s_wait_ready  -> Mux(io.flush, s_flush_wait_valid, 
-        Mux(io.idu2BaseReg.raw, s_wait, Mux(idu2EXUHandWire, s_wait_valid, s_wait_ready))),
-        s_flush_wait_valid  -> Mux(handWire, s_flush_wait_ready, s_flush_wait_valid),
-        s_flush_wait_ready  -> Mux(idu2EXUHandWire, s_wait_valid, s_flush_wait_ready),
-        s_wait        -> Mux(io.flush, s_wait_valid, Mux(io.idu2BaseReg.raw, s_wait, s_wait_ready))
-	))
-
 	// Output
     io.idu2EXU.bits.regWR 	 	:= regWRWire
     io.idu2EXU.bits.srcAALU 	:= srcAALUWire
@@ -122,18 +104,12 @@ class IDU extends Module {
     io.idu2EXU.bits.csrOP       := csrOPWire
     io.idu2EXU.bits.csrALUOP    := csrALUOPWire
 
-    io.idu2BaseReg.rs1Index := rs1IndexWire
-    io.idu2BaseReg.rs2Index := rs2IndexWire
-    io.idu2BaseReg.instType := immTypewire
-    io.idu2BaseReg.prePC    := prePCReg
-    io.idu2BaseReg.handShake:= handWire
-
     io.idu2EXU.bits.pc          := pcWire
     io.idu2EXU.bits.rs1Data 	:= io.idu2BaseReg.rs1Data
     io.idu2EXU.bits.rs2Data 	:= io.idu2BaseReg.rs2Data
     io.idu2EXU.bits.imm 		:= immWire
     io.idu2EXU.bits.inst        := instWire
 
-    io.inst.ready   := (state === s_wait_valid) | (state === s_flush_wait_valid)
-    io.idu2EXU.valid:= ((state === s_wait_ready) & (!io.idu2BaseReg.raw)) | (state === s_flush_wait_ready)
+    io.inst.ready   := 1.B
+    io.idu2EXU.valid:= 1.B
 }

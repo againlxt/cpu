@@ -18,18 +18,18 @@ class WBU extends Module {
 		val wbu2Icache	= Output(Bool())
 	})
     val handWire        = io.lsu2WBU.valid & io.lsu2WBU.ready
-	val pcReg 			= RegEnable(io.lsu2WBU.bits.pc, handWire)
-    val memDataReg		= RegEnable(io.lsu2WBU.bits.memData, handWire)
-    val aluDataReg		= RegEnable(io.lsu2WBU.bits.aluData, handWire)
-    val csrWDataReg		= RegEnable(io.lsu2WBU.bits.csrWData, handWire)
-    val csrDataReg		= RegEnable(io.lsu2WBU.bits.csrData, handWire)
-    val instReg 		= RegEnable(io.lsu2WBU.bits.inst, handWire)
-    val regWRReg       	= RegEnable(io.lsu2WBU.bits.regWR, handWire)
-    val toRegReg 		= RegEnable(io.lsu2WBU.bits.toReg, handWire)
-    val ecallReg 		= RegEnable(io.lsu2WBU.bits.ecall, handWire)
-    val csrEnReg 		= RegEnable(io.lsu2WBU.bits.csrEn, handWire)
-    val csrWrReg 		= RegEnable(io.lsu2WBU.bits.csrWr, handWire)
-    val fenceiReg		= RegEnable(io.lsu2WBU.bits.fencei, handWire)
+	val pcWire 			= io.lsu2WBU.bits.pc
+    val memDataWire		= io.lsu2WBU.bits.memData
+    val aluDataWire		= io.lsu2WBU.bits.aluData
+    val csrWDataWire	= io.lsu2WBU.bits.csrWData
+    val csrDataWire		= io.lsu2WBU.bits.csrData
+    val instWire 		= io.lsu2WBU.bits.inst
+    val regWRWire       = io.lsu2WBU.bits.regWR
+    val toRegWire 		= io.lsu2WBU.bits.toReg
+    val ecallWire 		= io.lsu2WBU.bits.ecall
+    val csrEnWire 		= io.lsu2WBU.bits.csrEn
+    val csrWrWire 		= io.lsu2WBU.bits.csrWr
+    val fenceiWire		= io.lsu2WBU.bits.fencei
 	val handReg 		= RegNext(handWire)
 
     /* DPI-C */
@@ -38,29 +38,29 @@ class WBU extends Module {
 		val getNextPC 	= Module(new GetNextPC)
 		val getCmd 		= Module(new GetCmd)
         val wbuEnd      = Module(new WBUEnd)
-		getCurPC.io.pc 		:= pcReg
+		getCurPC.io.pc 		:= pcWire
 		getNextPC.io.nextPC	:= io.lsu2WBU.bits.pc
-		getCmd.io.cmd 		:= instReg
-        wbuEnd.io.handshake := handReg 
+		getCmd.io.cmd 		:= instWire
+        wbuEnd.io.handshake := handWire 
 	}
 		
 	/* Output */
 	io.lsu2WBU.ready	:= 1.B
-    io.wbu2CSR.pc       := pcReg
-    io.wbu2CSR.csrWData := csrWDataReg
-    io.wbu2CSR.csr      := instReg(31,20)
-    io.wbu2CSR.ecall    := ecallReg
-    io.wbu2CSR.csrEn    := csrEnReg
-    io.wbu2CSR.csrWr    := csrWrReg
+    io.wbu2CSR.pc       := pcWire
+    io.wbu2CSR.csrWData := csrWDataWire
+    io.wbu2CSR.csr      := instWire(31,20)
+    io.wbu2CSR.ecall    := ecallWire
+    io.wbu2CSR.csrEn    := csrEnWire
+    io.wbu2CSR.csrWr    := csrWrWire
     io.wbu2BaseReg.data := MuxCase(	0.U(32.W), Seq(	
-        (toRegReg === "b00".U).asBool -> aluDataReg,
-		(toRegReg === "b01".U).asBool -> memDataReg,
-		(toRegReg === "b10".U).asBool -> csrDataReg
+        (toRegWire === "b00".U).asBool -> aluDataWire,
+		(toRegWire === "b01".U).asBool -> memDataWire,
+		(toRegWire === "b10".U).asBool -> csrDataWire
     ))
-    io.wbu2BaseReg.rdIndex  := instReg(11,7)
-    io.wbu2BaseReg.regWR    := regWRReg
-	io.wbu2BaseReg.pc		:= pcReg
-	io.wbu2Icache	:= fenceiReg
+    io.wbu2BaseReg.rdIndex  := instWire(11,7)
+    io.wbu2BaseReg.regWR    := regWRWire
+	io.wbu2BaseReg.pc		:= pcWire
+	io.wbu2Icache	:= fenceiWire
 }
 
 class WBUEnd extends BlackBox with HasBlackBoxInline {
