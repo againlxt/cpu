@@ -104,6 +104,9 @@ class IDU extends Module {
     io.idu2EXU.bits.csrOP       := csrOPWire
     io.idu2EXU.bits.csrALUOP    := csrALUOPWire
 
+    io.idu2BaseReg.rs1Index := rs1IndexWire
+    io.idu2BaseReg.rs2Index := rs2IndexWire
+
     io.idu2EXU.bits.pc          := pcWire
     io.idu2EXU.bits.rs1Data 	:= io.idu2BaseReg.rs1Data
     io.idu2EXU.bits.rs2Data 	:= io.idu2BaseReg.rs2Data

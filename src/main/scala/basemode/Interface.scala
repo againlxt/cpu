@@ -88,13 +88,9 @@ class IFU2Icache extends Bundle {
 class IDU2BaseReg extends Bundle {
 	val rs1Data = Input(UInt(32.W))
 	val rs2Data = Input(UInt(32.W))
-	val raw 	= Input(Bool())
 
 	val rs1Index = Output(UInt(4.W))
 	val rs2Index = Output(UInt(4.W))
-	val instType = Output(UInt(3.W))
-	val prePC 	 = Output(UInt(32.W))
-	val handShake = Output(Bool())
 }
 
 class EXU2CSR extends Bundle {
