@@ -17,7 +17,6 @@ import _root_.interface._
 import java.time.Clock
 import java.awt.MouseInfo
 import _root_.basemode.AXIAccessFault
-
 object Main extends App {
 	emitVerilog(new top, Array("--emit-modules", "verilog", "--target-dir", "generated"))
 }
@@ -40,18 +39,26 @@ class top extends Module {
 	val icacheSkidBuffer= Module(new AXISkidBuffer(false, false, false, false, false))
 
 	/* PipeLine */
-	val pipeline 			= Module(new Pipeline)
 	ifu.io.flush 			:= 0.B
 	ifu.io.correctPC 		:= 0.U
 	idu.io.flush 			:= 0.B
-	ifu.io.inst				<> pipeline.io.ifuIFU2IDU
-	pipeline.io.iduIFU2IDU	<> idu.io.inst
-	idu.io.idu2EXU			<> pipeline.io.iduIDU2EXU
-	pipeline.io.exuIDU2EXU	<> exu.io.idu2EXU
-	exu.io.exu2LSU			<> pipeline.io.exuEXU2LSU
-	pipeline.io.lsuEXU2LSU	<> lsu.io.exu2LSU
-	lsu.io.lsu2WBU 			<> pipeline.io.lsuLSU2WBU
-	pipeline.io.wbuLSU2WBU	<> wbu.io.lsu2WBU
+	def conflict(rs: UInt, rd: UInt) = (rs === rd)
+	def conflictWithStage(rs1: UInt, rs2: UInt, rd: UInt) = {
+		conflict(rs1, rd) || conflict(rs2, rd)
+	}
+	val isRAW = conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, exu.io.rd) ||
+				conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, lsu.io.rd) ||
+				conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, wbu.io.rd)
+	def pipelineConnect[T <: Data, T2 <: Data](prevOut: DecoupledIO[T],
+	thisIn: DecoupledIO[T]) = {
+		prevOut.ready 	:= thisIn.ready
+		thisIn.bits 	:= RegEnable(prevOut.bits, prevOut.valid & thisIn.ready)
+		thisIn.valid 	:= RegEnable(prevOut.valid & thisIn.ready, 1.B)
+	}
+	pipelineConnect(ifu.io.inst, idu.io.inst)
+	pipelineConnect(idu.io.idu2EXU, exu.io.idu2EXU)
+	pipelineConnect(exu.io.exu2LSU, lsu.io.exu2LSU)
+	pipelineConnect(lsu.io.lsu2WBU, wbu.io.lsu2WBU)
 
 	/* IFU */
 	/* Input */
@@ -132,28 +139,4 @@ class top extends Module {
 		val axiLiteUart = Module(new AXILiteUart)
 		xbarAXI.io.axiLiteUart.foreach {uart => uart <> axiLiteUart.io.axiLiteMaster}
 	}
-}
-
-class Pipeline extends Module {
-	val io = IO(new Bundle {
-		val ifuIFU2IDU 	= Flipped(Decoupled(new IFU2IDU))
-		val iduIFU2IDU 	= Decoupled(new IFU2IDU)
-		val iduIDU2EXU 	= Flipped(Decoupled(new IDU2EXU))
-		val exuIDU2EXU 	= Decoupled(new IDU2EXU)
-		val exuEXU2LSU 	= Flipped(Decoupled(new EXU2LSU))
-		val lsuEXU2LSU	= Decoupled(new EXU2LSU)
-		val lsuLSU2WBU 	= Flipped(Decoupled(new LSU2WBU))
-		val wbuLSU2WBU 	= Decoupled(new LSU2WBU)
-	})
-
-	def pipelineConnect[T <: Data, T2 <: Data](prevOut: DecoupledIO[T],
-	thisIn: DecoupledIO[T]) = {
-		prevOut.ready 	:= thisIn.ready
-		thisIn.bits 	:= RegEnable(prevOut.bits, prevOut.valid & thisIn.ready)
-		thisIn.valid 	:= RegEnable(prevOut.valid & thisIn.ready, 1.B)
-	}
-	pipelineConnect(io.ifuIFU2IDU, io.iduIFU2IDU)
-	pipelineConnect(io.iduIDU2EXU, io.exuIDU2EXU)
-	pipelineConnect(io.exuEXU2LSU, io.lsuEXU2LSU)
-	pipelineConnect(io.lsuLSU2WBU, io.wbuLSU2WBU)
 }

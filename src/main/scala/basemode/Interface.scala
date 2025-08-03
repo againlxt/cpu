@@ -100,20 +100,6 @@ class EXU2CSR extends Bundle {
 	val csr 	= Output(UInt(12.W))
 }
 
-class EXU2BaseReg extends Bundle {
-	val rdIndex = Output(UInt(4.W))
-	val regWR 	= Output(UInt(1.W))
-	val pc 		= Output(UInt(32.W))
-	val handShake = Output(Bool())
-}
-
-class LSU2BaseReg extends Bundle {
-	val rdIndex = Output(UInt(4.W))
-	val regWR 	= Output(UInt(1.W))
-	val pc 		= Output(UInt(32.W))
-	val handShake = Output(Bool())
-}
-
 class WBU2CSR extends Bundle {
 	val pc 		= Output(UInt(32.W))
 	val csrWData= Output(UInt(32.W))

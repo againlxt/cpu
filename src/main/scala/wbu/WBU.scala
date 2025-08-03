@@ -16,6 +16,7 @@ class WBU extends Module {
         val wbu2CSR     = new WBU2CSR
         val wbu2BaseReg = new WBU2BaseReg
 		val wbu2Icache	= Output(Bool())
+		val rd 			= Output(UInt(4.W))
 	})
     val handWire        = io.lsu2WBU.valid & io.lsu2WBU.ready
 	val pcWire 			= io.lsu2WBU.bits.pc
@@ -61,6 +62,7 @@ class WBU extends Module {
     io.wbu2BaseReg.regWR    := regWRWire
 	io.wbu2BaseReg.pc		:= pcWire
 	io.wbu2Icache	:= fenceiWire
+	io.rd	:= Mux(regWRWire.asBool, instWire(11,7), 0.U)
 }
 
 class WBUEnd extends BlackBox with HasBlackBoxInline {

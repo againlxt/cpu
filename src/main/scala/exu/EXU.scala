@@ -17,6 +17,7 @@ class EXU extends Module {
 		val idu2EXU 	= Flipped(Decoupled(new IDU2EXU))
 		val exu2LSU 	= Decoupled(new EXU2LSU)
 		val exu2CSR 	= new EXU2CSR
+		val rd 			= Output(UInt(4.W))
 	})
 
 	// Wire
@@ -125,6 +126,8 @@ class EXU extends Module {
 	io.exu2CSR.csr 				:= instWire(31,20)
 	io.exu2CSR.mret 			:= mretWire
 	io.exu2CSR.ecall 			:= ecallWire
+
+	io.rd	:= Mux(regWRWire.asBool, instWire(11,7), 0.U)
 
 	io.idu2EXU.ready   	:= 1.B
     io.exu2LSU.valid	:= 1.B
