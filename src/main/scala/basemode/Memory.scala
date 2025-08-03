@@ -179,7 +179,7 @@ class AXIBusArbiter extends Module {
   val wait2LSUWire  = arvalidWire1.asBool || awvalidWire1.asBool || wvalidWire1.asBool
   val wait2IFUWire  = arvalidWire0.asBool || awvalidWire0.asBool || wvalidWire0.asBool
   val ifu2WaitWire  = (rvalidWire0.asBool && rreadyWire0.asBool && rrlastWire0) || (wvalidWire0.asBool && wreadyWire0.asBool)
-  val lsu2WaitWire  = (rvalidWire1.asBool && rreadyWire1.asBool && rrlastWire1) || (wvalidWire1.asBool && wreadyWire1.asBool)
+  val lsu2WaitWire  = (rvalidWire1.asBool && rreadyWire1.asBool && rrlastWire1) || (bvalidWire1.asBool && breadyWire1.asBool)
 
   state := MuxLookup(state, s_idle)(List(
     s_idle  -> Mux(this.reset.asBool, s_idle, s_wait),
