@@ -188,9 +188,9 @@ class AXIBusArbiter extends Module {
     s_lsu   -> Mux(this.reset.asBool, s_idle, Mux(lsu2WaitWire, s_wait, s_lsu))
   ))
 
-  when(state === s_idle) {
+  when(state === s_idle || state === s_wait) {
     AXIUtils.initializeAXIMaster(io.axiMaster)
-  } .elsewhen(state === s_ifu || state === s_wait) {
+  } .elsewhen(state === s_ifu) {
     io.axiMaster <> io.axiSlave0
   } .elsewhen(state === s_lsu) {
     io.axiMaster <> io.axiSlave1
