@@ -94,29 +94,28 @@ class XbarAXI extends Module {
     if(!Config.SoC) io.axiLiteUart.foreach(uart => initializeAXILite(uart))
 
     val axiBusarbiter   = Module(new AXIBusArbiter)
+    AXIUtils.initializeAXIMaster(axiBusarbiter.io.axiSlave1)
     io.axiSlaveIFU      <> axiBusarbiter.io.axiSlave0
-    io.axiSlaveLSU      <> axiBusarbiter.io.axiSlave1
-    val axiMaster       = axiBusarbiter.io.axiMaster
-    AXIUtils.initializeAXISlave(axiMaster)
+    io.axiMasterDevice  <> axiBusarbiter.io.axiMaster
 
     val deviceID = MuxCase(DeviceID.ERROR, Seq(
-		(((axiMaster.araddr < DeviceClint.baseAddr + DeviceClint.size) & (axiMaster.araddr >= DeviceClint.baseAddr)) | 
-		((axiMaster.awaddr < DeviceClint.baseAddr + DeviceClint.size) & (axiMaster.awaddr >= DeviceClint.baseAddr))) -> DeviceID.CLINT,
-		(((axiMaster.araddr < DeviceUart16550.baseAddr + DeviceUart16550.size) & (axiMaster.araddr >= DeviceUart16550.baseAddr)) | 
-		((axiMaster.awaddr < DeviceUart16550.baseAddr + DeviceUart16550.size) & (axiMaster.awaddr >= DeviceUart16550.baseAddr))) -> DeviceID.UART16550,
-		(((axiMaster.araddr < DeviceMSPI.baseAddr + DeviceMSPI.size) & (axiMaster.araddr >= DeviceMSPI.baseAddr)) | 
-		((axiMaster.awaddr < DeviceMSPI.baseAddr + DeviceMSPI.size) & (axiMaster.awaddr >= DeviceMSPI.baseAddr))) -> DeviceID.MSPI,
-		(((axiMaster.araddr < DeviceGPIO.baseAddr + DeviceGPIO.size) & (axiMaster.araddr >= DeviceGPIO.baseAddr)) | 
-		((axiMaster.awaddr < DeviceGPIO.baseAddr + DeviceGPIO.size) & (axiMaster.awaddr >= DeviceGPIO.baseAddr))) -> DeviceID.GPIO,
-		(((axiMaster.araddr < DevicePS2.baseAddr + DevicePS2.size) & (axiMaster.araddr >= DevicePS2.baseAddr)) | 
-		((axiMaster.awaddr < DevicePS2.baseAddr + DevicePS2.size) & (axiMaster.awaddr >= DevicePS2.baseAddr))) -> DeviceID.PS2,
-		(((axiMaster.araddr < DeviceVGA.baseAddr + DeviceVGA.size) & (axiMaster.araddr >= DeviceVGA.baseAddr)) | 
-		((axiMaster.awaddr < DeviceVGA.baseAddr + DeviceVGA.size) & (axiMaster.awaddr >= DeviceVGA.baseAddr))) -> DeviceID.VGA,
-        (((axiMaster.araddr < DeviceSRAM.baseAddr + DeviceSRAM.size) & (axiMaster.araddr >= DeviceSRAM.baseAddr)) | 
-		((axiMaster.awaddr < DeviceSRAM.baseAddr + DeviceSRAM.size) & (axiMaster.awaddr >= DeviceSRAM.baseAddr))) -> DeviceID.SRAM,
-        (((axiMaster.araddr < DeviceMROM.baseAddr + DeviceMROM.size) & (axiMaster.araddr >= DeviceMROM.baseAddr)) | 
-		((axiMaster.awaddr < DeviceMROM.baseAddr + DeviceMROM.size) & (axiMaster.awaddr >= DeviceMROM.baseAddr))) -> DeviceID.MROM,
-        ((axiMaster.araddr >= DeviceOTHER.baseAddr) | (axiMaster.awaddr >= DeviceOTHER.baseAddr)) -> DeviceID.OTHER
+		(((io.axiSlaveLSU.araddr < DeviceClint.baseAddr + DeviceClint.size) & (io.axiSlaveLSU.araddr >= DeviceClint.baseAddr)) | 
+		((io.axiSlaveLSU.awaddr < DeviceClint.baseAddr + DeviceClint.size) & (io.axiSlaveLSU.awaddr >= DeviceClint.baseAddr))) -> DeviceID.CLINT,
+		(((io.axiSlaveLSU.araddr < DeviceUart16550.baseAddr + DeviceUart16550.size) & (io.axiSlaveLSU.araddr >= DeviceUart16550.baseAddr)) | 
+		((io.axiSlaveLSU.awaddr < DeviceUart16550.baseAddr + DeviceUart16550.size) & (io.axiSlaveLSU.awaddr >= DeviceUart16550.baseAddr))) -> DeviceID.UART16550,
+		(((io.axiSlaveLSU.araddr < DeviceMSPI.baseAddr + DeviceMSPI.size) & (io.axiSlaveLSU.araddr >= DeviceMSPI.baseAddr)) | 
+		((io.axiSlaveLSU.awaddr < DeviceMSPI.baseAddr + DeviceMSPI.size) & (io.axiSlaveLSU.awaddr >= DeviceMSPI.baseAddr))) -> DeviceID.MSPI,
+		(((io.axiSlaveLSU.araddr < DeviceGPIO.baseAddr + DeviceGPIO.size) & (io.axiSlaveLSU.araddr >= DeviceGPIO.baseAddr)) | 
+		((io.axiSlaveLSU.awaddr < DeviceGPIO.baseAddr + DeviceGPIO.size) & (io.axiSlaveLSU.awaddr >= DeviceGPIO.baseAddr))) -> DeviceID.GPIO,
+		(((io.axiSlaveLSU.araddr < DevicePS2.baseAddr + DevicePS2.size) & (io.axiSlaveLSU.araddr >= DevicePS2.baseAddr)) | 
+		((io.axiSlaveLSU.awaddr < DevicePS2.baseAddr + DevicePS2.size) & (io.axiSlaveLSU.awaddr >= DevicePS2.baseAddr))) -> DeviceID.PS2,
+		(((io.axiSlaveLSU.araddr < DeviceVGA.baseAddr + DeviceVGA.size) & (io.axiSlaveLSU.araddr >= DeviceVGA.baseAddr)) | 
+		((io.axiSlaveLSU.awaddr < DeviceVGA.baseAddr + DeviceVGA.size) & (io.axiSlaveLSU.awaddr >= DeviceVGA.baseAddr))) -> DeviceID.VGA,
+        (((io.axiSlaveLSU.araddr < DeviceSRAM.baseAddr + DeviceSRAM.size) & (io.axiSlaveLSU.araddr >= DeviceSRAM.baseAddr)) | 
+		((io.axiSlaveLSU.awaddr < DeviceSRAM.baseAddr + DeviceSRAM.size) & (io.axiSlaveLSU.awaddr >= DeviceSRAM.baseAddr))) -> DeviceID.SRAM,
+        (((io.axiSlaveLSU.araddr < DeviceMROM.baseAddr + DeviceMROM.size) & (io.axiSlaveLSU.araddr >= DeviceMROM.baseAddr)) | 
+		((io.axiSlaveLSU.awaddr < DeviceMROM.baseAddr + DeviceMROM.size) & (io.axiSlaveLSU.awaddr >= DeviceMROM.baseAddr))) -> DeviceID.MROM,
+        ((io.axiSlaveLSU.araddr >= DeviceOTHER.baseAddr) | (io.axiSlaveLSU.awaddr >= DeviceOTHER.baseAddr)) -> DeviceID.OTHER
     ))
 
     assert(deviceID != DeviceID.ERROR);
@@ -125,68 +124,68 @@ class XbarAXI extends Module {
     if(Config.hasDPIC & (!Config.isSTA)) {
         val skipDiff = Module(new SkipDiff())
         skipDiff.io.en := !((deviceID >= DeviceID.SRAM) & (deviceID <= DeviceID.ERROR)) & 
-        ((axiMaster.wvalid & axiMaster.wready) | (axiMaster.rvalid & axiMaster.rready));
+        ((io.axiSlaveLSU.wvalid & io.axiSlaveLSU.wready) | (io.axiSlaveLSU.rvalid & io.axiSlaveLSU.rready));
     }
 
     when(deviceID === DeviceID.CLINT) {
         /* AW */
-        axiMaster.awready    := io.axiLiteClint.awReady
-        io.axiLiteClint.awValid      := axiMaster.awvalid
-        io.axiLiteClint.awAddr       := axiMaster.awaddr
+        io.axiSlaveLSU.awready    := io.axiLiteClint.awReady
+        io.axiLiteClint.awValid      := io.axiSlaveLSU.awvalid
+        io.axiLiteClint.awAddr       := io.axiSlaveLSU.awaddr
         /* W */
-        axiMaster.wready     := io.axiLiteClint.wReady
-        io.axiLiteClint.wValid       := axiMaster.wvalid
-        io.axiLiteClint.wData        := axiMaster.wdata
-        io.axiLiteClint.wStrb        := axiMaster.wstrb
+        io.axiSlaveLSU.wready     := io.axiLiteClint.wReady
+        io.axiLiteClint.wValid       := io.axiSlaveLSU.wvalid
+        io.axiLiteClint.wData        := io.axiSlaveLSU.wdata
+        io.axiLiteClint.wStrb        := io.axiSlaveLSU.wstrb
         /* B */
-        axiMaster.bresp      := io.axiLiteClint.bResp
-        axiMaster.bvalid     := io.axiLiteClint.bValid
-        io.axiLiteClint.bReady       := axiMaster.bready
+        io.axiSlaveLSU.bresp      := io.axiLiteClint.bResp
+        io.axiSlaveLSU.bvalid     := io.axiLiteClint.bValid
+        io.axiLiteClint.bReady       := io.axiSlaveLSU.bready
         /* AR */
-        axiMaster.arready    := io.axiLiteClint.arReady
-        io.axiLiteClint.arValid      := axiMaster.arvalid
-        io.axiLiteClint.arAddr       := axiMaster.araddr
+        io.axiSlaveLSU.arready    := io.axiLiteClint.arReady
+        io.axiLiteClint.arValid      := io.axiSlaveLSU.arvalid
+        io.axiLiteClint.arAddr       := io.axiSlaveLSU.araddr
         /* R */
-        axiMaster.rdata      := io.axiLiteClint.rData
-        axiMaster.rresp      := io.axiLiteClint.rrEsp
-        axiMaster.rvalid     := io.axiLiteClint.rValid
-        axiMaster.rlast     := 1.B
-        io.axiLiteClint.rReady       := axiMaster.rready
+        io.axiSlaveLSU.rdata      := io.axiLiteClint.rData
+        io.axiSlaveLSU.rresp      := io.axiLiteClint.rrEsp
+        io.axiSlaveLSU.rvalid     := io.axiLiteClint.rValid
+        io.axiSlaveLSU.rlast     := 1.B
+        io.axiLiteClint.rReady       := io.axiSlaveLSU.rready
 	} .elsewhen(deviceID === DeviceID.UART16550 && 
-    ((axiMaster.araddr === BigInt("a00003f8", 16).U(32.W)) ||
-    (axiMaster.awaddr === BigInt("a00003f8", 16).U(32.W)))) {
+    ((io.axiSlaveLSU.araddr === BigInt("a00003f8", 16).U(32.W)) ||
+    (io.axiSlaveLSU.awaddr === BigInt("a00003f8", 16).U(32.W)))) {
         io.axiLiteUart.foreach { axiLite =>
             /* AW */
-            axiMaster.awready := axiLite.awReady
-            axiLite.awValid   := axiMaster.awvalid
-            axiLite.awAddr    := axiMaster.awaddr
+            io.axiSlaveLSU.awready := axiLite.awReady
+            axiLite.awValid   := io.axiSlaveLSU.awvalid
+            axiLite.awAddr    := io.axiSlaveLSU.awaddr
 
             /* W */
-            axiMaster.wready := axiLite.wReady
-            axiLite.wValid    := axiMaster.wvalid
-            axiLite.wData     := axiMaster.wdata
-            axiLite.wStrb     := axiMaster.wstrb
+            io.axiSlaveLSU.wready := axiLite.wReady
+            axiLite.wValid    := io.axiSlaveLSU.wvalid
+            axiLite.wData     := io.axiSlaveLSU.wdata
+            axiLite.wStrb     := io.axiSlaveLSU.wstrb
 
             /* B */
-            axiMaster.bresp := axiLite.bResp
-            axiMaster.bvalid := axiLite.bValid
-            axiLite.bReady    := axiMaster.bready
+            io.axiSlaveLSU.bresp := axiLite.bResp
+            io.axiSlaveLSU.bvalid := axiLite.bValid
+            axiLite.bReady    := io.axiSlaveLSU.bready
 
             /* AR */
-            axiMaster.arready := axiLite.arReady
-            axiLite.arValid   := axiMaster.arvalid
-            axiLite.arAddr    := axiMaster.araddr
+            io.axiSlaveLSU.arready := axiLite.arReady
+            axiLite.arValid   := io.axiSlaveLSU.arvalid
+            axiLite.arAddr    := io.axiSlaveLSU.araddr
 
             /* R */
-            axiMaster.rdata := axiLite.rData
-            axiMaster.rresp := axiLite.rrEsp
-            axiMaster.rvalid := axiLite.rValid
-            axiMaster.rlast := 1.B
-            axiLite.rReady    := axiMaster.rready
+            io.axiSlaveLSU.rdata := axiLite.rData
+            io.axiSlaveLSU.rresp := axiLite.rrEsp
+            io.axiSlaveLSU.rvalid := axiLite.rValid
+            io.axiSlaveLSU.rlast := 1.B
+            axiLite.rReady    := io.axiSlaveLSU.rready
         }
  
     } .otherwise {
-        axiMaster <> io.axiMasterDevice
+        io.axiSlaveLSU <> axiBusarbiter.io.axiSlave1
 	}
 }
 
