@@ -54,7 +54,7 @@ class top extends Module {
 	thisIn: DecoupledIO[T]) = {
 		prevOut.ready 	:= thisIn.ready
 		thisIn.bits 	:= RegEnable(prevOut.bits, prevOut.valid & thisIn.ready)
-		thisIn.valid 	:= RegEnable(prevOut.valid & thisIn.ready, 1.B)
+		thisIn.valid 	:= prevOut.valid & thisIn.ready
 	}
 	pipelineConnect(ifu.io.inst, idu.io.inst)
 	pipelineConnect(idu.io.idu2EXU, exu.io.idu2EXU)
