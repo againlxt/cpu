@@ -125,10 +125,11 @@ class IDU extends Module {
     switch(validReg) {
         is(0.B) { validReg := io.inst.ready & io.inst.valid }
         is(1.B) {
-            validReg := Mux(io.idu2EXU.valid & io.idu2EXU.ready, 
-            Mux(io.inst.ready & io.inst.valid, 1.B, 0.B), 1.B)
+            validReg := Mux(io.flush, 0.B, Mux(io.idu2EXU.valid & io.idu2EXU.ready, 
+            Mux(io.inst.ready & io.inst.valid, 1.B, 0.B), 1.B))
         }
     }
     io.inst.ready   := !(io.isRAW)
-    io.idu2EXU.valid:= Mux((state === s_flow), !(io.isRAW) & validReg, !io.isRAW)
+    io.idu2EXU.valid:= Mux((state === s_flow), 
+    !(io.isRAW) & validReg, !io.isRAW) & (!io.flush)
 }
