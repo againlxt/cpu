@@ -85,13 +85,10 @@ class top extends Module {
 		axiAccessFault.io.valid := icache.io.icache2Mem.bvalid
 		axiAccessFault.io.resp	:= icache.io.icache2Mem.bresp
 	}
-
 	/* IDU */
 	idu.io.idu2BaseReg	<> riscv32BaseReg.io.idu2BaseReg
-
 	/* EXU */
 	exu.io.exu2CSR 	<> csrReg.io.exu2CSR
-
 	/* LSU */
 	lsu.io.lsu2Mem	<> xbarAXI.io.axiSlaveLSU
 

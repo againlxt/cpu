@@ -42,7 +42,7 @@ class WBU extends Module {
 		getCurPC.io.pc 		:= pcWire
 		getNextPC.io.nextPC	:= io.lsu2WBU.bits.pc
 		getCmd.io.cmd 		:= instWire
-        wbuEnd.io.handshake := handWire 
+        wbuEnd.io.handshake := handReg
 	}
 		
 	/* Output */
