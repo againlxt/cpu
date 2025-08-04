@@ -167,17 +167,17 @@ class LSU extends Module {
     val state   = RegNext(nextState, s_wait_valid)
     val memEnd  = (io.lsu2Mem.bvalid & io.lsu2Mem.bready) || 
     (io.lsu2Mem.rvalid & io.lsu2Mem.rready & io.lsu2Mem.rlast)
-	val validReg = RegNext(io.exu2LSU.ready & io.exu2LSU.valid)
+	val handReg = RegNext(io.exu2LSU.ready & io.exu2LSU.valid)
     nextState    := MuxLookup(state, s_wait_valid)(List(
-        s_wait_valid  	-> Mux(validReg, Mux(io.exu2LSU.bits.memValid.asBool, 
+        s_wait_valid  	-> Mux(handReg, Mux(io.exu2LSU.bits.memValid.asBool, 
         Mux(io.exu2LSU.bits.memWR.asBool, s_write, s_read), s_wait_valid), s_wait_valid),
         s_write 		-> Mux(memEnd, s_wait_ready, s_write),
         s_read  		-> Mux(memEnd, s_wait_ready, s_read),
 		s_wait_ready	-> Mux(io.lsu2WBU.ready & io.lsu2WBU.valid, s_wait_valid, s_wait_ready)
     ))
-    val wOpWire      = validReg & 
+    val wOpWire      = handReg & 
     io.exu2LSU.bits.memValid.asBool & io.exu2LSU.bits.memWR.asBool
-    val rOpWire      = validReg & 
+    val rOpWire      = handReg & 
     io.exu2LSU.bits.memValid.asBool & (!io.exu2LSU.bits.memWR.asBool)
     switch(state) {
         is(s_wait_valid) {
@@ -240,11 +240,21 @@ class LSU extends Module {
 		mTrace.io.wOrR 		:= memWRWire.asBool
 		mTrace.io.enable	:= memEnd
 	}
-
+	
     /* IO */
-    io.exu2LSU.ready            := (nextState === s_wait_valid)
+	val readyReg = RegInit(1.B)
+	val validReg = RegInit(0.B)
+	switch(readyReg) {
+		is(0.B) { readyReg := io.lsu2WBU.valid & io.lsu2WBU.ready }
+		is(1.B) {
+			readyReg := Mux(io.exu2LSU.valid & io.exu2LSU.ready, 
+			Mux(io.lsu2WBU.valid & io.lsu2WBU.ready, 1.B, 0.B), 1.B)
+		}
+	}
+
+    io.exu2LSU.ready            := readyReg
     io.lsu2WBU.valid            := (state === s_wait_ready) ||
-	(validReg & (!io.exu2LSU.bits.memValid.asBool))
+	(handReg & (!io.exu2LSU.bits.memValid.asBool))
 
     io.lsu2WBU.bits.pc          := pcWire
     io.lsu2WBU.bits.memData     := memRdDataWire

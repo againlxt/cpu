@@ -39,12 +39,11 @@ class top extends Module {
 	val icacheSkidBuffer= Module(new AXISkidBuffer(false, false, false, false, false))
 
 	/* PipeLine */
-	val branchCheck 		= Module(new BranchCheck)
-	branchCheck.io.predictPC := idu.io.idu2EXU.bits.pc
-	branchCheck.io.correctPC := exu.io.currentPC
-	val correctReg = RegNext(branchCheck.io.correct)
-	val idu2EXUHandShakeReg = RegNext(idu.io.idu2EXU.valid & idu.io.idu2EXU.ready)
-	val flush = (!correctReg) & idu2EXUHandShakeReg
+	val s_flow :: s_raw :: s_flush :: Nil = Enum(3)
+	val nextState = WireInit(s_flow)
+	val state = RegNext(nextState, s_flow)
+	val flushWire 		= WireInit(0.B)
+	val flushEndWire 	= WireInit(0.B)
 	def conflict(rs: UInt, rd: UInt) = (rs === rd)
 	def conflictWithStage(rs1: UInt, rs2: UInt, rd: UInt) = {
 		conflict(rs1, rd) || conflict(rs2, rd)
@@ -62,13 +61,18 @@ class top extends Module {
 		thisIn.bits 	:= RegEnable(prevOut.bits, prevOut.valid & thisIn.ready)
 		thisIn.valid 	:= prevOut.valid & thisIn.ready
 	}
+	nextState := MuxLookup(state, s_flow)(List(
+		s_flow	-> Mux(flushWire, s_flush, Mux(isRAW, s_raw, s_flow)),
+		s_raw 	-> Mux(flushWire, s_flush, Mux(isRAW, s_raw, s_flow)),
+		s_flush	-> Mux(flushEndWire, s_flow, s_flush)
+	))	
 	pipelineConnect(ifu.io.inst, idu.io.inst)
 	pipelineConnect(idu.io.idu2EXU, exu.io.idu2EXU)
 	pipelineConnect(exu.io.exu2LSU, lsu.io.exu2LSU)
 	pipelineConnect(lsu.io.lsu2WBU, wbu.io.lsu2WBU)
 	ifu.io.flush 			:= 0.B
 	ifu.io.correctPC 		:= 0.U
-	idu.io.isRAW 			:= isRAW | isRAWReg
+	idu.io.isRAW 			:= 0.B
 	idu.io.flush 			:= 0.B
 
 	/* IFU */
