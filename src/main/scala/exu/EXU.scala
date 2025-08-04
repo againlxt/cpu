@@ -18,6 +18,7 @@ class EXU extends Module {
 		val exu2LSU 	= Decoupled(new EXU2LSU)
 		val exu2CSR 	= new EXU2CSR
 		val rd 			= Output(UInt(4.W))
+		val currentPC 	= Output(UInt(32.W))
 	})
 
 	// Wire
@@ -128,9 +129,11 @@ class EXU extends Module {
 	io.exu2CSR.ecall 			:= ecallWire
 
 	io.rd	:= Mux(regWRWire.asBool, instWire(11,7), 0.U)
+	io.currentPC	:= nextPC
 
+	val validReg = RegNext(io.idu2EXU.valid & io.idu2EXU.ready)
 	io.idu2EXU.ready   	:= 1.B
-    io.exu2LSU.valid	:= 1.B
+    io.exu2LSU.valid	:= validReg
 }
 
 class BranchCond extends Module {

@@ -39,6 +39,12 @@ class top extends Module {
 	val icacheSkidBuffer= Module(new AXISkidBuffer(false, false, false, false, false))
 
 	/* PipeLine */
+	val branchCheck 		= Module(new BranchCheck)
+	branchCheck.io.predictPC := idu.io.idu2EXU.bits.pc
+	branchCheck.io.correctPC := exu.io.currentPC
+	val correctReg = RegNext(branchCheck.io.correct)
+	val idu2EXUHandShakeReg = RegNext(idu.io.idu2EXU.valid & idu.io.idu2EXU.ready)
+	val flush = (!correctReg) & idu2EXUHandShakeReg
 	def conflict(rs: UInt, rd: UInt) = (rs === rd)
 	def conflictWithStage(rs1: UInt, rs2: UInt, rd: UInt) = {
 		conflict(rs1, rd) || conflict(rs2, rd)
@@ -60,9 +66,10 @@ class top extends Module {
 	pipelineConnect(idu.io.idu2EXU, exu.io.idu2EXU)
 	pipelineConnect(exu.io.exu2LSU, lsu.io.exu2LSU)
 	pipelineConnect(lsu.io.lsu2WBU, wbu.io.lsu2WBU)
-	ifu.io.flush 			:= 0.B
-	ifu.io.correctPC 		:= 0.U
+	ifu.io.flush 			:= flush
+	ifu.io.correctPC 		:= exu.io.currentPC
 	idu.io.isRAW 			:= isRAW | isRAWReg
+	idu.io.flush 			:= flush
 
 	/* IFU */
 	/* Input */
@@ -139,4 +146,54 @@ class top extends Module {
 		val axiLiteUart = Module(new AXILiteUart)
 		xbarAXI.io.axiLiteUart.foreach {uart => uart <> axiLiteUart.io.axiLiteMaster}
 	}
+}
+
+class BranchCond extends Module {
+	val io = IO(new Bundle {
+		// Input
+		val branch 	= Input(UInt(4.W))
+		val less 	= Input(Bool())
+		val zero 	= Input(Bool())
+
+		// Output
+		val pcASrc 	= Output(UInt(2.W))
+		val pcBSrc 	= Output(UInt(2.W))
+	})
+
+	val branchWire 	= io.branch
+	val lessWire 	= io.less
+	val zeroWire 	= io.zero
+
+	io.pcASrc 	:= MuxCase (0.U, Seq(
+		(branchWire === "b0000".U).asBool -> 0.U,
+		(branchWire === "b0001".U).asBool -> 1.U,
+		(branchWire === "b0010".U).asBool -> 1.U,
+		(branchWire === "b0100".U & !zeroWire).asBool -> 0.U,
+		(branchWire === "b0100".U & zeroWire).asBool -> 1.U,
+		(branchWire === "b0101".U & !zeroWire).asBool -> 1.U,
+		(branchWire === "b0101".U & zeroWire).asBool -> 0.U,
+		(branchWire === "b0110".U & !lessWire).asBool -> 0.U,
+		(branchWire === "b0110".U & lessWire).asBool -> 1.U,
+		(branchWire === "b0111".U & !lessWire).asBool -> 1.U,
+		(branchWire === "b0111".U & lessWire).asBool -> 0.U,
+		(branchWire === "b1000".U).asBool -> 2.U
+	))
+
+	io.pcBSrc := MuxCase(0.U, Seq(
+		(branchWire === "b1000".U) -> 2.U,  // 最高优先级
+		(branchWire === "b0010".U) -> 1.U,  // 只有b0010返回1
+		(branchWire =/= "b1000".U) -> 0.U  // 其他情况返回0
+	))	
+}
+
+class BranchCheck extends Module {
+	val io = IO(new Bundle {
+		val predictPC 	= Input(UInt(32.W))
+		val correctPC	= Input(UInt(32.W))
+		val correct 	= Output(Bool())
+	})
+
+
+	io.correct := Mux((io.predictPC === io.correctPC) | 
+	(io.predictPC === 0.U) | (io.correctPC === 4.U), 1.B, 0.B)
 }
