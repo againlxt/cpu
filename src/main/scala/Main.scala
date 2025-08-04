@@ -39,16 +39,17 @@ class top extends Module {
 	val icacheSkidBuffer= Module(new AXISkidBuffer(false, false, false, false, false))
 
 	/* PipeLine */
-	ifu.io.flush 			:= 0.B
-	ifu.io.correctPC 		:= 0.U
-	idu.io.flush 			:= 0.B
 	def conflict(rs: UInt, rd: UInt) = (rs === rd)
 	def conflictWithStage(rs1: UInt, rs2: UInt, rd: UInt) = {
 		conflict(rs1, rd) || conflict(rs2, rd)
 	}
-	val isRAW = conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, exu.io.rd) ||
-				conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, lsu.io.rd) ||
-				conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, wbu.io.rd)
+	val isRAW = Wire(Bool())
+	val isRAWReg = RegNext(isRAW)
+	val rawPC = RegEnable(exu.io.idu2EXU.bits.pc, isRAW)
+	isRAW 	  := 
+	(conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, exu.io.rd) & (rawPC =/= exu.io.idu2EXU.bits.pc)) ||
+	(conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, lsu.io.rd) & (rawPC =/= lsu.io.exu2LSU.bits.pc)) ||
+	(conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, wbu.io.rd) & (rawPC =/= wbu.io.lsu2WBU.bits.pc))
 	def pipelineConnect[T <: Data, T2 <: Data](prevOut: DecoupledIO[T],
 	thisIn: DecoupledIO[T]) = {
 		prevOut.ready 	:= thisIn.ready
@@ -59,6 +60,9 @@ class top extends Module {
 	pipelineConnect(idu.io.idu2EXU, exu.io.idu2EXU)
 	pipelineConnect(exu.io.exu2LSU, lsu.io.exu2LSU)
 	pipelineConnect(lsu.io.lsu2WBU, wbu.io.lsu2WBU)
+	ifu.io.flush 			:= 0.B
+	ifu.io.correctPC 		:= 0.U
+	idu.io.isRAW 			:= isRAW | isRAWReg
 
 	/* IFU */
 	/* Input */
@@ -91,7 +95,6 @@ class top extends Module {
 	exu.io.exu2CSR 	<> csrReg.io.exu2CSR
 	/* LSU */
 	lsu.io.lsu2Mem	<> xbarAXI.io.axiSlaveLSU
-
 	/* WBU */
 	wbu.io.wbu2CSR			<> csrReg.io.wbu2CSR
 	wbu.io.wbu2BaseReg		<> riscv32BaseReg.io.wbu2BaseReg

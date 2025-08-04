@@ -16,7 +16,7 @@ class IDU extends Module {
 		val inst 			= Flipped(Decoupled(new IFU2IDU))
 		val idu2EXU			= Decoupled(new IDU2EXU)
 		val idu2BaseReg 	= new IDU2BaseReg
-        val flush           = Input(Bool())
+        val isRAW           = Input(Bool())
 	})
     val instWire    = io.inst.bits.inst
     val pcWire      = io.inst.bits.pc
@@ -113,6 +113,6 @@ class IDU extends Module {
     io.idu2EXU.bits.imm 		:= immWire
     io.idu2EXU.bits.inst        := instWire
 
-    io.inst.ready   := 1.B
-    io.idu2EXU.valid:= 1.B
+    io.inst.ready   := !(io.isRAW)
+    io.idu2EXU.valid:= !(io.isRAW)
 }
