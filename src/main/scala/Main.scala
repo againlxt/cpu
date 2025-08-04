@@ -66,10 +66,10 @@ class top extends Module {
 	pipelineConnect(idu.io.idu2EXU, exu.io.idu2EXU)
 	pipelineConnect(exu.io.exu2LSU, lsu.io.exu2LSU)
 	pipelineConnect(lsu.io.lsu2WBU, wbu.io.lsu2WBU)
-	ifu.io.flush 			:= flush
-	ifu.io.correctPC 		:= exu.io.currentPC
+	ifu.io.flush 			:= 0.B
+	ifu.io.correctPC 		:= 0.U
 	idu.io.isRAW 			:= isRAW | isRAWReg
-	idu.io.flush 			:= flush
+	idu.io.flush 			:= 0.B
 
 	/* IFU */
 	/* Input */

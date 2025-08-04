@@ -114,7 +114,21 @@ class IDU extends Module {
     io.idu2EXU.bits.imm 		:= immWire
     io.idu2EXU.bits.inst        := instWire
 
-    val validReg    = RegNext(io.inst.ready & io.inst.valid)
+    val s_flow :: s_wait_raw :: Nil = Enum(2)
+    val state = RegInit(s_flow)
+    val handShake = RegNext(io.inst.ready & io.inst.valid)
+    state := MuxLookup(state, s_flow)(List(
+        s_flow      -> Mux(io.isRAW & handShake, s_wait_raw, s_flow),
+        s_wait_raw  -> Mux(!io.isRAW, s_flow, s_wait_raw)
+    ))
+    val validReg    = RegInit(0.B)
+    switch(validReg) {
+        is(0.B) { validReg := io.inst.ready & io.inst.valid }
+        is(1.B) {
+            validReg := Mux(io.idu2EXU.valid & io.idu2EXU.ready, 
+            Mux(io.inst.ready & io.inst.valid, 1.B, 0.B), 1.B)
+        }
+    }
     io.inst.ready   := !(io.isRAW)
-    io.idu2EXU.valid:= !(io.isRAW) & validReg & !(io.flush)
+    io.idu2EXU.valid:= Mux((state === s_flow), !(io.isRAW) & validReg, !io.isRAW)
 }

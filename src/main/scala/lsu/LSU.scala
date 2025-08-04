@@ -163,20 +163,21 @@ class LSU extends Module {
 	val memRdDataWire 	= Mux(sOrUWire.asBool, signDataWire.asUInt, rdataShiftWire)
 
     val s_wait_valid :: s_write :: s_read :: s_wait_ready :: Nil = Enum(4)
-    val state   = RegInit(s_wait_valid)
+	val nextState	= WireInit(s_wait_valid)
+    val state   = RegNext(nextState, s_wait_valid)
     val memEnd  = (io.lsu2Mem.bvalid & io.lsu2Mem.bready) || 
     (io.lsu2Mem.rvalid & io.lsu2Mem.rready & io.lsu2Mem.rlast)
-    state       := MuxLookup(state, s_wait_valid)(List(
-        s_wait_valid  	-> Mux(io.exu2LSU.ready & io.exu2LSU.valid, 
-        Mux(io.exu2LSU.bits.memValid.asBool, 
+	val validReg = RegNext(io.exu2LSU.ready & io.exu2LSU.valid)
+    nextState    := MuxLookup(state, s_wait_valid)(List(
+        s_wait_valid  	-> Mux(validReg, Mux(io.exu2LSU.bits.memValid.asBool, 
         Mux(io.exu2LSU.bits.memWR.asBool, s_write, s_read), s_wait_valid), s_wait_valid),
         s_write 		-> Mux(memEnd, s_wait_ready, s_write),
         s_read  		-> Mux(memEnd, s_wait_ready, s_read),
 		s_wait_ready	-> Mux(io.lsu2WBU.ready & io.lsu2WBU.valid, s_wait_valid, s_wait_ready)
     ))
-    val wOpWire      = io.exu2LSU.ready & io.exu2LSU.valid & 
+    val wOpWire      = validReg & 
     io.exu2LSU.bits.memValid.asBool & io.exu2LSU.bits.memWR.asBool
-    val rOpWire      = io.exu2LSU.ready & io.exu2LSU.valid & 
+    val rOpWire      = validReg & 
     io.exu2LSU.bits.memValid.asBool & (!io.exu2LSU.bits.memWR.asBool)
     switch(state) {
         is(s_wait_valid) {
@@ -188,18 +189,27 @@ class LSU extends Module {
         }
         is(s_write) {
 			switch(awvalidReg) {
-				is(1.B) {awvalidReg := (!(io.lsu2Mem.awvalid & io.lsu2Mem.awready)) & (!memEnd)}
+				is(1.B) {awvalidReg := !(io.lsu2Mem.awvalid & io.lsu2Mem.awready)}
 				is(0.B)	{awvalidReg := 0.B}
 			}
-            wvalidReg   := !memEnd
-            wlastReg    := !memEnd
+			switch(wvalidReg) {
+				is(1.B) {wvalidReg := !(io.lsu2Mem.wvalid & io.lsu2Mem.wready & io.lsu2Mem.wlast)}
+				is(0.B)	{wvalidReg := 0.B}
+			}
+			switch(wlastReg) {
+				is(1.B) {wlastReg := !(io.lsu2Mem.wvalid & io.lsu2Mem.wready & io.lsu2Mem.wlast)}
+				is(0.B)	{wlastReg := 0.B}
+			}
         }
         is(s_read) {
 			switch(arvalidReg) {
 				is(1.B) {arvalidReg := !(io.lsu2Mem.arvalid & io.lsu2Mem.arready)}
 				is(0.B) {arvalidReg := 0.B}
 			}
-            rreadyReg   := !memEnd
+			switch(rreadyReg) {
+				is(1.B) {rreadyReg := !(io.lsu2Mem.rvalid & io.lsu2Mem.rready & io.lsu2Mem.rlast)}
+				is(0.B) {rreadyReg := 0.B}
+			}
             rdataReg    := Mux(memEnd, rdataWire, rdataReg)
         }
     }
@@ -232,9 +242,10 @@ class LSU extends Module {
 	}
 
     /* IO */
-    io.exu2LSU.ready            := (state === s_wait_valid)
+    io.exu2LSU.ready            := (nextState === s_wait_valid)
     io.lsu2WBU.valid            := (state === s_wait_ready) ||
-	(io.exu2LSU.ready & io.exu2LSU.valid & (!io.exu2LSU.bits.memValid.asBool))
+	(validReg & (!io.exu2LSU.bits.memValid.asBool))
+
     io.lsu2WBU.bits.pc          := pcWire
     io.lsu2WBU.bits.memData     := memRdDataWire
     io.lsu2WBU.bits.aluData     := aluDataWire
