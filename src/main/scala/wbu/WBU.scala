@@ -32,6 +32,7 @@ class WBU extends Module {
     val csrWrWire 		= io.lsu2WBU.bits.csrWr
     val fenceiWire		= io.lsu2WBU.bits.fencei
 	val handReg 		= RegNext(handWire)
+	val handRReg 		= RegNext(handReg)
 
     /* DPI-C */
 	if(!Config.isSTA) {
@@ -42,7 +43,7 @@ class WBU extends Module {
 		getCurPC.io.pc 		:= pcWire
 		getNextPC.io.nextPC	:= io.lsu2WBU.bits.pc
 		getCmd.io.cmd 		:= instWire
-        wbuEnd.io.handshake := handReg
+        wbuEnd.io.handshake := handRReg
 	}
 		
 	/* Output */

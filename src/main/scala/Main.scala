@@ -42,8 +42,8 @@ class top extends Module {
 	val s_flow :: s_raw :: s_raw_end :: s_flush :: Nil = Enum(4)
 	val nextState = WireInit(s_flow)
 	val state = RegNext(nextState, s_flow)
-	val flushWire 		= WireInit(0.B)
-	val flushEndWire 	= WireInit(0.B)
+	val flushWire 		= exu.io.flush
+	val flushEndWire 	= exu.io.exu2LSU.ready & exu.io.exu2LSU.valid
 	def conflict(rs: UInt, rd: UInt) = ((rs === rd) & (rd =/= 0.U) & (rs =/= 0.U))
 	def conflictWithStage(rs1: UInt, rs2: UInt, rd: UInt) = {
 		conflict(rs1, rd) || conflict(rs2, rd)
@@ -62,17 +62,18 @@ class top extends Module {
 	nextState := MuxLookup(state, s_flow)(List(
 		s_flow	-> Mux(flushWire, s_flush, Mux(isRAW, s_raw, s_flow)),
 		s_raw 	-> Mux(flushWire, s_flush, Mux(idu.io.idu2EXU.valid & idu.io.idu2EXU.ready, s_raw_end, s_raw)),
-		s_raw_end -> Mux(idu.io.inst.valid & idu.io.inst.ready, s_flow, s_raw_end),
+		s_raw_end -> Mux(flushWire, s_flush, Mux(idu.io.inst.valid & idu.io.inst.ready, s_flow, s_raw_end)),
 		s_flush	-> Mux(flushEndWire, s_flow, s_flush)
 	))	
 	pipelineConnect(ifu.io.inst, idu.io.inst)
 	pipelineConnect(idu.io.idu2EXU, exu.io.idu2EXU)
 	pipelineConnect(exu.io.exu2LSU, lsu.io.exu2LSU)
 	pipelineConnect(lsu.io.lsu2WBU, wbu.io.lsu2WBU)
-	ifu.io.flush 			:= 0.B
-	ifu.io.correctPC 		:= 0.U
+	ifu.io.flush 			:= flushWire
+	ifu.io.correctPC 		:= exu.io.currentPC
 	idu.io.isRAW 			:= (isRAW & ((state === s_flow) | (state === s_raw)))
-	idu.io.flush 			:= 0.B
+	idu.io.flush 			:= flushWire
+	exu.io.flushing			:= (state === s_flush)
 
 	/* IFU */
 	/* Input */

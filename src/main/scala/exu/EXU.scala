@@ -19,6 +19,8 @@ class EXU extends Module {
 		val exu2CSR 	= new EXU2CSR
 		val rd 			= Output(UInt(4.W))
 		val currentPC 	= Output(UInt(32.W))
+		val flush 		= Output(Bool())
+		val flushing 	= Input(Bool())
 	})
 
 	// Wire
@@ -91,6 +93,12 @@ class EXU extends Module {
 		(pcBSrcWire === "b01".U).asBool  -> rs1DataWire,
 		(pcBSrcWire === "b10".U).asBool  -> csrODataWire
     ))
+	val predictPCReg 	= RegEnable(nextPC, io.idu2EXU.valid & io.idu2EXU.ready)
+	val handReg 		= RegNext(io.idu2EXU.valid & io.idu2EXU.ready)
+	val branchCheck 	= Module(new BranchCheck)
+	branchCheck.io.predictPC := pcWire
+	branchCheck.io.correctPC := predictPCReg
+	val flushWire 		= (!branchCheck.io.correct) & (predictPCReg =/= 4.U) & (handReg) & (!io.flushing)
 
 	/* Counter */
 	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
@@ -129,26 +137,32 @@ class EXU extends Module {
 	io.exu2CSR.ecall 			:= ecallWire
 
 	io.rd	:= Mux(regWRWire.asBool, Mux(io.idu2EXU.ready & !io.exu2LSU.valid, 0.U, instWire(11,7)), 0.U)
-	io.currentPC	:= nextPC
+	io.currentPC	:= predictPCReg
+	io.flush 		:= flushWire
 
 	val validReg = RegInit(0.B)
 	val readyReg = RegInit(1.B)
-	switch(validReg) {
-		is(0.B) { validReg := io.idu2EXU.valid & io.idu2EXU.ready}
-		is(1.B) {
-			validReg := Mux(io.exu2LSU.valid & io.exu2LSU.ready,
-			Mux(io.idu2EXU.valid & io.idu2EXU.ready, 1.B, 0.B), 1.B)
+	when(!flushWire) {
+		switch(validReg) {
+			is(0.B) { validReg := io.idu2EXU.valid & io.idu2EXU.ready}
+			is(1.B) {
+				validReg := Mux(io.exu2LSU.valid & io.exu2LSU.ready,
+				Mux(io.idu2EXU.valid & io.idu2EXU.ready, 1.B, 0.B), 1.B)
+			}
+		}
+		switch(readyReg) {
+			is(0.B) { readyReg := io.exu2LSU.valid & io.exu2LSU.ready }
+			is(1.B) {
+				readyReg := Mux(io.idu2EXU.valid & io.idu2EXU.ready, 
+				Mux(io.exu2LSU.valid & io.exu2LSU.ready, 1.B, 0.B), 1.B)
 		}
 	}
-	switch(readyReg) {
-		is(0.B) { readyReg := io.exu2LSU.valid & io.exu2LSU.ready }
-		is(1.B) {
-			readyReg := Mux(io.idu2EXU.valid & io.idu2EXU.ready, 
-			Mux(io.exu2LSU.valid & io.exu2LSU.ready, 1.B, 0.B), 1.B)
-		}
+	} .otherwise {
+		validReg := 0.U
+		readyReg := 1.B
 	}
-	io.idu2EXU.ready   	:= readyReg
-    io.exu2LSU.valid	:= validReg
+	io.idu2EXU.ready   	:= readyReg & (!flushWire)
+    io.exu2LSU.valid	:= validReg & (!flushWire)
 }
 
 class BranchCond extends Module {

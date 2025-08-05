@@ -116,20 +116,25 @@ class IDU extends Module {
 
     val validReg = RegInit(0.B)
 	val readyReg = RegInit(1.B)
-	switch(validReg) {
-		is(0.B) { validReg := io.inst.valid & io.inst.ready}
-		is(1.B) {
-			validReg := Mux(io.idu2EXU.valid & io.idu2EXU.ready,
-			Mux(io.inst.valid & io.inst.ready, 1.B, 0.B), 1.B)
-		}
-	}
-	switch(readyReg) {
-		is(0.B) { readyReg := io.idu2EXU.valid & io.idu2EXU.ready }
-		is(1.B) {
-			readyReg := Mux(io.inst.valid & io.inst.ready, 
-			Mux(io.idu2EXU.valid & io.idu2EXU.ready, 1.B, 0.B), 1.B)
-		}
-	}
+    when(!io.flush) {
+        switch(validReg) {
+            is(0.B) { validReg := io.inst.valid & io.inst.ready}
+            is(1.B) {
+                validReg := Mux(io.idu2EXU.valid & io.idu2EXU.ready,
+                Mux(io.inst.valid & io.inst.ready, 1.B, 0.B), 1.B)
+            }
+        }
+        switch(readyReg) {
+            is(0.B) { readyReg := io.idu2EXU.valid & io.idu2EXU.ready }
+            is(1.B) {
+                readyReg := Mux(io.inst.valid & io.inst.ready, 
+                Mux(io.idu2EXU.valid & io.idu2EXU.ready, 1.B, 0.B), 1.B)
+            }
+        }
+    } .otherwise {
+        validReg := 0.U
+		readyReg := 1.B
+    }
 	io.inst.ready   	:= readyReg & !io.isRAW
     io.idu2EXU.valid	:= validReg & !io.isRAW
 }
