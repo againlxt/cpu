@@ -128,7 +128,7 @@ class EXU extends Module {
 	io.exu2CSR.mret 			:= mretWire
 	io.exu2CSR.ecall 			:= ecallWire
 
-	io.rd	:= Mux(regWRWire.asBool, instWire(11,7), 0.U)
+	io.rd	:= Mux(regWRWire.asBool, Mux(io.idu2EXU.ready & !io.exu2LSU.valid, 0.U, instWire(11,7)), 0.U)
 	io.currentPC	:= nextPC
 
 	val validReg = RegInit(0.B)

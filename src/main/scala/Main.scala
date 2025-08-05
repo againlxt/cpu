@@ -39,22 +39,20 @@ class top extends Module {
 	val icacheSkidBuffer= Module(new AXISkidBuffer(false, false, false, false, false))
 
 	/* PipeLine */
-	val s_flow :: s_raw :: s_flush :: Nil = Enum(3)
+	val s_flow :: s_raw :: s_raw_end :: s_flush :: Nil = Enum(4)
 	val nextState = WireInit(s_flow)
 	val state = RegNext(nextState, s_flow)
 	val flushWire 		= WireInit(0.B)
 	val flushEndWire 	= WireInit(0.B)
-	def conflict(rs: UInt, rd: UInt) = (rs === rd)
+	def conflict(rs: UInt, rd: UInt) = ((rs === rd) & (rd =/= 0.U) & (rs =/= 0.U))
 	def conflictWithStage(rs1: UInt, rs2: UInt, rd: UInt) = {
 		conflict(rs1, rd) || conflict(rs2, rd)
 	}
 	val isRAW = Wire(Bool())
-	val isRAWReg = RegNext(isRAW)
-	val rawPC = RegEnable(exu.io.idu2EXU.bits.pc, isRAW)
 	isRAW 	  := 
-	(conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, exu.io.rd) & (rawPC =/= exu.io.idu2EXU.bits.pc)) ||
-	(conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, lsu.io.rd) & (rawPC =/= lsu.io.exu2LSU.bits.pc)) ||
-	(conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, wbu.io.rd) & (rawPC =/= wbu.io.lsu2WBU.bits.pc))
+	(conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, exu.io.rd)) ||
+	(conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, lsu.io.rd)) ||
+	(conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, wbu.io.rd))
 	def pipelineConnect[T <: Data, T2 <: Data](prevOut: DecoupledIO[T],
 	thisIn: DecoupledIO[T]) = {
 		prevOut.ready 	:= thisIn.ready
@@ -63,7 +61,8 @@ class top extends Module {
 	}
 	nextState := MuxLookup(state, s_flow)(List(
 		s_flow	-> Mux(flushWire, s_flush, Mux(isRAW, s_raw, s_flow)),
-		s_raw 	-> Mux(flushWire, s_flush, Mux(isRAW, s_raw, s_flow)),
+		s_raw 	-> Mux(flushWire, s_flush, Mux(idu.io.idu2EXU.valid & idu.io.idu2EXU.ready, s_raw_end, s_raw)),
+		s_raw_end -> Mux(idu.io.inst.valid & idu.io.inst.ready, s_flow, s_raw_end),
 		s_flush	-> Mux(flushEndWire, s_flow, s_flush)
 	))	
 	pipelineConnect(ifu.io.inst, idu.io.inst)
@@ -72,7 +71,7 @@ class top extends Module {
 	pipelineConnect(lsu.io.lsu2WBU, wbu.io.lsu2WBU)
 	ifu.io.flush 			:= 0.B
 	ifu.io.correctPC 		:= 0.U
-	idu.io.isRAW 			:= 0.B
+	idu.io.isRAW 			:= (isRAW & ((state === s_flow) | (state === s_raw)))
 	idu.io.flush 			:= 0.B
 
 	/* IFU */

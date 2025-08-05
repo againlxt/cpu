@@ -130,6 +130,6 @@ class IDU extends Module {
 			Mux(io.idu2EXU.valid & io.idu2EXU.ready, 1.B, 0.B), 1.B)
 		}
 	}
-	io.inst.ready   	:= readyReg
-    io.idu2EXU.valid	:= validReg
+	io.inst.ready   	:= readyReg & !io.isRAW
+    io.idu2EXU.valid	:= validReg & !io.isRAW
 }

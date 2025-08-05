@@ -269,7 +269,7 @@ class LSU extends Module {
     io.lsu2WBU.bits.csrEn       := csrEnWire
     io.lsu2WBU.bits.csrWr       := csrWrWire
     io.lsu2WBU.bits.fencei      := (memOPWire === 7.U)
-	io.rd	:= Mux(regWRWire.asBool, instWire(11,7), 0.U)
+	io.rd	:= Mux(regWRWire.asBool, Mux(io.exu2LSU.ready & !io.lsu2WBU.valid, 0.U, instWire(11,7)), 0.U)
 }
 
 class GetCommond extends BlackBox with HasBlackBoxInline {

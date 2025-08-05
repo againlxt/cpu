@@ -62,7 +62,7 @@ class WBU extends Module {
     io.wbu2BaseReg.regWR    := regWRWire
 	io.wbu2BaseReg.pc		:= pcWire
 	io.wbu2Icache	:= fenceiWire
-	io.rd	:= Mux(regWRWire.asBool, instWire(11,7), 0.U)
+	io.rd	:= Mux(regWRWire.asBool, Mux(handReg, instWire(11,7), 0.U), 0.U)
 }
 
 class WBUEnd extends BlackBox with HasBlackBoxInline {
