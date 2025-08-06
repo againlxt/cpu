@@ -20,6 +20,7 @@ class EXU extends Module {
 		val rd 			= Output(UInt(4.W))
 		val currentPC 	= Output(UInt(32.W))
 		val flush 		= Output(Bool())
+		val ecallFlush 	= Input(Bool())
 		val flushing 	= Input(Bool())
 	})
 
@@ -98,7 +99,7 @@ class EXU extends Module {
 	val branchCheck 	= Module(new BranchCheck)
 	branchCheck.io.predictPC := pcWire
 	branchCheck.io.correctPC := predictPCReg
-	val flushWire 		= (!branchCheck.io.correct) & (predictPCReg =/= 4.U) & (handReg) & (!io.flushing)
+	val flushWire 		= ((!branchCheck.io.correct) & (predictPCReg =/= 4.U) & (handReg) & (!io.flushing)) | io.ecallFlush
 
 	/* Counter */
 	if (Config.hasPerformanceCounter & (!Config.isSTA)) {

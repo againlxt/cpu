@@ -17,6 +17,8 @@ class WBU extends Module {
         val wbu2BaseReg = new WBU2BaseReg
 		val wbu2Icache	= Output(Bool())
 		val rd 			= Output(UInt(4.W))
+		val flush 		= Output(Bool())
+		val correctPC 	= Output(UInt(32.W))
 	})
     val handWire        = io.lsu2WBU.valid & io.lsu2WBU.ready
 	val pcWire 			= io.lsu2WBU.bits.pc
@@ -33,6 +35,14 @@ class WBU extends Module {
     val fenceiWire		= io.lsu2WBU.bits.fencei
 	val handReg 		= RegNext(handWire)
 	val handRReg 		= RegNext(handReg)
+
+	val s_flow :: s_flush :: Nil = Enum(2)
+	val nextState	= WireInit(s_flow)
+	val state 		= RegNext(nextState, s_flow)
+	nextState	:= MuxLookup(state, s_flow)(List(
+		s_flow 	-> Mux(ecallWire.asBool, s_flush, s_flow),
+		s_flush	-> Mux(handWire, s_flow, s_flush)
+	))
 
     /* DPI-C */
 	if(!Config.isSTA) {
@@ -63,7 +73,10 @@ class WBU extends Module {
     io.wbu2BaseReg.regWR    := regWRWire
 	io.wbu2BaseReg.pc		:= pcWire
 	io.wbu2Icache	:= fenceiWire
-	io.rd	:= Mux(regWRWire.asBool, Mux(handReg, instWire(11,7), 0.U), 0.U)
+	io.rd		:= Mux(regWRWire.asBool, Mux(handReg, instWire(11,7), 0.U), 0.U)
+
+	io.flush	:= (state === s_flow) & (nextState === s_flush)
+	io.correctPC:= io.wbu2CSR.mtvec
 }
 
 class WBUEnd extends BlackBox with HasBlackBoxInline {

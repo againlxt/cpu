@@ -103,6 +103,7 @@ class EXU2CSR extends Bundle {
 class WBU2CSR extends Bundle {
 	val pc 		= Output(UInt(32.W))
 	val csrWData= Output(UInt(32.W))
+	val mtvec 	= Input(UInt(32.W))
 	val csr 	= Output(UInt(12.W))
 	val ecall 	= Output(UInt(1.W))
 	val csrEn 	= Output(UInt(1.W))

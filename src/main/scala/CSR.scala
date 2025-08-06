@@ -50,4 +50,5 @@ class CSRReg extends Module {
         io.exu2CSR.ecall.asBool              -> mtvecReg,
         io.exu2CSR.mret.asBool               -> mepcReg
     ))
+    io.wbu2CSR.mtvec := mtvecReg
 }
