@@ -17,6 +17,8 @@ import _root_.interface._
 import java.time.Clock
 import java.awt.MouseInfo
 import _root_.basemode.AXIAccessFault
+import dpic.PerformanceCounter
+import dpic.PerformanceCounterType
 object Main extends App {
 	emitVerilog(new top, Array("--emit-modules", "verilog", "--target-dir", "generated"))
 }
@@ -75,6 +77,30 @@ class top extends Module {
 	idu.io.flush 			:= flushWire
 	exu.io.flushing			:= (state === s_flush)
 	exu.io.ecallFlush		:= wbu.io.flush
+	/* Counter */
+	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
+		val rawCnt = RegInit(0.U(32.W))
+		when(nextState === s_raw) {
+			rawCnt := rawCnt + 1.U
+		} .otherwise {
+			rawCnt := 0.U
+		}
+		val RAWC 			= Module(new PerformanceCounter)
+		RAWC.io.valid		:= (state === s_raw) & (nextState === s_raw_end)
+		RAWC.io.counterType	:= PerformanceCounterType.RAWCNT.asUInt
+		RAWC.io.data		:= rawCnt
+
+		val flushCnt = RegInit(0.U(32.W))
+		val EFC	= Module(new PerformanceCounter)
+		when(nextState === s_flush) {
+			flushCnt := flushCnt + 1.U;
+		} .otherwise {
+			flushCnt := 0.U
+		}
+		EFC.io.valid 		:= (state === s_flush) & (nextState === s_flow)
+		EFC.io.counterType	:= PerformanceCounterType.FLUSHCNT.asUInt
+		EFC.io.data 		:= flushCnt
+	}
 
 	/* IFU */
 	/* Input */
