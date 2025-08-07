@@ -1,0 +1,11 @@
+*
+*.*
+!*/
+!/scala/*
+!project/*
+!build.sbt
+!build.sc
+!mill
+!README.md
+!*.sh
+!.gitignore
