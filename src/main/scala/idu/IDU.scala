@@ -16,6 +16,7 @@ class IDU extends Module {
 		val inst 			= Flipped(Decoupled(new IFU2IDU))
 		val idu2EXU			= Decoupled(new IDU2EXU)
 		val idu2BaseReg 	= new IDU2BaseReg
+        val iduBypass       = new IDUBypass
         val isRAW           = Input(Bool())
         val flush           = Input(Bool())
 	})
@@ -71,6 +72,18 @@ class IDU extends Module {
 	// Output
     val immWire 	= immGen.io.imm
 
+    val rs1DataWire = MuxCase(io.idu2BaseReg.rs1Data, Seq(	
+        ((io.iduBypass.rd(0)===rs1IndexWire) & io.iduBypass.regWR(0) & io.iduBypass.Valid(0)) -> io.iduBypass.data(0),
+        ((io.iduBypass.rd(1)===rs1IndexWire) & io.iduBypass.regWR(1) & io.iduBypass.Valid(1)) -> io.iduBypass.data(1),
+        ((io.iduBypass.rd(2)===rs1IndexWire) & io.iduBypass.regWR(2) & io.iduBypass.Valid(2)) -> io.iduBypass.data(2)
+    ))
+
+    val rs2DataWire = MuxCase(io.idu2BaseReg.rs2Data, Seq(	
+        ((io.iduBypass.rd(0)===rs2IndexWire) & io.iduBypass.regWR(0) & io.iduBypass.Valid(0)) -> io.iduBypass.data(0),
+        ((io.iduBypass.rd(1)===rs2IndexWire) & io.iduBypass.regWR(1) & io.iduBypass.Valid(1)) -> io.iduBypass.data(1),
+        ((io.iduBypass.rd(2)===rs2IndexWire) & io.iduBypass.regWR(2) & io.iduBypass.Valid(2)) -> io.iduBypass.data(2)
+    ))
+
     /* Counter */
 	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
         val instType = MuxCase(PerformanceCounterType.OTHER.asUInt, Seq(
@@ -109,8 +122,8 @@ class IDU extends Module {
     io.idu2BaseReg.rs2Index := rs2IndexWire
 
     io.idu2EXU.bits.pc          := pcWire
-    io.idu2EXU.bits.rs1Data 	:= io.idu2BaseReg.rs1Data
-    io.idu2EXU.bits.rs2Data 	:= io.idu2BaseReg.rs2Data
+    io.idu2EXU.bits.rs1Data 	:= rs1DataWire
+    io.idu2EXU.bits.rs2Data 	:= rs2DataWire
     io.idu2EXU.bits.imm 		:= immWire
     io.idu2EXU.bits.inst        := instWire
 

@@ -46,7 +46,35 @@ class top extends Module {
 	val state = RegNext(nextState, s_flow)
 	val flushWire 		= exu.io.flush | wbu.io.flush
 	val flushEndWire 	= exu.io.exu2LSU.ready & exu.io.exu2LSU.valid
-	def conflict(rs: UInt, rd: UInt) = ((rs === rd) & (rd =/= 0.U) & (rs =/= 0.U))
+	/* Bypass */
+	val bypassRd 		= Wire(Vec(3, UInt(4.W)))
+	val bypassData		= Wire(Vec(3, UInt(32.W)))
+	val bypassRegWR 	= Wire(Vec(3, Bool()))
+	val bypassValid 	= Wire(Vec(3, Bool()))
+	bypassRd(0)		:= exu.io.exu2LSU.bits.inst(11,7)
+	bypassRd(1)		:= lsu.io.lsu2WBU.bits.inst(11,7)
+	bypassRd(2)		:= wbu.io.wbu2BaseReg.rdIndex
+	bypassData(0)	:= MuxCase(	0.U(32.W), Seq(	
+        (exu.io.exu2LSU.bits.toReg === "b00".U).asBool -> exu.io.exu2LSU.bits.aluData,
+		(exu.io.exu2LSU.bits.toReg === "b10".U).asBool -> exu.io.exu2LSU.bits.csrData
+    ))
+	bypassData(1)	:= MuxCase(	0.U(32.W), Seq(	
+        (lsu.io.lsu2WBU.bits.toReg === "b00".U).asBool -> lsu.io.lsu2WBU.bits.aluData,
+		(lsu.io.lsu2WBU.bits.toReg === "b01".U).asBool -> lsu.io.lsu2WBU.bits.memData,
+		(lsu.io.lsu2WBU.bits.toReg === "b10".U).asBool -> lsu.io.lsu2WBU.bits.toReg
+    ))
+	bypassData(2)	:= wbu.io.wbu2BaseReg.data
+	bypassRegWR(0)	:= exu.io.exu2LSU.bits.regWR
+	bypassRegWR(1)	:= lsu.io.lsu2WBU.bits.regWR
+	bypassRegWR(2)	:= wbu.io.wbu2BaseReg.regWR
+	bypassValid(0)	:= (bypassRd(0) =/= 0.U)
+	bypassValid(1)	:= lsu.io.bypassValid & (bypassRd(1) =/= 0.U)
+	bypassValid(2)	:= (bypassRd(2) =/= 0.U)
+	/* RAW */
+	def conflict(rs: UInt, rd: UInt) = ((rs === rd) & (rd =/= 0.U) & (rs =/= 0.U)
+	& (!((rs === bypassRd(0)) & (bypassRegWR(0) & bypassValid(0))))
+	& (!((rs === bypassRd(1)) & (bypassRegWR(1) & bypassValid(1))))
+	& (!((rs === bypassRd(2)) & (bypassRegWR(2) & bypassValid(2)))))
 	def conflictWithStage(rs1: UInt, rs2: UInt, rd: UInt) = {
 		conflict(rs1, rd) || conflict(rs2, rd)
 	}
@@ -75,6 +103,10 @@ class top extends Module {
 	ifu.io.correctPC 		:= Mux(wbu.io.flush, wbu.io.correctPC, Mux(exu.io.flush, exu.io.currentPC, 0.U))
 	idu.io.isRAW 			:= (isRAW & ((state === s_flow) | (state === s_raw)))
 	idu.io.flush 			:= flushWire
+	idu.io.iduBypass.rd		:= bypassRd
+	idu.io.iduBypass.data 	:= bypassData
+	idu.io.iduBypass.regWR	:= bypassRegWR
+	idu.io.iduBypass.Valid	:= bypassValid
 	exu.io.flushing			:= (state === s_flush)
 	exu.io.ecallFlush		:= wbu.io.flush
 	/* Counter */

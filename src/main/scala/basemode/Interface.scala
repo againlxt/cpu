@@ -73,6 +73,13 @@ class LSU2WBU extends Bundle {
 	val fencei		= Output(UInt(1.W))
 }
 
+class IDUBypass extends Bundle {
+	val rd 		= Input(Vec(3, UInt(3.W)))
+	val data 	= Input(Vec(3, UInt(32.W)))
+	val regWR 	= Input(Vec(3, Bool()))
+	val Valid 	= Input(Vec(3, Bool()))
+}
+
 /* Normal */
 class C2IFU extends Bundle {
     val memData = Input(UInt(32.W))

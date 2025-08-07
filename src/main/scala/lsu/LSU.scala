@@ -13,6 +13,7 @@ class LSU extends Module {
         val lsu2Mem     = new AXI
         val lsu2WBU     = Decoupled(new LSU2WBU)
 		val rd 			= Output(UInt(4.W))
+		val bypassValid = Output(Bool())
     })
 	val pcWire 			= io.exu2LSU.bits.pc
 	val memDataWire		= io.exu2LSU.bits.memData
@@ -270,6 +271,7 @@ class LSU extends Module {
     io.lsu2WBU.bits.csrWr       := csrWrWire
     io.lsu2WBU.bits.fencei      := (memOPWire === 7.U)
 	io.rd	:= Mux(regWRWire.asBool, Mux(io.exu2LSU.ready & !io.lsu2WBU.valid, 0.U, instWire(11,7)), 0.U)
+	io.bypassValid				:= !((toRegWire === 1.U) & ((state === s_read)|(nextState === s_read)))
 }
 
 class GetCommond extends BlackBox with HasBlackBoxInline {
