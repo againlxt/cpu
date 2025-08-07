@@ -1,10 +1,18 @@
 *
 *.*
+<<<<<<< HEAD
 !*/
+=======
+>>>>>>> 44139a78a901d8952496b198d1ca19948f58f25a
 !project/*
 !build.sbt
 !build.sc
 !mill
 !README.md
+<<<<<<< HEAD
 !*.sh
 !.gitignore
+=======
+!src/*.scala
+!*.sh
+>>>>>>> 44139a78a901d8952496b198d1ca19948f58f25a
