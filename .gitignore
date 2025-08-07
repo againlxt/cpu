@@ -1,4 +1,9 @@
-.bloop/*
-.metals/*
-project/*
-target/*
+*
+*.*
+!project/*
+!build.sbt
+!build.sc
+!mill
+!README.md
+!src/*.scala
+!*.sh
