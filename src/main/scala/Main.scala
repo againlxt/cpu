@@ -64,25 +64,24 @@ class top extends Module {
 		(lsu.io.lsu2WBU.bits.toReg === "b10".U).asBool -> lsu.io.lsu2WBU.bits.toReg
     ))
 	bypassData(2)	:= wbu.io.wbu2BaseReg.data
-	bypassRegWR(0)	:= exu.io.exu2LSU.bits.regWR
-	bypassRegWR(1)	:= lsu.io.lsu2WBU.bits.regWR
-	bypassRegWR(2)	:= wbu.io.wbu2BaseReg.regWR
-	bypassValid(0)	:= (bypassRd(0) =/= 0.U)
-	bypassValid(1)	:= lsu.io.bypassValid & (bypassRd(1) =/= 0.U)
-	bypassValid(2)	:= (bypassRd(2) =/= 0.U)
+	bypassRegWR(0)	:= exu.io.exu2LSU.bits.regWR & (bypassRd(0) =/= 0.U)
+	bypassRegWR(1)	:= lsu.io.lsu2WBU.bits.regWR & (bypassRd(1) =/= 0.U)
+	bypassRegWR(2)	:= wbu.io.wbu2BaseReg.regWR & (bypassRd(2) =/= 0.U)
+	bypassValid(0)	:= (exu.io.exu2LSU.bits.toReg =/= 1.U) & (state =/= s_flush)
+	bypassValid(1)	:= lsu.io.bypassValid
+	bypassValid(2)	:= 1.B
 	/* RAW */
-	def conflict(rs: UInt, rd: UInt) = ((rs === rd) & (rd =/= 0.U) & (rs =/= 0.U)
-	& (!((rs === bypassRd(0)) & (bypassRegWR(0) & bypassValid(0))))
-	& (!((rs === bypassRd(1)) & (bypassRegWR(1) & bypassValid(1))))
-	& (!((rs === bypassRd(2)) & (bypassRegWR(2) & bypassValid(2)))))
-	def conflictWithStage(rs1: UInt, rs2: UInt, rd: UInt) = {
-		conflict(rs1, rd) || conflict(rs2, rd)
+	val IFU2IDUHandReg = RegNext(ifu.io.inst.valid & ifu.io.inst.ready)
+	def conflict(rs: UInt, rd: UInt, index: UInt) = ((rs === rd) & (rd =/= 0.U) & (rs =/= 0.U)
+	& (!((rs === bypassRd(index)) & (bypassRegWR(index) & bypassValid(index)))))
+	def conflictWithStage(rs1: UInt, rs2: UInt, rd: UInt, index: UInt) = {
+		conflict(rs1, rd, index) || conflict(rs2, rd, index)
 	}
 	val isRAW = Wire(Bool())
 	isRAW 	  := 
-	(conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, exu.io.rd)) ||
-	(conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, lsu.io.rd)) ||
-	(conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, wbu.io.rd))
+	(conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, exu.io.rd, 0.U)) ||
+	(conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, lsu.io.rd, 1.U)) ||
+	(conflictWithStage(idu.io.idu2BaseReg.rs1Index, idu.io.idu2BaseReg.rs2Index, wbu.io.rd, 2.U))
 	def pipelineConnect[T <: Data, T2 <: Data](prevOut: DecoupledIO[T],
 	thisIn: DecoupledIO[T]) = {
 		prevOut.ready 	:= thisIn.ready
@@ -90,7 +89,7 @@ class top extends Module {
 		thisIn.valid 	:= prevOut.valid & thisIn.ready
 	}
 	nextState := MuxLookup(state, s_flow)(List(
-		s_flow	-> Mux(flushWire, s_flush, Mux(isRAW, s_raw, s_flow)),
+		s_flow	-> Mux(flushWire, s_flush, Mux(isRAW & IFU2IDUHandReg, s_raw, s_flow)),
 		s_raw 	-> Mux(flushWire, s_flush, Mux(idu.io.idu2EXU.valid & idu.io.idu2EXU.ready, s_raw_end, s_raw)),
 		s_raw_end -> Mux(flushWire, s_flush, Mux(idu.io.inst.valid & idu.io.inst.ready, s_flow, s_raw_end)),
 		s_flush	-> Mux(flushEndWire, s_flow, s_flush)
@@ -255,7 +254,6 @@ class BranchCheck extends Module {
 		val correctPC	= Input(UInt(32.W))
 		val correct 	= Output(Bool())
 	})
-
 
 	io.correct := Mux((io.predictPC === io.correctPC) | 
 	(io.predictPC === 0.U) | (io.correctPC === 4.U), 1.B, 0.B)

@@ -3,6 +3,7 @@ package interface
 import chisel3._
 import chisel3.util._
 import chisel3.util.Decoupled
+import cpu.Config
 
 /* Bus */
 class IFU2IDU extends Bundle {
@@ -71,6 +72,7 @@ class LSU2WBU extends Bundle {
 	val csrEn 		= Output(UInt(1.W))
 	val csrWr 		= Output(UInt(1.W))
 	val fencei		= Output(UInt(1.W))
+	val skip 		= Output(Bool())
 }
 
 class IDUBypass extends Bundle {

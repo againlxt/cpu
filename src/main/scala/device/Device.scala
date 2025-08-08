@@ -120,13 +120,6 @@ class XbarAXI extends Module {
 
     assert(deviceID != DeviceID.ERROR);
 
-    /* DPIC */
-    if(Config.hasDPIC & (!Config.isSTA)) {
-        val skipDiff = Module(new SkipDiff())
-        skipDiff.io.en := !((deviceID >= DeviceID.SRAM) & (deviceID <= DeviceID.ERROR)) & 
-        ((io.axiSlaveLSU.wvalid & io.axiSlaveLSU.wready) | (io.axiSlaveLSU.rvalid & io.axiSlaveLSU.rready));
-    }
-
     when(deviceID === DeviceID.CLINT) {
         /* AW */
         io.axiSlaveLSU.awready    := io.axiLiteClint.awReady

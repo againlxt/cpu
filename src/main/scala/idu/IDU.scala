@@ -72,10 +72,22 @@ class IDU extends Module {
 	// Output
     val immWire 	= immGen.io.imm
 
-    val bypassRdReg = RegEnable(io.iduBypass.rd, io.inst.valid & io.inst.ready)
-    val bypassWRReg = RegEnable(io.iduBypass.regWR, io.inst.valid & io.inst.ready)
-    val bypassValidReg    = RegEnable(io.iduBypass.Valid, io.inst.valid & io.inst.ready)
-    val bypassDataReg     = RegEnable(io.iduBypass.data, io.inst.valid & io.inst.ready)
+    /* State */
+    val s_flow :: s_stall :: s_wait :: Nil = Enum(3)
+    val nextState   = WireInit(s_flow)
+    val state       = RegNext(nextState, s_flow)
+    val handReg     = RegNext(io.inst.valid & io.inst.ready)
+    nextState   := MuxLookup(state, s_flow)(List(
+        s_flow  -> Mux(io.isRAW & handReg, s_stall, s_flow),
+        s_stall -> Mux(!io.isRAW, s_wait, s_stall),
+        s_wait  -> Mux(io.idu2EXU.valid & io.idu2EXU.ready, s_wait, s_flow)
+    ))
+
+    /* Bypass */
+    val bypassRdReg       = RegEnable(io.iduBypass.rd, io.inst.valid & io.inst.ready | (nextState === s_wait))
+    val bypassWRReg       = RegEnable(io.iduBypass.regWR, io.inst.valid & io.inst.ready | (nextState === s_wait))
+    val bypassValidReg    = RegEnable(io.iduBypass.Valid, io.inst.valid & io.inst.ready | (nextState === s_wait))
+    val bypassDataReg     = RegEnable(io.iduBypass.data, io.inst.valid & io.inst.ready | (nextState === s_wait))
     val rs1DataWire = MuxCase(io.idu2BaseReg.rs1Data, Seq(	
         ((bypassRdReg(0)===rs1IndexWire) & bypassWRReg(0) & bypassValidReg(0)) -> bypassDataReg(0),
         ((bypassRdReg(1)===rs1IndexWire) & bypassWRReg(1) & bypassValidReg(1)) -> bypassDataReg(1),
@@ -151,6 +163,6 @@ class IDU extends Module {
         validReg := 0.U
 		readyReg := 1.B
     }
-	io.inst.ready   	:= readyReg & !io.isRAW
-    io.idu2EXU.valid	:= validReg & !io.isRAW
+	io.inst.ready   	:= readyReg & !io.isRAW & (state =/= s_stall)
+    io.idu2EXU.valid	:= validReg & !io.isRAW & (state =/= s_stall)
 }

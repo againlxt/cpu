@@ -136,13 +136,13 @@ class LSU extends Module {
 			((aluDataWire >= "h80000000".U) && aluDataWire(1,0) === 3.U).asBool	-> Cat(0.U(24.W), rdataReg(31,24)),
 			
 			/* SRAM Read */
-			((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 2.U).asBool -> rdataReg,
-			((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataReg(7,0)),
-			((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataReg(15,0)),
-			((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 1.U).asBool	-> Cat(0.U(24.W), rdataReg(15,8)),
-			((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 2.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataReg(23,16)),
-			((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 2.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataReg(31,16)),
-			((aluDataWire <= "h0f001fff".U) && (aluDataWire >= "h0f00000".U) && aluDataWire(1,0) === 3.U).asBool	-> Cat(0.U(24.W), rdataReg(31,24)),
+			((aluDataWire <= "h1fffffff".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 2.U).asBool -> rdataReg,
+			((aluDataWire <= "h1fffffff".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataReg(7,0)),
+			((aluDataWire <= "h1fffffff".U) && aluDataWire(1,0) === 0.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataReg(15,0)),
+			((aluDataWire <= "h1fffffff".U) && aluDataWire(1,0) === 1.U).asBool	-> Cat(0.U(24.W), rdataReg(15,8)),
+			((aluDataWire <= "h1fffffff".U) && aluDataWire(1,0) === 2.U && memOPWire(1,0) === 0.U).asBool	-> Cat(0.U(24.W), rdataReg(23,16)),
+			((aluDataWire <= "h1fffffff".U) && aluDataWire(1,0) === 2.U && memOPWire(1,0) === 1.U).asBool	-> Cat(0.U(16.W), rdataReg(31,16)),
+			((aluDataWire <= "h1fffffff".U) && aluDataWire(1,0) === 3.U).asBool	-> Cat(0.U(24.W), rdataReg(31,24)),
 		))
 		signDataWire					:= MuxCase(rdataShiftWire.asSInt, Seq(
 			(wMaskWire === "b0001".U).asBool 	-> Cat(Fill(24, rdataShiftWire(7)), rdataShiftWire(7, 0)).asSInt,
@@ -229,10 +229,6 @@ class LSU extends Module {
 		LGDC.io.data 		:= lsuGetDataCnt+1.U
 	}
     /* DPIC */
-	if(!Config.isSTA) {
-		val getCmd 			= Module(new GetCommond)
-		getCmd.io.cmd 		:= instWire
-	}
 	if(Config.hasDPIC & (!Config.isSTA)) {
 		val mTrace 			= Module(new MTrace)
 		mTrace.io.data 		:= Mux(memWRWire.asBool, io.lsu2Mem.wdata, Mux(sOrUWire.asBool, signDataWire.asUInt, rdataShiftWire))
@@ -272,6 +268,14 @@ class LSU extends Module {
     io.lsu2WBU.bits.fencei      := (memOPWire === 7.U)
 	io.rd	:= Mux(regWRWire.asBool, Mux(io.exu2LSU.ready & !io.lsu2WBU.valid, 0.U, instWire(11,7)), 0.U)
 	io.bypassValid				:= !((toRegWire === 1.U) & ((state === s_read)|(nextState === s_read)))
+
+	val skip = io.exu2LSU.bits.memValid.asBool & (
+			((aluDataWire >= 0x02000000.U & aluDataWire <= 0x0200ffff.U)) |
+			((aluDataWire >= 0x10000000.U & aluDataWire <= 0x10002fff.U)) |
+			((aluDataWire >= 0x10001000.U & aluDataWire <= 0x10000007.U)) |
+			((aluDataWire >= 0x21000000.U & aluDataWire <= 0x211fffff.U))
+		)
+	io.lsu2WBU.bits.skip := skip
 }
 
 class GetCommond extends BlackBox with HasBlackBoxInline {

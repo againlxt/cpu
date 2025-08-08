@@ -53,7 +53,9 @@ class WBU extends Module {
 		getCurPC.io.pc 		:= pcWire
 		getNextPC.io.nextPC	:= io.lsu2WBU.bits.pc
 		getCmd.io.cmd 		:= instWire
-        wbuEnd.io.handshake := handRReg
+        wbuEnd.io.handshake := handReg
+		val skipDiff = Module(new SkipDiff())
+        skipDiff.io.en := handWire & io.lsu2WBU.bits.skip
 	}
 		
 	/* Output */
@@ -121,7 +123,10 @@ class GetCmd extends BlackBox with HasBlackBoxInline {
 	"""module GetCmd(
 	   |  input [31:0] cmd
 	   |);
-	   |
+	   |import "DPI-C" function void sim_exit();
+		|always @(cmd) begin
+		|    if(cmd==32'h00100073)   sim_exit();
+		|end
 	   |export "DPI-C" function getCommond;
 	   |function bit [31:0] getCommond;
 	   |	return cmd;
@@ -144,5 +149,24 @@ class GetNextPC extends BlackBox with HasBlackBoxInline {
 	   |	return nextPC;
 	   |endfunction
 	   |endmodule
+	""".stripMargin)
+}
+
+class SkipDiff extends BlackBox with HasBlackBoxInline {
+    val io = IO(new Bundle {
+        val en = Input(Bool())
+    })
+
+	setInline("SkipDiff.sv",
+	"""module SkipDiff(
+	|	input en
+	|);
+	|
+	|import "DPI-C" function void difftest_skip_ref();
+	|always@(en) begin
+	|	if(en) difftest_skip_ref();
+	|end
+	|
+	|endmodule
 	""".stripMargin)
 }
