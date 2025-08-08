@@ -72,16 +72,19 @@ class IDU extends Module {
 	// Output
     val immWire 	= immGen.io.imm
 
+    val bypassRdReg = RegEnable(io.iduBypass.rd, io.inst.valid & io.inst.ready)
+    val bypassWRReg = RegEnable(io.iduBypass.regWR, io.inst.valid & io.inst.ready)
+    val bypassValidReg    = RegEnable(io.iduBypass.Valid, io.inst.valid & io.inst.ready)
+    val bypassDataReg     = RegEnable(io.iduBypass.data, io.inst.valid & io.inst.ready)
     val rs1DataWire = MuxCase(io.idu2BaseReg.rs1Data, Seq(	
-        ((io.iduBypass.rd(0)===rs1IndexWire) & io.iduBypass.regWR(0) & io.iduBypass.Valid(0)) -> io.iduBypass.data(0),
-        ((io.iduBypass.rd(1)===rs1IndexWire) & io.iduBypass.regWR(1) & io.iduBypass.Valid(1)) -> io.iduBypass.data(1),
-        ((io.iduBypass.rd(2)===rs1IndexWire) & io.iduBypass.regWR(2) & io.iduBypass.Valid(2)) -> io.iduBypass.data(2)
+        ((bypassRdReg(0)===rs1IndexWire) & bypassWRReg(0) & bypassValidReg(0)) -> bypassDataReg(0),
+        ((bypassRdReg(1)===rs1IndexWire) & bypassWRReg(1) & bypassValidReg(1)) -> bypassDataReg(1),
+        ((bypassRdReg(2)===rs1IndexWire) & bypassWRReg(2) & bypassValidReg(2)) -> bypassDataReg(2)
     ))
-
     val rs2DataWire = MuxCase(io.idu2BaseReg.rs2Data, Seq(	
-        ((io.iduBypass.rd(0)===rs2IndexWire) & io.iduBypass.regWR(0) & io.iduBypass.Valid(0)) -> io.iduBypass.data(0),
-        ((io.iduBypass.rd(1)===rs2IndexWire) & io.iduBypass.regWR(1) & io.iduBypass.Valid(1)) -> io.iduBypass.data(1),
-        ((io.iduBypass.rd(2)===rs2IndexWire) & io.iduBypass.regWR(2) & io.iduBypass.Valid(2)) -> io.iduBypass.data(2)
+        ((bypassRdReg(0)===rs2IndexWire) & bypassWRReg(0) & bypassValidReg(0)) -> bypassDataReg(0),
+        ((bypassRdReg(1)===rs2IndexWire) & bypassWRReg(1) & bypassValidReg(1)) -> bypassDataReg(1),
+        ((bypassRdReg(2)===rs2IndexWire) & bypassWRReg(2) & bypassValidReg(2)) -> bypassDataReg(2)
     ))
 
     /* Counter */

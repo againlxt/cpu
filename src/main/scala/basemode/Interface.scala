@@ -74,7 +74,7 @@ class LSU2WBU extends Bundle {
 }
 
 class IDUBypass extends Bundle {
-	val rd 		= Input(Vec(3, UInt(3.W)))
+	val rd 		= Input(Vec(3, UInt(4.W)))
 	val data 	= Input(Vec(3, UInt(32.W)))
 	val regWR 	= Input(Vec(3, Bool()))
 	val Valid 	= Input(Vec(3, Bool()))
