@@ -44,7 +44,8 @@ class top extends Module {
 	val s_flow :: s_raw :: s_raw_end :: s_flush :: Nil = Enum(4)
 	val nextState = WireInit(s_flow)
 	val state = RegNext(nextState, s_flow)
-	val flushWire 		= exu.io.flush | wbu.io.flush
+	val branchFlush 	= WireInit(0.B)
+	val flushWire 		= branchFlush | wbu.io.flush
 	val flushEndWire 	= exu.io.exu2LSU.ready & exu.io.exu2LSU.valid
 	/* Bypass */
 	val bypassRd 		= Wire(Vec(3, UInt(4.W)))
@@ -70,6 +71,35 @@ class top extends Module {
 	bypassValid(0)	:= (exu.io.exu2LSU.bits.toReg =/= 1.U) & (state =/= s_flush)
 	bypassValid(1)	:= lsu.io.bypassValid
 	bypassValid(2)	:= 1.B
+	/* Branch */
+	/* Branch */
+	val branchCtrReg 	= RegEnable(exu.io.exu2Branch.branchCtr, exu.io.exu2LSU.valid & exu.io.exu2LSU.ready)
+	val zeroReg 		= RegEnable(exu.io.exu2Branch.zero, exu.io.exu2LSU.valid & exu.io.exu2LSU.ready)
+	val lessReg 		= RegEnable(exu.io.exu2Branch.less, exu.io.exu2LSU.valid & exu.io.exu2LSU.ready)
+	val branchCond 		= Module(new BranchCond)
+	branchCond.io.branch	:= branchCtrReg
+	branchCond.io.less 		:= lessReg
+	branchCond.io.zero 		:= zeroReg
+	val pcASrcWire 		= branchCond.io.pcASrc
+	val pcBSrcWire 		= branchCond.io.pcBSrc
+    val nextPC  		= MuxCase(0.U(32.W), Seq(	
+        (pcASrcWire === "b00".U).asBool	-> 4.U,
+		(pcASrcWire === "b01".U).asBool  -> exu.io.exu2LSU.bits.immData,
+		(pcASrcWire === "b10".U).asBool  -> 0.U
+    )) + MuxCase(	0.U(32.W), Seq(	
+        (pcBSrcWire === "b00".U).asBool  -> exu.io.exu2LSU.bits.pc,
+		(pcBSrcWire === "b01".U).asBool  -> exu.io.exu2LSU.bits.rs1Data,
+		(pcBSrcWire === "b10".U).asBool  -> exu.io.exu2LSU.bits.csrWData
+    ))
+	val idu2EXUHandReg 	= RegNext(exu.io.idu2EXU.valid & exu.io.idu2EXU.ready)
+	val exu2LSUHandReg 	= RegNext(exu.io.exu2LSU.valid & exu.io.exu2LSU.ready)
+	val correctPCReg 	= RegEnable(nextPC, exu2LSUHandReg)
+	val predictPCReg 	= RegEnable(idu.io.idu2EXU.bits.pc, idu.io.idu2EXU.valid & idu.io.idu2EXU.ready)
+	val branchCheck 	= Module(new BranchCheck)
+	branchCheck.io.predictPC := predictPCReg
+	branchCheck.io.correctPC := correctPCReg
+	branchFlush 			 := (!branchCheck.io.correct) & 
+	(correctPCReg(31, 24) =/= 0.U) & (state =/= s_flush) & idu2EXUHandReg
 	/* RAW */
 	val IFU2IDUHandReg = RegNext(ifu.io.inst.valid & ifu.io.inst.ready)
 	def conflict(rs: UInt, rd: UInt, index: UInt) = ((rs === rd) & (rd =/= 0.U) & (rs =/= 0.U)
@@ -99,15 +129,14 @@ class top extends Module {
 	pipelineConnect(exu.io.exu2LSU, lsu.io.exu2LSU)
 	pipelineConnect(lsu.io.lsu2WBU, wbu.io.lsu2WBU)
 	ifu.io.flush 			:= flushWire
-	ifu.io.correctPC 		:= Mux(wbu.io.flush, wbu.io.correctPC, Mux(exu.io.flush, exu.io.currentPC, 0.U))
+	ifu.io.correctPC 		:= Mux(wbu.io.flush, wbu.io.correctPC, Mux(exu.io.flush, correctPCReg, 0.U))
 	idu.io.isRAW 			:= (isRAW & ((state === s_flow) | (state === s_raw)))
 	idu.io.flush 			:= flushWire
 	idu.io.iduBypass.rd		:= bypassRd
 	idu.io.iduBypass.data 	:= bypassData
 	idu.io.iduBypass.regWR	:= bypassRegWR
 	idu.io.iduBypass.Valid	:= bypassValid
-	exu.io.flushing			:= (state === s_flush)
-	exu.io.ecallFlush		:= wbu.io.flush
+	exu.io.flush			:= flushWire
 	/* Counter */
 	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
 		val rawCnt = RegInit(0.U(32.W))

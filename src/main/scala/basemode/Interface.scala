@@ -56,6 +56,12 @@ class EXU2LSU extends Bundle {
 	val csrWr 		= Output(UInt(1.W))
 }
 
+class EXU2Branch extends Bundle {
+	val branchCtr 	= Output(UInt(4.W))
+	val less 		= Output(Bool())
+	val zero 		= Output(Bool())
+}
+
 class LSU2WBU extends Bundle {
 	val pc 			= Output(UInt(32.W))
 	val memData		= Output(UInt(32.W))
