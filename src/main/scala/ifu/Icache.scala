@@ -40,20 +40,20 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 	val hitWire     	= hitVec.reduce(_ || _)
 	val hitWay 			= PriorityEncoder(hitVec)
 
-	val sets 			= numOfCache/way
-	val wayIndexWidth 	= log2Up(way)
-	val replacement_algorithm	= Module(new Replacement_Algorithm
-	(way, sets, n, n, policy))
-	replacement_algorithm.io.update_entry 	:= hitWire
-	replacement_algorithm.io.update_index	:= indexWire
-	replacement_algorithm.io.set_index		:= wayIndexWidth.asUInt
-	val wayIndex 		= replacement_algorithm.io.way_index
-
-    val s_idle   = "b00001".U
+	val s_idle   = "b00001".U
     val s_check  = "b00010".U
     val s_find   = "b00100".U
 	val s_find_b = "b01000".U
     val state       = RegInit(1.U(5.W))
+
+	val sets 			= numOfCache/way
+	val wayIndexWidth 	= log2Up(way)
+	val replacement_algorithm	= Module(new Replacement_Algorithm
+	(way, sets, n, policy))
+	replacement_algorithm.io.update_entry 	:= !hitWire & (state === s_check)
+	replacement_algorithm.io.update_index	:= indexWire
+	val wayIndex 		= replacement_algorithm.io.way_index
+
     val findEndWire = Wire(Bool())
 	val busrtCnt 	  	= RegInit(0.U(8.W))
 	if(Config.SoC) {
@@ -349,21 +349,21 @@ class Replacement_Algorithm_Unit(way: Int, indexWidth: Int, policy: ReplacePolic
 	}
 }
 
-class Replacement_Algorithm(way: Int, sets: Int, indexWidth: Int, setIndexWidth: Int, policy: ReplacePolicy.Type) extends Module {
+class Replacement_Algorithm(way: Int, sets: Int, indexWidth: Int, policy: ReplacePolicy.Type) extends Module {
 	val io = IO(new Bundle {
 		val update_entry	= Input(Bool())
 		val update_index	= Input(UInt(indexWidth.W))
-		val set_index		= Input(UInt(setIndexWidth.W))
 		val way_index		= Output(UInt(indexWidth.W))
 	})
 
-	val wayArray 	= WireDefault(VecInit(Seq.fill(sets)(0.U(indexWidth.W))))
-	val unitArray 	= Seq.tabulate(sets) { i =>
-		val uint 				= Module(new Replacement_Algorithm_Unit(way, indexWidth, policy))
-		uint.io.update_entry	:= io.update_entry & (io.set_index === i.asUInt)
-		uint.io.update_index	:= io.update_index
-		io.way_index			:= wayArray(setIndexWidth) 
+	val wayArray = Wire(Vec(sets, UInt(indexWidth.W)))
+	val uints = Seq.fill(sets)(Module(new Replacement_Algorithm_Unit(way, indexWidth, policy)))
+
+	for (i <- 0 until sets) {
+		uints(i).io.update_entry := io.update_entry && (io.update_index === i.U)
+		uints(i).io.update_index := io.update_index
+		wayArray(i) := uints(i).io.index
 	}
 
-	io.way_index := wayArray(io.set_index)
+	io.way_index := wayArray(io.update_index)
 }
