@@ -74,7 +74,7 @@ class BranchPredict(depthOfTable: Int, offsetWidth: Int, tagWidth: Int, way: Int
 	})
 	/* BTB */
 	val pcReg 			= RegInit(Mux(Config.SoC.asBool, "h30000000".U(32.W), "h80000000".U(32.W)))
-	val indexWidth 		= log2Up(depthOfTable)
+	val indexWidth 		= log2Up(depthOfTable/way)
 	val indexWire 		= pcReg(indexWidth+offsetWidth-1, offsetWidth)
 	val tagWire 		= pcReg(tagWidth+indexWidth+offsetWidth-1, indexWidth+offsetWidth)
 	object BTB extends ChiselEnum {
