@@ -94,6 +94,7 @@ class top extends Module {
 	val idu2EXUHandReg 	= RegNext(exu.io.idu2EXU.valid & exu.io.idu2EXU.ready)
 	val exu2LSUHandReg 	= RegNext(exu.io.exu2LSU.valid & exu.io.exu2LSU.ready)
 	val correctPCReg 	= RegEnable(nextPC, exu2LSUHandReg)
+	val fromPCReg 		= RegEnable(lsu.io.exu2LSU.bits.pc, exu2LSUHandReg)
 	val predictPCReg 	= RegEnable(idu.io.idu2EXU.bits.pc, idu.io.idu2EXU.valid & idu.io.idu2EXU.ready)
 	val branchCheck 	= Module(new BranchCheck)
 	branchCheck.io.predictPC := predictPCReg
@@ -130,6 +131,7 @@ class top extends Module {
 	pipelineConnect(lsu.io.lsu2WBU, wbu.io.lsu2WBU)
 	ifu.io.flush 			:= flushWire
 	ifu.io.correctPC 		:= Mux(wbu.io.flush, wbu.io.correctPC, Mux(exu.io.flush, correctPCReg, 0.U))
+	ifu.io.fromPC			:= fromPCReg
 	idu.io.isRAW 			:= (isRAW & ((state === s_flow) | (state === s_raw)))
 	idu.io.flush 			:= flushWire
 	idu.io.iduBypass.rd		:= bypassRd
