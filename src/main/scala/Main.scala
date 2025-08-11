@@ -167,9 +167,9 @@ class top extends Module {
 	val pcWire 		= ifu.io.inst.bits.pc
 	/* Output */
 	/* Icache */
-	val numOfCache 	= 16
+	val numOfCache 	= 4
 	val sizeOfCache	= 128
-	val way 		= 4
+	val way 		= 1
 	val m 			= log2Ceil(sizeOfCache >> 3)
 	val n 			= log2Up(numOfCache/way)
 	val burstLen	= 4
