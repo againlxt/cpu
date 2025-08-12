@@ -77,29 +77,6 @@ class EXU extends Module {
 	csrALU.io.csrALUOP 	:= csrALUOPWire
 	val csrODataWire= csrALU.io.oData
 
-	/* Branch */
-	// val branchCond 		= Module(new BranchCond)
-	// branchCond.io.branch	:= branchCtrWire
-	// branchCond.io.less 		:= lessWire
-	// branchCond.io.zero 		:= zeroWire
-	// val pcASrcWire 		= branchCond.io.pcASrc
-	// val pcBSrcWire 		= branchCond.io.pcBSrc
-    // val nextPC  		= MuxCase(0.U(32.W), Seq(	
-    //     (pcASrcWire === "b00".U).asBool	-> 4.U,
-	// 	(pcASrcWire === "b01".U).asBool  -> immDataWire,
-	// 	(pcASrcWire === "b10".U).asBool  -> 0.U
-    // )) + MuxCase(	0.U(32.W), Seq(	
-    //     (pcBSrcWire === "b00".U).asBool  -> pcWire,
-	// 	(pcBSrcWire === "b01".U).asBool  -> rs1DataWire,
-	// 	(pcBSrcWire === "b10".U).asBool  -> csrODataWire
-    // ))
-	// val predictPCReg 	= RegEnable(nextPC, io.idu2EXU.valid & io.idu2EXU.ready)
-	// val handReg 		= RegNext(io.idu2EXU.valid & io.idu2EXU.ready)
-	// val branchCheck 	= Module(new BranchCheck)
-	// branchCheck.io.predictPC := pcWire
-	// branchCheck.io.correctPC := predictPCReg
-	// val flushWire 		= ((!branchCheck.io.correct) & (predictPCReg =/= 4.U) & (handReg) & (!io.flushing)) | io.ecallFlush
-
 	/* Counter */
 	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
 		val exuFinCalCnt = RegInit(0.U(32.W))
