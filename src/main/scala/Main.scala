@@ -169,13 +169,13 @@ class top extends Module {
 	val pcWire 		= ifu.io.inst.bits.pc
 	/* Output */
 	/* Icache */
-	val numOfCache 	= 4
-	val sizeOfCache	= 128
-	val way 		= 1
+	val numOfCache 	= Config.ICacheConfig.numOfCache
+	val sizeOfCache	= Config.ICacheConfig.sizeOfCache
+	val way 		= Config.ICacheConfig.ways
 	val m 			= log2Ceil(sizeOfCache >> 3)
 	val n 			= log2Up(numOfCache/way)
-	val burstLen	= 4
-	val burstSize 	= 16
+	val burstLen	= Config.ICacheConfig.burstLen
+	val burstSize 	= Config.ICacheConfig.burstSize
 	val icache = Module(new Icache(numOfCache, sizeOfCache, m, n, burstLen, burstSize, way, ReplacePolicy.LRU))
 	icache.io.addr 				:= ifu.io.ifu2Icache.addr
 	icache.io.enable			:= ifu.io.ifu2Icache.enable
