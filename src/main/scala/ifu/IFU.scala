@@ -17,51 +17,46 @@ object ReplacePolicy extends ChiselEnum {
 object DPPolicy extends ChiselEnum {
 	val BTFN = Value
 }
+
 class IFU extends Module {
     val io = IO(new Bundle {
         val inst     	= Decoupled(new IFU2IDU)
-		val ifu2Icache	= new IFU2Icache
+		val ifu2ICache	= Decoupled(new IFU2ICache)
+		val icache2IFU 	= Flipped(Decoupled(new ICache2IFU))
 		val flush 		= Input(Bool())
 		val correctPC 	= Input(UInt(32.W))
 		val fromPC 		= Input(UInt(32.W))
     })
-	val s_idle :: s_wait_bp :: s_wait_icache :: s_wait :: Nil = Enum(4)
-	val state 	= RegInit(s_idle)
-	state 	:= MuxLookup(state, s_idle)(List(
-		s_idle 			-> s_wait_icache,
-		s_wait_bp 		-> Mux(io.flush, s_wait_bp, s_wait_icache),
-		s_wait_icache	-> Mux(io.flush, s_wait, 
-		Mux(io.inst.valid & io.inst.ready, s_wait_bp, s_wait_icache)),
-		s_wait			-> Mux(io.ifu2Icache.oEnable, s_wait_bp, s_wait)
-	))
-	
-	val handWire = io.inst.valid & io.inst.ready
-	val branchPredict = Module(new BranchPredict(8, 2, 10, 1, ReplacePolicy.LRU, DPPolicy.BTFN))
+	/* Module */
+	val branchPredict 	= Module(new BranchPredict(8, 2, 10, 1, ReplacePolicy.LRU, DPPolicy.BTFN))
+	val pcFIFO 			= Module(new Queue(Vec(2, UInt(32.W)), 4, true, true, false, true))
+
+	/* HandShake */
+
+	/* BPU */
 	branchPredict.io.correctPC	:= io.correctPC
 	branchPredict.io.fromPC 	:= io.fromPC
 	branchPredict.io.flush 		:= io.flush
-	branchPredict.io.next 		:= handWire
-	val pc 	= branchPredict.io.predictPC
+	branchPredict.io.ifu2ICache	<> io.ifu2ICache
 
 	/* Counter */
 	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
 		val ifuGetInstCounter = RegInit(0.U(32.W))
-		when (state === s_wait_bp) {
-			ifuGetInstCounter := 0.U
-		} .otherwise {
-			ifuGetInstCounter := ifuGetInstCounter + 1.U
-		}
 		val IGIC 			= Module(new PerformanceCounter)
-		IGIC.io.valid		:= io.ifu2Icache.oEnable
+		IGIC.io.valid		:= 0.B
 		IGIC.io.counterType	:= PerformanceCounterType.IFUGETINST.asUInt
 		IGIC.io.data 		:= ifuGetInstCounter
 	}
 
-	io.ifu2Icache.enable:= ((state === s_idle) | (state === s_wait_bp)) & (!io.flush)
-	io.ifu2Icache.addr	:= pc
-	io.inst.valid		:= io.ifu2Icache.oEnable & (state === s_wait_icache) & (!io.flush)
-	io.inst.bits.inst	:= io.ifu2Icache.inst
-	io.inst.bits.pc		:= pc
+	pcFIFO.io.enq.valid		:= io.icache2IFU.valid
+	pcFIFO.io.enq.bits(0)	:= io.icache2IFU.bits.pc
+	pcFIFO.io.enq.bits(1)	:= io.icache2IFU.bits.inst
+	io.icache2IFU.ready		:= pcFIFO.io.enq.ready
+	pcFIFO.io.flush.foreach(_ := io.flush)
+	pcFIFO.io.deq.ready		:= io.inst.ready
+	io.inst.bits.pc			:= pcFIFO.io.deq.bits(0)
+	io.inst.bits.inst		:= pcFIFO.io.deq.bits(1)
+	io.inst.valid			:= pcFIFO.io.deq.valid
 }
 
 class BranchPredict(depthOfTable: Int, offsetWidth: Int, tagWidth: Int, way: Int, raPolicy: ReplacePolicy.Type, dpPolicy: DPPolicy.Type) extends Module {
@@ -69,8 +64,7 @@ class BranchPredict(depthOfTable: Int, offsetWidth: Int, tagWidth: Int, way: Int
 		val correctPC 	= Input(UInt(32.W))
 		val fromPC 		= Input(UInt(32.W))
 		val flush 		= Input(Bool())
-		val next 		= Input(Bool())
-		val predictPC 	= Output(UInt(32.W))
+		val ifu2ICache	= Decoupled(new IFU2ICache)	
 	})
 	/* BTB */
 	val pcReg 			= RegInit(Mux(Config.SoC.asBool, "h30000000".U(32.W), "h80000000".U(32.W)))
@@ -111,11 +105,12 @@ class BranchPredict(depthOfTable: Int, offsetWidth: Int, tagWidth: Int, way: Int
 	val normalPC 	= pcReg + 4.U
 	when(io.flush) {
 		pcReg 			:= io.correctPC
-	} .elsewhen(io.next) {
+	} .elsewhen(io.ifu2ICache.ready) {
 		pcReg 			:= Mux(hitWire, Mux(jumpWire, btbPCWire, normalPC), normalPC)
 	}
 
-	io.predictPC	:= pcReg
+	io.ifu2ICache.valid 	:= !io.flush
+	io.ifu2ICache.bits.pc	:= pcReg
 }
 
 class directionPredictor(dpPolicy: DPPolicy.Type) extends Module {

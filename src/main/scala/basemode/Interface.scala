@@ -94,10 +94,11 @@ class C2IFU extends Bundle {
 }
 
 class IFU2ICache extends Bundle {
-	val addr 	= Output(UInt(32.W))
+	val pc 		= Output(UInt(32.W))
 }
 
 class ICache2IFU extends Bundle {
+	val pc 		= Output(UInt(32.W))
 	val inst 	= Output(UInt(32.W))
 }
 

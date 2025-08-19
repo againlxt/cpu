@@ -177,10 +177,8 @@ class top extends Module {
 	val burstLen	= Config.ICacheConfig.burstLen
 	val burstSize 	= Config.ICacheConfig.burstSize
 	val icache = Module(new Icache(numOfCache, sizeOfCache, m, n, burstLen, burstSize, way, ReplacePolicy.LRU))
-	icache.io.addr 				:= ifu.io.ifu2Icache.addr
-	icache.io.enable			:= ifu.io.ifu2Icache.enable
-	ifu.io.ifu2Icache.oEnable	:= icache.io.oEnable
-	ifu.io.ifu2Icache.inst		:= icache.io.inst
+	ifu.io.ifu2ICache		<> icache.io.ifu2ICache
+	icache.io.icache2IFU	<> ifu.io.icache2IFU
 	icache.io.icache2Mem 		<> icacheSkidBuffer.io.axiSlave
 	icacheSkidBuffer.io.axiMaster	<> xbarAXI.io.axiSlaveIFU
 	if(Config.hasDPIC & (!Config.isSTA)) {

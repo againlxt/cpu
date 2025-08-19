@@ -19,18 +19,17 @@ import dpic.PerformanceCounterType
   */
 class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, burstSize: Int, way: Int, policy: ReplacePolicy.Type) extends Module {
     val io = IO(new Bundle {
-        val addr        = Input(UInt(32.W))
-        val enable      = Input(Bool())
-        val inst        = Output(UInt(32.W))
-        val oEnable     = Output(Bool())
+        val ifu2ICache	= Flipped(Decoupled(new IFU2ICache))
+		val icache2IFU 	= Decoupled(new ICache2IFU)
         val icache2Mem  = new AXI
 		val wbu2Icache	= Input(Bool())
+		val flush 		= Input(Bool())
     })
 	val cacheValidReg 	= RegInit(VecInit(Seq.fill(numOfCache/way)(VecInit(Seq.fill(way)(false.B)))))
 	val tagReg   		= RegInit(VecInit(Seq.fill(numOfCache/way)(VecInit(Seq.fill(way)(0.U((32-m-n).W))))))
 	val cache  			= RegInit(VecInit(Seq.fill(numOfCache/way)(VecInit(Seq.fill(way)(VecInit(Seq.fill(burstSize >> 2)(0.U(32.W))))))))
 
-    val addrReg         = RegEnable(io.addr, io.enable)
+    val addrReg         = RegEnable(io.ifu2ICache.bits.pc, io.ifu2ICache.valid & io.ifu2ICache.ready)
 	val tagWire			= addrReg(31, m+n)
 	val indexWire 		= addrReg(m+n-1, m)
 	val offsetWire 		= addrReg(m-1,0) >> 2
@@ -63,7 +62,7 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 	}
 	val isSdram 	= (addrReg(31,28) >= 10.U)
     state := MuxLookup(state, s_idle)(List(
-        s_idle      -> Mux(io.enable, s_check, s_idle),
+        s_idle      -> Mux(io.ifu2ICache.valid & io.ifu2ICache.ready, s_check, s_idle),
         s_check     -> Mux(hitWire, s_idle, Mux(isSdram, s_find_b, s_find)),
         s_find      -> Mux(findEndWire, s_idle, s_find),
 		s_find_b    -> Mux(findEndWire, s_idle, s_find_b)
@@ -224,7 +223,7 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 	val rdataReg    = RegEnable(io.icache2Mem.rdata, findEndWire)	
 	switch(state) {
 		is(s_idle) {
-			oValidReg 	:= Mux(oValidReg, !io.enable, 0.B)
+			oValidReg 	:= Mux(oValidReg, !(io.icache2IFU.valid & io.icache2IFU.ready), 0.B)
 		}
 		is(s_check){
 			oValidReg := hitWire
@@ -237,9 +236,11 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 		}
 	}
 
-    io.oEnable := oValidReg 
-    io.inst    := Mux(((state =/= s_check) & findEndWire & (offsetWire === 3.U))
+	io.ifu2ICache.ready			:= (state === s_idle)
+    io.icache2IFU.valid 		:= oValidReg 
+    io.icache2IFU.bits.inst    	:= Mux(((state =/= s_check) & findEndWire & (offsetWire === 3.U))
     , rdataReg, cache(addrReg(m+n-1, m))(wayIndex)(offsetWire))
+	io.icache2IFU.bits.pc		:= addrReg
 }
 
 class LRU(way: Int, indexWidth: Int) extends Module {
