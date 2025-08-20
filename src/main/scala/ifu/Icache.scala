@@ -224,7 +224,7 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 	}
 	val oValidReg	= RegInit(0.B)
 	val rdataReg    = RegEnable(io.icache2Mem.rdata, findEndWire)
-	when(state === s_wait) {
+	when((state === s_wait) | (state === s_idle)) {
 		flushReg := 0.B
 	} .otherwise {
 		flushReg := Mux(flushReg, flushReg, io.flush)
