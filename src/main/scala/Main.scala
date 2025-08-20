@@ -39,6 +39,14 @@ class top extends Module {
 	val wbu 			= Module(new WBU)
 	val xbarAXI			= Module(new XbarAXI)
 	val icacheSkidBuffer= Module(new AXISkidBuffer(false, false, false, false, false))
+	val numOfCache 	= Config.ICacheConfig.numOfCache
+	val sizeOfCache	= Config.ICacheConfig.sizeOfCache
+	val way 		= Config.ICacheConfig.ways
+	val m 			= log2Ceil(sizeOfCache >> 3)
+	val n 			= log2Up(numOfCache/way)
+	val burstLen	= Config.ICacheConfig.burstLen
+	val burstSize 	= Config.ICacheConfig.burstSize
+	val icache = Module(new Icache(numOfCache, sizeOfCache, m, n, burstLen, burstSize, way, ReplacePolicy.LRU))
 
 	/* PipeLine */
 	val s_flow :: s_raw :: s_raw_end :: s_flush :: Nil = Enum(4)
@@ -129,6 +137,7 @@ class top extends Module {
 	pipelineConnect(idu.io.idu2EXU, exu.io.idu2EXU)
 	pipelineConnect(exu.io.exu2LSU, lsu.io.exu2LSU)
 	pipelineConnect(lsu.io.lsu2WBU, wbu.io.lsu2WBU)
+	icache.io.flush			:= flushWire
 	ifu.io.flush 			:= flushWire
 	ifu.io.correctPC 		:= Mux(wbu.io.flush, wbu.io.correctPC, Mux(exu.io.flush, correctPCReg, 0.U))
 	ifu.io.fromPC			:= fromPCReg
@@ -169,14 +178,6 @@ class top extends Module {
 	val pcWire 		= ifu.io.inst.bits.pc
 	/* Output */
 	/* Icache */
-	val numOfCache 	= Config.ICacheConfig.numOfCache
-	val sizeOfCache	= Config.ICacheConfig.sizeOfCache
-	val way 		= Config.ICacheConfig.ways
-	val m 			= log2Ceil(sizeOfCache >> 3)
-	val n 			= log2Up(numOfCache/way)
-	val burstLen	= Config.ICacheConfig.burstLen
-	val burstSize 	= Config.ICacheConfig.burstSize
-	val icache = Module(new Icache(numOfCache, sizeOfCache, m, n, burstLen, burstSize, way, ReplacePolicy.LRU))
 	ifu.io.ifu2ICache		<> icache.io.ifu2ICache
 	icache.io.icache2IFU	<> ifu.io.icache2IFU
 	icache.io.icache2Mem 		<> icacheSkidBuffer.io.axiSlave

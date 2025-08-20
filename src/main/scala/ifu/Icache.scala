@@ -38,11 +38,13 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 	val hitVec 			= wayValidVec.zip(wayTagVec).map { case (v, t) => v && (t === tagWire) }
 	val hitWire     	= hitVec.reduce(_ || _)
 	val hitWay 			= PriorityEncoder(hitVec)
+	val flushReg 		= RegInit(0.B)
 
 	val s_idle   = "b00001".U
     val s_check  = "b00010".U
     val s_find   = "b00100".U
 	val s_find_b = "b01000".U
+	val s_wait 	 = "b10000".U
     val state       = RegInit(1.U(5.W))
 
 	val sets 			= numOfCache/way
@@ -63,9 +65,10 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 	val isSdram 	= (addrReg(31,28) >= 10.U)
     state := MuxLookup(state, s_idle)(List(
         s_idle      -> Mux(io.ifu2ICache.valid & io.ifu2ICache.ready, s_check, s_idle),
-        s_check     -> Mux(hitWire, s_idle, Mux(isSdram, s_find_b, s_find)),
-        s_find      -> Mux(findEndWire, s_idle, s_find),
-		s_find_b    -> Mux(findEndWire, s_idle, s_find_b)
+        s_check     -> Mux(hitWire, s_wait, Mux(isSdram, s_find_b, s_find)),
+        s_find      -> Mux(findEndWire, s_wait, s_find),
+		s_find_b    -> Mux(findEndWire, s_wait, s_find_b),
+		s_wait 		-> Mux((io.icache2IFU.valid & io.icache2IFU.ready) | io.flush | flushReg, s_idle, s_wait)
     ))
 
     /* AW */
@@ -220,13 +223,18 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 		MPC.io.data 		:= missPenaltyCounter
 	}
 	val oValidReg	= RegInit(0.B)
-	val rdataReg    = RegEnable(io.icache2Mem.rdata, findEndWire)	
+	val rdataReg    = RegEnable(io.icache2Mem.rdata, findEndWire)
+	when(state === s_wait) {
+		flushReg := 0.B
+	} .otherwise {
+		flushReg := Mux(flushReg, flushReg, io.flush)
+	}
 	switch(state) {
 		is(s_idle) {
-			oValidReg 	:= Mux(oValidReg, !(io.icache2IFU.valid & io.icache2IFU.ready), 0.B)
+			oValidReg 	:= 0.B
 		}
 		is(s_check){
-			oValidReg := hitWire
+			oValidReg 	:= hitWire
 		}
 		is(s_find) {
 			oValidReg := findEndWire
@@ -234,10 +242,13 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 		is(s_find_b) {
 			oValidReg := findEndWire
 		}
+		is(s_wait) {
+			oValidReg := Mux((io.icache2IFU.valid & io.icache2IFU.ready) | io.flush | flushReg, 0.B, oValidReg)
+		}
 	}
 
 	io.ifu2ICache.ready			:= (state === s_idle)
-    io.icache2IFU.valid 		:= oValidReg 
+    io.icache2IFU.valid 		:= oValidReg & !(io.flush | flushReg)
     io.icache2IFU.bits.inst    	:= Mux(((state =/= s_check) & findEndWire & (offsetWire === 3.U))
     , rdataReg, cache(addrReg(m+n-1, m))(wayIndex)(offsetWire))
 	io.icache2IFU.bits.pc		:= addrReg
