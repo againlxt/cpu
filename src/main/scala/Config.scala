@@ -15,5 +15,7 @@ object Config {
     def ways:         Int = 2
     def burstLen:     Int = 4
     def burstSize:    Int = 16 /* Bytes */
+    def m: 		        Int = log2Ceil(sizeOfCache >> 3)
+	  def n:			      Int = log2Up(numOfCache/ways)
   }
 }

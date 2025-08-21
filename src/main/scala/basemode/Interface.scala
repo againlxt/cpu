@@ -97,9 +97,43 @@ class IFU2ICache extends Bundle {
 	val pc 		= Output(UInt(32.W))
 }
 
+class FetchReqIO extends Bundle {
+	val ifu2FetchReq 		= Flipped(Decoupled(new IFU2ICache))
+	val fetchReq2CheckUnit	= Decoupled(Output(UInt(32.W)))
+}
+
+class CheckUnit2PreDecoder extends Bundle {
+	val pc 			= Output(UInt(32.W))
+	val inst		= Output(UInt(32.W))
+}
+
+class CheckUnit2Sram extends Bundle {
+	val cacheLineVec 	= Input(VecInit(Seq.fill(Config.ICacheConfig.ways)
+	(Vec(Config.ICacheConfig.burstSize >> 2, UInt(32.W)))))
+	val tagVec 			= Input(VecInit(Seq.fill(Config.ICacheConfig.ways)
+	(UInt((32-Config.ICacheConfig.m-Config.ICacheConfig.n).W))))
+	val cacheBuf 		= Output(VecInit(Seq.fill(Config.ICacheConfig.burstLen)(0.U(32.W))))
+	val tagBuf 			= Output(UInt((32-Config.ICacheConfig.m-Config.ICacheConfig.n).W))
+	val replaceWay 		= Output(UInt(Config.ICacheConfig.ways.W))
+	val wen 			= Output(Bool())
+}
+
+class CheckUnitIO extends Bundle {
+	val fetchReq2CheckUnit		= Flipped(Decoupled(Output(UInt(32.W))))
+	val checkUnit2PreDecoder 	= Decoupled(new CheckUnit2PreDecoder)
+	val checkUnit2Mem 			= new AXI
+	val checkUnit2Sram 			= new CheckUnit2Sram
+	val wbu2Icache				= Input(Bool())
+}
+
 class ICache2IFU extends Bundle {
 	val pc 		= Output(UInt(32.W))
 	val inst 	= Output(UInt(32.W))
+}
+
+class PreDecoderIO extends Bundle {
+	val checkUnit2PreDecoder 	= Flipped(Decoupled(new CheckUnit2PreDecoder))
+	val preDecoder2IFU 			= Decoupled(new ICache2IFU)
 }
 
 class IDU2BaseReg extends Bundle {
@@ -144,6 +178,7 @@ class IFUSRAM extends Bundle {
 	val valid 	= Output(UInt(1.W))
 	val data 	= Output(UInt(32.W))
 }
+
 class WBUSRAM extends Bundle {
 	val clk 	= Output(UInt(1.W))
 	val raddr	= Output(UInt(32.W))
