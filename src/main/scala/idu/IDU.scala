@@ -84,10 +84,10 @@ class IDU extends Module {
     ))
 
     /* Bypass */
-    val bypassRdReg       = RegEnable(io.iduBypass.rd, io.inst.valid & io.inst.ready | (nextState === s_wait))
-    val bypassWRReg       = RegEnable(io.iduBypass.regWR, io.inst.valid & io.inst.ready | (nextState === s_wait))
-    val bypassValidReg    = RegEnable(io.iduBypass.Valid, io.inst.valid & io.inst.ready | (nextState === s_wait))
-    val bypassDataReg     = RegEnable(io.iduBypass.data, io.inst.valid & io.inst.ready | (nextState === s_wait))
+    val bypassRdReg       = io.iduBypass.rd
+    val bypassWRReg       = io.iduBypass.regWR
+    val bypassValidReg    = io.iduBypass.Valid
+    val bypassDataReg     = io.iduBypass.data
     val rs1DataWire = MuxCase(io.idu2BaseReg.rs1Data, Seq(	
         ((bypassRdReg(0)===rs1IndexWire) & bypassWRReg(0) & bypassValidReg(0)) -> bypassDataReg(0),
         ((bypassRdReg(1)===rs1IndexWire) & bypassWRReg(1) & bypassValidReg(1)) -> bypassDataReg(1),
