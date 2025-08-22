@@ -100,6 +100,7 @@ class IFU2ICache extends Bundle {
 class FetchReqIO extends Bundle {
 	val ifu2FetchReq 		= Flipped(Decoupled(new IFU2ICache))
 	val fetchReq2CheckUnit	= Decoupled(Output(UInt(32.W)))
+	val flush 				= Input(Bool())
 }
 
 class CheckUnit2PreDecoder extends Bundle {
@@ -124,6 +125,7 @@ class CheckUnitIO extends Bundle {
 	val checkUnit2Mem 			= new AXI
 	val checkUnit2Sram 			= new CheckUnit2Sram
 	val wbu2Icache				= Input(Bool())
+	val flush 					= Input(Bool())
 }
 
 class ICache2IFU extends Bundle {
@@ -134,6 +136,7 @@ class ICache2IFU extends Bundle {
 class PreDecoderIO extends Bundle {
 	val checkUnit2PreDecoder 	= Flipped(Decoupled(new CheckUnit2PreDecoder))
 	val preDecoder2IFU 			= Decoupled(new ICache2IFU)
+	val flush 					= Input(Bool())
 }
 
 class IDU2BaseReg extends Bundle {

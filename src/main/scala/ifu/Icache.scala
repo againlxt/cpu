@@ -253,9 +253,9 @@ class IcachePipe(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: In
     })
 	def pipelineConnect[T <: Data, T2 <: Data](prevOut: DecoupledIO[T],
 	thisIn: DecoupledIO[T]) = {
-		prevOut.ready 	:= thisIn.ready & (!io.flush)
+		prevOut.ready 	:= thisIn.ready
 		thisIn.bits 	:= RegEnable(prevOut.bits, prevOut.valid & thisIn.ready)
-		thisIn.valid 	:= prevOut.valid & thisIn.ready & (!io.flush)
+		thisIn.valid 	:= prevOut.valid & thisIn.ready
 	}
 
 	val cacheMem 	= Seq.fill(way)(SyncReadMem(numOfCache/way, Vec(burstSize >> 2, UInt(32.W))))
@@ -281,6 +281,9 @@ class IcachePipe(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: In
 		}
 	}
 	fetchReq.io.fetchReqIO.ifu2FetchReq <> io.ifu2ICache
+	fetchReq.io.fetchReqIO.flush		:= io.flush
+	checkUnit.io.checkUnitIO.flush		:= io.flush
+	preDecoder.io.preDecoderIO.flush	:= io.flush
 	pipelineConnect(fetchReq.io.fetchReqIO.fetchReq2CheckUnit, checkUnit.io.checkUnitIO.fetchReq2CheckUnit)
 	pipelineConnect(checkUnit.io.checkUnitIO.checkUnit2PreDecoder, preDecoder.io.preDecoderIO.checkUnit2PreDecoder)
 	preDecoder.io.preDecoderIO.preDecoder2IFU <> io.icache2IFU
@@ -292,24 +295,29 @@ class FetchReq extends Module {
 	})
 	val validReg = RegInit(0.B)
 	val readyReg = RegInit(1.B)
-	switch(validReg) {
-		is(0.B) { validReg := io.fetchReqIO.ifu2FetchReq.valid & io.fetchReqIO.ifu2FetchReq.ready}
-		is(1.B) {
-			validReg := Mux(io.fetchReqIO.fetchReq2CheckUnit.valid & io.fetchReqIO.fetchReq2CheckUnit.ready,
-			Mux(io.fetchReqIO.ifu2FetchReq.valid & io.fetchReqIO.ifu2FetchReq.ready, 1.B, 0.B), 1.B)
+	when(io.fetchReqIO.flush) {
+		validReg := 0.B
+		readyReg := 1.B
+	} .otherwise {
+		switch(validReg) {
+			is(0.B) { validReg := io.fetchReqIO.ifu2FetchReq.valid & io.fetchReqIO.ifu2FetchReq.ready}
+			is(1.B) {
+				validReg := Mux(io.fetchReqIO.fetchReq2CheckUnit.valid & io.fetchReqIO.fetchReq2CheckUnit.ready,
+				Mux(io.fetchReqIO.ifu2FetchReq.valid & io.fetchReqIO.ifu2FetchReq.ready, 1.B, 0.B), 1.B)
+			}
 		}
-	}
-	switch(readyReg) {
-		is(0.B) { readyReg := io.fetchReqIO.fetchReq2CheckUnit.valid & io.fetchReqIO.fetchReq2CheckUnit.ready }
-		is(1.B) {
-			readyReg := Mux(io.fetchReqIO.ifu2FetchReq.valid & io.fetchReqIO.ifu2FetchReq.ready, 
-			Mux(io.fetchReqIO.fetchReq2CheckUnit.valid & io.fetchReqIO.fetchReq2CheckUnit.ready, 1.B, 0.B), 1.B)
+		switch(readyReg) {
+			is(0.B) { readyReg := io.fetchReqIO.fetchReq2CheckUnit.valid & io.fetchReqIO.fetchReq2CheckUnit.ready }
+			is(1.B) {
+				readyReg := Mux(io.fetchReqIO.ifu2FetchReq.valid & io.fetchReqIO.ifu2FetchReq.ready, 
+				Mux(io.fetchReqIO.fetchReq2CheckUnit.valid & io.fetchReqIO.fetchReq2CheckUnit.ready, 1.B, 0.B), 1.B)
+			}
 		}
 	}
 
 	io.fetchReqIO.ifu2FetchReq.ready 		:= readyReg
 	io.fetchReqIO.fetchReq2CheckUnit.bits	:= io.fetchReqIO.ifu2FetchReq.bits
-	io.fetchReqIO.fetchReq2CheckUnit.valid	:= validReg
+	io.fetchReqIO.fetchReq2CheckUnit.valid	:= validReg & (!io.fetchReqIO.flush)
 }
 
 class CheckUnit(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, burstSize: Int, way: Int, policy: ReplacePolicy.Type) extends Module {
@@ -469,23 +477,29 @@ class CheckUnit(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int
 	/* AXI End */
 	val validReg = RegInit(0.B)
 	val readyReg = RegInit(1.B)
-	switch(validReg) {
-		is(0.B) { validReg := io.checkUnitIO.fetchReq2CheckUnit.valid & io.checkUnitIO.fetchReq2CheckUnit.ready}
-		is(1.B) {
-			validReg := Mux(io.checkUnitIO.checkUnit2PreDecoder.valid & io.checkUnitIO.checkUnit2PreDecoder.ready,
-			Mux(io.checkUnitIO.fetchReq2CheckUnit.valid & io.checkUnitIO.fetchReq2CheckUnit.ready, 1.B, 0.B), 1.B)
+	when (io.checkUnitIO.flush) {
+		validReg := 0.B
+		readyReg := 1.B
+	} .otherwise {
+		switch(validReg) {
+			is(0.B) { validReg := io.checkUnitIO.fetchReq2CheckUnit.valid & io.checkUnitIO.fetchReq2CheckUnit.ready}
+			is(1.B) {
+				validReg := Mux(io.checkUnitIO.checkUnit2PreDecoder.valid & io.checkUnitIO.checkUnit2PreDecoder.ready,
+				Mux(io.checkUnitIO.fetchReq2CheckUnit.valid & io.checkUnitIO.fetchReq2CheckUnit.ready, 1.B, 0.B), 1.B)
+			}
+		}
+		switch(readyReg) {
+			is(0.B) { readyReg := io.checkUnitIO.checkUnit2PreDecoder.valid & io.checkUnitIO.checkUnit2PreDecoder.ready }
+			is(1.B) {
+				readyReg := Mux(io.checkUnitIO.fetchReq2CheckUnit.valid & io.checkUnitIO.fetchReq2CheckUnit.ready, 
+				Mux(io.checkUnitIO.checkUnit2PreDecoder.valid & io.checkUnitIO.checkUnit2PreDecoder.ready, 1.B, 0.B), 1.B)
+			}
 		}
 	}
-	switch(readyReg) {
-		is(0.B) { readyReg := io.checkUnitIO.checkUnit2PreDecoder.valid & io.checkUnitIO.checkUnit2PreDecoder.ready }
-		is(1.B) {
-			readyReg := Mux(io.checkUnitIO.fetchReq2CheckUnit.valid & io.checkUnitIO.fetchReq2CheckUnit.ready, 
-			Mux(io.checkUnitIO.checkUnit2PreDecoder.valid & io.checkUnitIO.checkUnit2PreDecoder.ready, 1.B, 0.B), 1.B)
-		}
-	}
-	
-	io.checkUnitIO.checkUnit2PreDecoder.valid 		:= 
-	validReg & (hitWire & (state === s_flow)) | ((state =/= s_flow) & axiHitVecReg(offsetWire))
+
+	io.checkUnitIO.checkUnit2PreDecoder.valid 		:= validReg & 
+	(hitWire & (state === s_flow)) | ((state =/= s_flow) & axiHitVecReg(offsetWire)) & 
+	(!io.checkUnitIO.flush)
 	io.checkUnitIO.checkUnit2PreDecoder.bits.inst	:= 
 	Mux((state === s_flow), cacheLineRegVec(hitWay)(offsetWire), axiDataVecReg(offsetWire))
 	io.checkUnitIO.fetchReq2CheckUnit.ready			:= 
@@ -503,23 +517,28 @@ class PreDecoder extends Module {
 
 	val validReg = RegInit(0.B)
 	val readyReg = RegInit(1.B)
-	switch(validReg) {
-		is(0.B) { validReg := io.preDecoderIO.checkUnit2PreDecoder.valid & io.preDecoderIO.checkUnit2PreDecoder.ready}
-		is(1.B) {
-			validReg := Mux(io.preDecoderIO.preDecoder2IFU.valid & io.preDecoderIO.preDecoder2IFU.ready,
-			Mux(io.preDecoderIO.checkUnit2PreDecoder.valid & io.preDecoderIO.checkUnit2PreDecoder.ready, 1.B, 0.B), 1.B)
+	when(io.preDecoderIO.flush) {
+		validReg := 0.B
+		readyReg := 1.B
+	} .otherwise {
+		switch(validReg) {
+			is(0.B) { validReg := io.preDecoderIO.checkUnit2PreDecoder.valid & io.preDecoderIO.checkUnit2PreDecoder.ready}
+			is(1.B) {
+				validReg := Mux(io.preDecoderIO.preDecoder2IFU.valid & io.preDecoderIO.preDecoder2IFU.ready,
+				Mux(io.preDecoderIO.checkUnit2PreDecoder.valid & io.preDecoderIO.checkUnit2PreDecoder.ready, 1.B, 0.B), 1.B)
+			}
 		}
-	}
-	switch(readyReg) {
-		is(0.B) { readyReg := io.preDecoderIO.preDecoder2IFU.valid & io.preDecoderIO.preDecoder2IFU.ready }
-		is(1.B) {
-			readyReg := Mux(io.preDecoderIO.checkUnit2PreDecoder.valid & io.preDecoderIO.checkUnit2PreDecoder.ready, 
-			Mux(io.preDecoderIO.preDecoder2IFU.valid & io.preDecoderIO.preDecoder2IFU.ready, 1.B, 0.B), 1.B)
+		switch(readyReg) {
+			is(0.B) { readyReg := io.preDecoderIO.preDecoder2IFU.valid & io.preDecoderIO.preDecoder2IFU.ready }
+			is(1.B) {
+				readyReg := Mux(io.preDecoderIO.checkUnit2PreDecoder.valid & io.preDecoderIO.checkUnit2PreDecoder.ready, 
+				Mux(io.preDecoderIO.preDecoder2IFU.valid & io.preDecoderIO.preDecoder2IFU.ready, 1.B, 0.B), 1.B)
+			}
 		}
 	}
 
 	io.preDecoderIO.checkUnit2PreDecoder.ready	:= readyReg
-	io.preDecoderIO.preDecoder2IFU.valid		:= validReg
+	io.preDecoderIO.preDecoder2IFU.valid		:= validReg & io.preDecoderIO.flush
 	io.preDecoderIO.preDecoder2IFU.bits 		:= io.preDecoderIO.checkUnit2PreDecoder.bits	
 }
 
