@@ -109,14 +109,22 @@ class CheckUnit2PreDecoder extends Bundle {
 }
 
 class CheckUnit2Sram extends Bundle {
-	val cacheLineVec 	= Input(VecInit(Seq.fill(Config.ICacheConfig.ways)
-	(Vec(Config.ICacheConfig.burstSize >> 2, UInt(32.W)))))
-	val tagVec 			= Input(VecInit(Seq.fill(Config.ICacheConfig.ways)
-	(UInt((32-Config.ICacheConfig.m-Config.ICacheConfig.n).W))))
-	val cacheBuf 		= Output(VecInit(Seq.fill(Config.ICacheConfig.burstLen)(0.U(32.W))))
-	val tagBuf 			= Output(UInt((32-Config.ICacheConfig.m-Config.ICacheConfig.n).W))
-	val replaceWay 		= Output(UInt(Config.ICacheConfig.ways.W))
-	val wen 			= Output(Bool())
+  val cacheLineVec = Input(Vec(
+    Config.ICacheConfig.ways,
+    Vec(Config.ICacheConfig.burstSize >> 2, UInt(32.W))
+  ))
+  val tagVec = Input(Vec(
+    Config.ICacheConfig.ways,
+    UInt((32 - Config.ICacheConfig.m - Config.ICacheConfig.n).W)
+  ))
+  val cacheBuf = Output(Vec(
+    Config.ICacheConfig.burstLen,
+    UInt(32.W)
+  ))
+  val tagBuf 		= Output(UInt((32 - Config.ICacheConfig.m - Config.ICacheConfig.n).W))
+  val replaceWay 	= Output(UInt(Config.ICacheConfig.ways.W))
+  val replaceIndex	= Output(UInt(Config.ICacheConfig.n.W))
+  val wen = Output(Bool())
 }
 
 class CheckUnitIO extends Bundle {

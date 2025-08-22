@@ -267,22 +267,24 @@ class IcachePipe(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: In
 	val indexWire 			= fetchReq.io.fetchReqIO.fetchReq2CheckUnit.bits(m+n-1, m)
 	val fetchReqHandWire	= fetchReq.io.fetchReqIO.fetchReq2CheckUnit.valid & 
 	fetchReq.io.fetchReqIO.fetchReq2CheckUnit.ready
-	val cacheLineVec		= Seq.fill(way)(cacheMem(way).read(indexWire, fetchReqHandWire))
-	val tagVec 				= Seq.fill(way)(tagMem(way).read(indexWire, fetchReqHandWire))
+	val cacheLineVec = cacheMem.map(mem => mem.read(indexWire, fetchReqHandWire))
+	val tagVec       = tagMem.map(mem => mem.read(indexWire, fetchReqHandWire))	
 
 	checkUnit.io.checkUnitIO.checkUnit2Mem <> io.icache2Mem
 	checkUnit.io.checkUnitIO.checkUnit2Sram.cacheLineVec 	:= cacheLineVec
 	checkUnit.io.checkUnitIO.checkUnit2Sram.tagVec			:= tagVec
-	val replaceWay = checkUnit.io.checkUnitIO.checkUnit2Sram.replaceWay
+	val replaceWay 		= checkUnit.io.checkUnitIO.checkUnit2Sram.replaceWay
+	val replaceIndex	= 
 	for (w <- 0 until way) {
 		when (replaceWay === w.U & checkUnit.io.checkUnitIO.checkUnit2Sram.wen) {
-			cacheMem(w).write(indexWire, checkUnit.io.checkUnitIO.checkUnit2Sram.cacheBuf)
-			tagMem(w).write(indexWire, checkUnit.io.checkUnitIO.checkUnit2Sram.tagBuf)
+			cacheMem(w).write(checkUnit.io.checkUnitIO.checkUnit2Sram.replaceIndex, checkUnit.io.checkUnitIO.checkUnit2Sram.cacheBuf)
+			tagMem(w).write(checkUnit.io.checkUnitIO.checkUnit2Sram.replaceIndex, checkUnit.io.checkUnitIO.checkUnit2Sram.tagBuf)
 		}
 	}
 	fetchReq.io.fetchReqIO.ifu2FetchReq <> io.ifu2ICache
 	fetchReq.io.fetchReqIO.flush		:= io.flush
 	checkUnit.io.checkUnitIO.flush		:= io.flush
+	checkUnit.io.checkUnitIO.wbu2Icache	:= io.wbu2Icache
 	preDecoder.io.preDecoderIO.flush	:= io.flush
 	pipelineConnect(fetchReq.io.fetchReqIO.fetchReq2CheckUnit, checkUnit.io.checkUnitIO.fetchReq2CheckUnit)
 	pipelineConnect(checkUnit.io.checkUnitIO.checkUnit2PreDecoder, preDecoder.io.preDecoderIO.checkUnit2PreDecoder)
@@ -295,6 +297,8 @@ class FetchReq extends Module {
 	})
 	val validReg = RegInit(0.B)
 	val readyReg = RegInit(1.B)
+	val pcReg 	 = RegEnable(io.fetchReqIO.ifu2FetchReq.bits.pc, 
+	io.fetchReqIO.ifu2FetchReq.valid & io.fetchReqIO.ifu2FetchReq.ready)
 	when(io.fetchReqIO.flush) {
 		validReg := 0.B
 		readyReg := 1.B
@@ -316,7 +320,7 @@ class FetchReq extends Module {
 	}
 
 	io.fetchReqIO.ifu2FetchReq.ready 		:= readyReg
-	io.fetchReqIO.fetchReq2CheckUnit.bits	:= io.fetchReqIO.ifu2FetchReq.bits
+	io.fetchReqIO.fetchReq2CheckUnit.bits	:= pcReg
 	io.fetchReqIO.fetchReq2CheckUnit.valid	:= validReg & (!io.fetchReqIO.flush)
 }
 
@@ -342,16 +346,17 @@ class CheckUnit(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int
 
 	val axiHitVecReg 	= RegInit(VecInit(Seq.fill(burstLen)(false.B)))
 	val axiDataVecReg	= RegInit(VecInit(Seq.fill(burstLen)(0.U(32.W))))
+	val busrtCnt 	  	= RegInit(0.U(8.W))
 	val findEndWire		= io.checkUnitIO.checkUnit2Mem.rvalid & io.checkUnitIO.checkUnit2Mem.rready &
 	io.checkUnitIO.checkUnit2Mem.rlast & (busrtCnt === ((burstSize.U >> 2)-1.U))
 
 	val s_flow 	= "b001".U
 	val s_miss 	= "b010".U
 	val s_load 	= "b100".U
-	val nextState = WireInit(s_flow)
+	val nextState = WireInit(1.U(3.W))
 	val state 	= RegNext(nextState)
 	nextState 	:= MuxLookup(state, s_flow)(List(
-		s_flow 	-> Mux(hitWire & feq2CheckHandReg, s_flow, s_miss),
+		s_flow 	-> Mux((!hitWire) & feq2CheckHandReg, s_miss, s_flow),
 		s_miss	-> Mux(findEndWire, s_load, s_miss),
 		s_load	-> s_flow
 	))
@@ -362,7 +367,6 @@ class CheckUnit(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int
 
 	/* AXI */
 	val isSdram 		= (pcWire(31,28) >= 10.U)
-	val busrtCnt 	  	= RegInit(0.U(8.W))
 	/* AW */
 	val awvalidReg		= RegInit(0.B)
 	val awaddrReg		= RegInit(0.U(32.W))
@@ -452,19 +456,19 @@ class CheckUnit(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int
 	}
 	switch(state) {
         is(s_flow) {
-			arvalidReg 	:= !hitWire
-			arlenReg 	:= Mux(hitWire, Mux(isSdram, burstLen.U-1.U, 0.U), arlenReg)
+			arvalidReg 	:= (!hitWire) & feq2CheckHandReg
+			arlenReg 	:= Mux((!hitWire) & feq2CheckHandReg, Mux(isSdram, burstLen.U-1.U, 0.U), arlenReg)
 		}
         is(s_miss)  {
 			when(isSdram) {
 				when (io.checkUnitIO.checkUnit2Mem.arvalid & io.checkUnitIO.checkUnit2Mem.arready) {
 					arvalidReg := 0.B
-				} .elsewhen(io.checkUnitIO.checkUnit2Mem.rvalid & io.checkUnitIO.checkUnit2Mem.rready & (busrtCnt < ((burstSize.U >> 2)-1.U))) {
-					arvalidReg := 1.B
 				}
 			} .otherwise {
 				when (io.checkUnitIO.checkUnit2Mem.arvalid & io.checkUnitIO.checkUnit2Mem.arready) {
 					arvalidReg := 0.B
+				} .elsewhen(io.checkUnitIO.checkUnit2Mem.rvalid & io.checkUnitIO.checkUnit2Mem.rready & (busrtCnt < ((burstSize.U >> 2)-1.U))) {
+					arvalidReg := 1.B
 				}
 			}
 		}
@@ -498,15 +502,17 @@ class CheckUnit(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int
 	}
 
 	io.checkUnitIO.checkUnit2PreDecoder.valid 		:= validReg & 
-	(hitWire & (state === s_flow)) | ((state =/= s_flow) & axiHitVecReg(offsetWire)) & 
+	((hitWire & (state === s_flow)) | ((state =/= s_flow) & axiHitVecReg(offsetWire))) & 
 	(!io.checkUnitIO.flush)
 	io.checkUnitIO.checkUnit2PreDecoder.bits.inst	:= 
 	Mux((state === s_flow), cacheLineRegVec(hitWay)(offsetWire), axiDataVecReg(offsetWire))
+	io.checkUnitIO.checkUnit2PreDecoder.bits.pc		:= pcWire
 	io.checkUnitIO.fetchReq2CheckUnit.ready			:= 
 	readyReg & ((nextState === s_flow) & (state === s_flow))
 	io.checkUnitIO.checkUnit2Sram.cacheBuf			:= axiDataVecReg
-	io.checkUnitIO.checkUnit2Sram.tagBuf			:= axiHitVecReg
+	io.checkUnitIO.checkUnit2Sram.tagBuf			:= tagWire
 	io.checkUnitIO.checkUnit2Sram.replaceWay		:= replaceWay
+	io.checkUnitIO.checkUnit2Sram.replaceIndex		:= indexWire
 	io.checkUnitIO.checkUnit2Sram.wen				:= (state === s_load)
 }
 
@@ -538,7 +544,7 @@ class PreDecoder extends Module {
 	}
 
 	io.preDecoderIO.checkUnit2PreDecoder.ready	:= readyReg
-	io.preDecoderIO.preDecoder2IFU.valid		:= validReg & io.preDecoderIO.flush
+	io.preDecoderIO.preDecoder2IFU.valid		:= validReg & (!io.preDecoderIO.flush)
 	io.preDecoderIO.preDecoder2IFU.bits 		:= io.preDecoderIO.checkUnit2PreDecoder.bits	
 }
 

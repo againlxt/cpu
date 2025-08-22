@@ -46,7 +46,7 @@ class top extends Module {
 	val n 			= log2Up(numOfCache/way)
 	val burstLen	= Config.ICacheConfig.burstLen
 	val burstSize 	= Config.ICacheConfig.burstSize
-	val icache = Module(new Icache(numOfCache, sizeOfCache, m, n, burstLen, burstSize, way, ReplacePolicy.LRU))
+	val icache = Module(new IcachePipe(numOfCache, sizeOfCache, m, n, burstLen, burstSize, way, ReplacePolicy.LRU))
 
 	/* PipeLine */
 	val s_flow :: s_raw :: s_raw_end :: s_flush :: Nil = Enum(4)
