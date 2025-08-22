@@ -12,7 +12,7 @@ object Config {
   object ICacheConfig {
     def numOfCache:   Int = 4
     def sizeOfCache:  Int = 128 /* Bits */
-    def ways:         Int = 2
+    def ways:         Int = 1
     def burstLen:     Int = 4
     def burstSize:    Int = 16 /* Bytes */
     def m: 		        Int = log2Ceil(sizeOfCache >> 3)
