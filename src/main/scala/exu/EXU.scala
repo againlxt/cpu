@@ -131,7 +131,7 @@ class EXU extends Module {
 	} .otherwise {
 		validReg := 0.U
 	}
-	io.idu2EXU.ready   	:= (io.exu2LSU.ready || !validReg) & (!flushWire)
+	io.idu2EXU.ready   	:= (io.exu2LSU.ready || !validReg)
     io.exu2LSU.valid	:= validReg & (!flushWire)
 }
 

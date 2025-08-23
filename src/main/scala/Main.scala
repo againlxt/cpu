@@ -92,23 +92,20 @@ class top extends Module {
 	val pcBSrcWire 		= branchCond.io.pcBSrc
     val nextPC  		= MuxCase(0.U(32.W), Seq(	
         (pcASrcWire === "b00".U).asBool	-> 4.U,
-		(pcASrcWire === "b01".U).asBool  -> exu.io.exu2LSU.bits.immData,
+		(pcASrcWire === "b01".U).asBool  -> lsu.io.exu2LSU.bits.immData,
 		(pcASrcWire === "b10".U).asBool  -> 0.U
     )) + MuxCase(	0.U(32.W), Seq(	
-        (pcBSrcWire === "b00".U).asBool  -> exu.io.exu2LSU.bits.pc,
-		(pcBSrcWire === "b01".U).asBool  -> exu.io.exu2LSU.bits.rs1Data,
-		(pcBSrcWire === "b10".U).asBool  -> exu.io.exu2LSU.bits.csrWData
+        (pcBSrcWire === "b00".U).asBool  -> lsu.io.exu2LSU.bits.pc,
+		(pcBSrcWire === "b01".U).asBool  -> lsu.io.exu2LSU.bits.rs1Data,
+		(pcBSrcWire === "b10".U).asBool  -> lsu.io.exu2LSU.bits.csrWData
     ))
 	val idu2EXUHandReg 	= RegNext(exu.io.idu2EXU.valid & exu.io.idu2EXU.ready)
-	val exu2LSUHandReg 	= RegNext(exu.io.exu2LSU.valid & exu.io.exu2LSU.ready)
-	val correctPCReg 	= RegEnable(nextPC, exu2LSUHandReg)
-	val fromPCReg 		= RegEnable(lsu.io.exu2LSU.bits.pc, exu2LSUHandReg)
-	val predictPCReg 	= RegEnable(idu.io.idu2EXU.bits.pc, idu.io.idu2EXU.valid & idu.io.idu2EXU.ready)
+	val fromPCReg 		= RegEnable(exu.io.exu2LSU.bits.pc, exu.io.exu2LSU.valid & exu.io.exu2LSU.ready)
 	val branchCheck 	= Module(new BranchCheck)
-	branchCheck.io.predictPC := predictPCReg
-	branchCheck.io.correctPC := correctPCReg
+	branchCheck.io.predictPC := exu.io.idu2EXU.bits.pc
+	branchCheck.io.correctPC := nextPC
 	branchFlush 			 := (!branchCheck.io.correct) & 
-	(correctPCReg(31, 24) =/= 0.U) & (state =/= s_flush) & idu2EXUHandReg
+	(nextPC(31, 24) =/= 0.U) & (state =/= s_flush) & idu2EXUHandReg
 	/* RAW */
 	val IFU2IDUHandReg = RegNext(ifu.io.inst.valid & ifu.io.inst.ready)
 	def conflict(rs: UInt, rd: UInt, index: UInt) = ((rs === rd) & (rd =/= 0.U) & (rs =/= 0.U)
@@ -139,7 +136,7 @@ class top extends Module {
 	pipelineConnect(lsu.io.lsu2WBU, wbu.io.lsu2WBU)
 	icache.io.flush			:= flushWire
 	ifu.io.flush 			:= flushWire
-	ifu.io.correctPC 		:= Mux(wbu.io.flush, wbu.io.correctPC, Mux(exu.io.flush, correctPCReg, 0.U))
+	ifu.io.correctPC 		:= Mux(wbu.io.flush, wbu.io.correctPC, Mux(exu.io.flush, nextPC, 0.U))
 	ifu.io.fromPC			:= fromPCReg
 	idu.io.isRAW 			:= (isRAW & ((state === s_flow) | (state === s_raw)))
 	idu.io.flush 			:= flushWire
