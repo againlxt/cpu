@@ -120,7 +120,6 @@ class EXU extends Module {
 	io.rd	:= Mux(regWRWire.asBool, Mux(io.idu2EXU.ready & !io.exu2LSU.valid, 0.U, instWire(11,7)), 0.U)
 
 	val validReg = RegInit(0.B)
-	val readyReg = RegInit(1.B)
 	when(!flushWire) {
 		switch(validReg) {
 			is(0.B) { validReg := io.idu2EXU.valid & io.idu2EXU.ready}
@@ -129,18 +128,10 @@ class EXU extends Module {
 				Mux(io.idu2EXU.valid & io.idu2EXU.ready, 1.B, 0.B), 1.B)
 			}
 		}
-		switch(readyReg) {
-			is(0.B) { readyReg := io.exu2LSU.valid & io.exu2LSU.ready }
-			is(1.B) {
-				readyReg := Mux(io.idu2EXU.valid & io.idu2EXU.ready, 
-				Mux(io.exu2LSU.valid & io.exu2LSU.ready, 1.B, 0.B), 1.B)
-		}
-	}
 	} .otherwise {
 		validReg := 0.U
-		readyReg := 1.B
 	}
-	io.idu2EXU.ready   	:= readyReg & (!flushWire)
+	io.idu2EXU.ready   	:= (io.exu2LSU.ready || !validReg) & (!flushWire)
     io.exu2LSU.valid	:= validReg & (!flushWire)
 }
 

@@ -239,19 +239,18 @@ class LSU extends Module {
 	}
 	
     /* IO */
-	val readyReg = RegInit(1.B)
 	val validReg = RegInit(0.B)
-	switch(readyReg) {
-		is(0.B) { readyReg := io.lsu2WBU.valid & io.lsu2WBU.ready }
+	switch(validReg) {
+		is(0.B) { validReg := io.exu2LSU.valid & io.exu2LSU.ready}
 		is(1.B) {
-			readyReg := Mux(io.exu2LSU.valid & io.exu2LSU.ready, 
-			Mux(io.lsu2WBU.valid & io.lsu2WBU.ready, 1.B, 0.B), 1.B)
+			validReg := Mux(io.lsu2WBU.valid & io.lsu2WBU.ready,
+			Mux(io.exu2LSU.valid & io.exu2LSU.ready, 1.B, 0.B), 1.B)
 		}
 	}
 
-    io.exu2LSU.ready            := readyReg
+    io.exu2LSU.ready            := io.lsu2WBU.ready || !(validReg)
     io.lsu2WBU.valid            := (state === s_wait_ready) ||
-	(handReg & (!io.exu2LSU.bits.memValid.asBool))
+	(validReg & (!io.exu2LSU.bits.memValid.asBool))
 
     io.lsu2WBU.bits.pc          := pcWire
     io.lsu2WBU.bits.memData     := memRdDataWire

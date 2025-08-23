@@ -143,7 +143,6 @@ class IDU extends Module {
     io.idu2EXU.bits.inst        := instWire
 
     val validReg = RegInit(0.B)
-	val readyReg = RegInit(1.B)
     when(!io.flush) {
         switch(validReg) {
             is(0.B) { validReg := io.inst.valid & io.inst.ready}
@@ -152,17 +151,9 @@ class IDU extends Module {
                 Mux(io.inst.valid & io.inst.ready, 1.B, 0.B), 1.B)
             }
         }
-        switch(readyReg) {
-            is(0.B) { readyReg := io.idu2EXU.valid & io.idu2EXU.ready }
-            is(1.B) {
-                readyReg := Mux(io.inst.valid & io.inst.ready, 
-                Mux(io.idu2EXU.valid & io.idu2EXU.ready, 1.B, 0.B), 1.B)
-            }
-        }
     } .otherwise {
         validReg := 0.U
-		readyReg := 1.B
     }
-	io.inst.ready   	:= readyReg & !io.isRAW & (state =/= s_stall)
+	io.inst.ready   	:= (io.idu2EXU.ready || !validReg) & !io.isRAW & (state =/= s_stall)
     io.idu2EXU.valid	:= validReg & !io.isRAW & (state =/= s_stall)
 }
