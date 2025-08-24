@@ -49,7 +49,7 @@ class top extends Module {
 	val icache = Module(new IcachePipe(numOfCache, sizeOfCache, m, n, burstLen, burstSize, way, ReplacePolicy.LRU))
 
 	/* PipeLine */
-	val s_flow :: s_raw :: s_raw_end :: s_flush :: Nil = Enum(4)
+	val s_flow :: s_raw :: s_flush :: Nil = Enum(4)
 	val nextState = WireInit(s_flow)
 	val state = RegNext(nextState, s_flow)
 	val branchFlush 	= WireInit(0.B)
@@ -126,8 +126,7 @@ class top extends Module {
 	}
 	nextState := MuxLookup(state, s_flow)(List(
 		s_flow	-> Mux(flushWire, s_flush, Mux(isRAW & IFU2IDUHandReg, s_raw, s_flow)),
-		s_raw 	-> Mux(flushWire, s_flush, Mux(idu.io.idu2EXU.valid & idu.io.idu2EXU.ready, s_raw_end, s_raw)),
-		s_raw_end -> Mux(flushWire, s_flush, Mux(idu.io.inst.valid & idu.io.inst.ready, s_flow, s_raw_end)),
+		s_raw 	-> Mux(flushWire, s_flush, Mux(idu.io.idu2EXU.valid & idu.io.idu2EXU.ready, s_flow, s_raw)),
 		s_flush	-> Mux(flushEndWire, s_flow, s_flush)
 	))	
 	pipelineConnect(ifu.io.inst, idu.io.inst)
