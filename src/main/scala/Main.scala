@@ -70,7 +70,7 @@ class top extends Module {
 	bypassData(1)	:= MuxCase(	0.U(32.W), Seq(	
         (lsu.io.lsu2WBU.bits.toReg === "b00".U).asBool -> lsu.io.lsu2WBU.bits.aluData,
 		(lsu.io.lsu2WBU.bits.toReg === "b01".U).asBool -> lsu.io.lsu2WBU.bits.memData,
-		(lsu.io.lsu2WBU.bits.toReg === "b10".U).asBool -> lsu.io.lsu2WBU.bits.toReg
+		(lsu.io.lsu2WBU.bits.toReg === "b10".U).asBool -> lsu.io.lsu2WBU.bits.csrData
     ))
 	bypassData(2)	:= wbu.io.wbu2BaseReg.data
 	bypassRegWR(0)	:= exu.io.exu2LSU.bits.regWR & (bypassRd(0) =/= 0.U)
