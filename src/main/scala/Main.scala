@@ -54,7 +54,7 @@ class top extends Module {
 	val state = RegNext(nextState, s_flow)
 	val branchFlush 	= WireInit(0.B)
 	val flushWire 		= branchFlush | wbu.io.flush
-	val flushEndWire 	= exu.io.exu2LSU.ready & exu.io.exu2LSU.valid
+	val flushEndWire 	= exu.io.idu2EXU.ready & exu.io.idu2EXU.valid
 	/* Bypass */
 	val bypassRd 		= Wire(Vec(3, UInt(4.W)))
 	val bypassData		= Wire(Vec(3, UInt(32.W)))

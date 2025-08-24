@@ -248,7 +248,7 @@ class LSU extends Module {
 		}
 	}
 
-    io.exu2LSU.ready            := io.lsu2WBU.ready || !(validReg)
+    io.exu2LSU.ready            := (io.lsu2WBU.ready || !(validReg)) & (state === s_wait_valid) & (nextState === s_wait_valid)
     io.lsu2WBU.valid            := (state === s_wait_ready) ||
 	(validReg & (!io.exu2LSU.bits.memValid.asBool))
 
