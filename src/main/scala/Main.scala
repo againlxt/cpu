@@ -49,7 +49,7 @@ class top extends Module {
 	val icache = Module(new IcachePipe(numOfCache, sizeOfCache, m, n, burstLen, burstSize, way, ReplacePolicy.LRU))
 
 	/* PipeLine */
-	val s_flow :: s_raw :: s_flush :: Nil = Enum(4)
+	val s_flow :: s_raw :: s_flush :: Nil = Enum(3)
 	val nextState = WireInit(s_flow)
 	val state = RegNext(nextState, s_flow)
 	val branchFlush 	= WireInit(0.B)
@@ -153,7 +153,7 @@ class top extends Module {
 			rawCnt := 0.U
 		}
 		val RAWC 			= Module(new PerformanceCounter)
-		RAWC.io.valid		:= (state === s_raw) & (nextState === s_raw_end)
+		RAWC.io.valid		:= (state === s_raw)
 		RAWC.io.counterType	:= PerformanceCounterType.RAWCNT.asUInt
 		RAWC.io.data		:= rawCnt
 
