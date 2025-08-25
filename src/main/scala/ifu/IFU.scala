@@ -29,7 +29,7 @@ class IFU extends Module {
     })
 	/* Module */
 	val branchPredict 	= Module(new BranchPredict(8, 2, 10, 1, ReplacePolicy.LRU, DPPolicy.BTFN))
-	val pcFIFO 			= Module(new Queue(Vec(2, UInt(32.W)), 4, true, true, false, true))
+	val pcFIFO 			= Module(new Queue(Vec(2, UInt(32.W)), 1, true, true, false, true))
 
 	/* HandShake */
 
