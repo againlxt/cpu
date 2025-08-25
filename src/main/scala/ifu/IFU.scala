@@ -29,7 +29,6 @@ class IFU extends Module {
     })
 	/* Module */
 	val branchPredict 	= Module(new BranchPredict(8, 2, 10, 1, ReplacePolicy.LRU, DPPolicy.BTFN))
-	val pcFIFO 			= Module(new Queue(Vec(2, UInt(32.W)), 1, true, true, false, true))
 
 	/* HandShake */
 
@@ -48,15 +47,10 @@ class IFU extends Module {
 		IGIC.io.data 		:= ifuGetInstCounter
 	}
 
-	pcFIFO.io.enq.valid		:= io.icache2IFU.valid
-	pcFIFO.io.enq.bits(0)	:= io.icache2IFU.bits.pc
-	pcFIFO.io.enq.bits(1)	:= io.icache2IFU.bits.inst
-	io.icache2IFU.ready		:= pcFIFO.io.enq.ready
-	pcFIFO.io.flush.foreach(_ := io.flush)
-	pcFIFO.io.deq.ready		:= io.inst.ready
-	io.inst.bits.pc			:= pcFIFO.io.deq.bits(0)
-	io.inst.bits.inst		:= pcFIFO.io.deq.bits(1)
-	io.inst.valid			:= pcFIFO.io.deq.valid
+	io.icache2IFU.ready		:= io.inst.ready
+	io.inst.bits.pc			:= io.icache2IFU.bits.pc
+	io.inst.bits.inst		:= io.icache2IFU.bits.inst
+	io.inst.valid			:= io.icache2IFU.valid
 }
 
 class BranchPredict(depthOfTable: Int, offsetWidth: Int, tagWidth: Int, way: Int, raPolicy: ReplacePolicy.Type, dpPolicy: DPPolicy.Type) extends Module {
