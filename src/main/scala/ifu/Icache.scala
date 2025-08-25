@@ -479,6 +479,28 @@ class CheckUnit(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int
 		}
 	}
 
+		/* Counter */
+	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
+		val missPenaltyCounter	= RegInit(0.U(32.W))
+		switch(nextState) {
+			is(s_flow) {
+				missPenaltyCounter := 0.U
+			}
+			is(s_miss) {
+                missPenaltyCounter := missPenaltyCounter + 1.U
+			}
+		}
+		
+		val ATC 			= Module(new PerformanceCounter)
+		ATC.io.valid		:= (state === s_flow) & (hitWire) & feq2CheckHandReg
+		ATC.io.counterType	:= PerformanceCounterType.ICACHE_ACCESS_TIME.asUInt
+		ATC.io.data 		:= 1.U
+		val MPC 			= Module(new PerformanceCounter)
+		MPC.io.valid		:= (state === s_miss) & findEndWire
+		MPC.io.counterType	:= PerformanceCounterType.ICACHE_MISS_PENALTY.asUInt
+		MPC.io.data 		:= missPenaltyCounter
+	}
+
 	io.checkUnitIO.checkUnit2PreDecoder.valid 		:= validReg & 
 	((hitWire & (state === s_flow)) | ((state =/= s_flow) & axiHitVecReg(offsetWire))) & 
 	(!io.checkUnitIO.flush)

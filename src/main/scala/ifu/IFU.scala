@@ -42,7 +42,16 @@ class IFU extends Module {
 	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
 		val ifuGetInstCounter = RegInit(0.U(32.W))
 		val IGIC 			= Module(new PerformanceCounter)
-		IGIC.io.valid		:= 0.B
+		when(io.inst.ready) {
+			when(io.inst.valid) {
+				ifuGetInstCounter := 1.U
+			} .otherwise {
+				ifuGetInstCounter := ifuGetInstCounter + 1.U
+			}
+		} .otherwise {
+			ifuGetInstCounter := 0.U
+		}
+		IGIC.io.valid		:= io.inst.ready & io.inst.valid
 		IGIC.io.counterType	:= PerformanceCounterType.IFUGETINST.asUInt
 		IGIC.io.data 		:= ifuGetInstCounter
 	}
