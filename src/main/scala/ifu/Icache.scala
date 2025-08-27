@@ -393,7 +393,7 @@ class Random(way: Int) extends Module {
 	})
 
 	// 伪随机数发生器 (LFSR)
-	val lfsr = RegEnable(chisel3.util.random.LFSR(log2Up(way)), io.replaceEn)
+	val lfsr = RegEnable(chisel3.util.random.LFSR(way), io.replaceEn)
 	io.random_index := lfsr
 }
 
