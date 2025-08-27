@@ -12,7 +12,7 @@ import cpu.Config
 import dpic._
 import dpic.PerformanceCounterType.{IFUGETINST => IFUGETINST}
 object ReplacePolicy extends ChiselEnum {
-	val LRU, FIFO, RANDOM = Value
+	val BSLRU, FIFO, RANDOM = Value
 }
 object DPPolicy extends ChiselEnum {
 	val BTFN = Value
@@ -28,7 +28,9 @@ class IFU extends Module {
 		val fromPC 		= Input(UInt(32.W))
     })
 	/* Module */
-	val branchPredict 	= Module(new BranchPredict(8, 2, 10, 1, ReplacePolicy.LRU, DPPolicy.BTFN))
+	val branchPredict 	= Module(new BranchPredict(Config.BPConfig.depthOfTable, 
+	Config.BPConfig.offsetWidth, Config.BPConfig.tagWidth, Config.BPConfig.way, 
+	ReplacePolicy.FIFO, DPPolicy.BTFN))
 
 	/* HandShake */
 
@@ -89,9 +91,11 @@ class BranchPredict(depthOfTable: Int, offsetWidth: Int, tagWidth: Int, way: Int
 
 	/* RA */
 	val flushReg 		= RegNext(io.flush)
-	val ra 				= Module(new Replacement_Algorithm(way, depthOfTable, log2Up(way), raPolicy))
-	ra.io.update_entry	:= flushReg
-	ra.io.update_index	:= indexWire
+	val ra 				= Module(new Replacement_Algorithm(way, depthOfTable, raPolicy))
+	ra.io.hit			:= 0.B
+	ra.io.hitway		:= 0.U
+	ra.io.replaceEn		:= flushReg
+	ra.io.index			:= indexWire
 	val wayIndexWire 	= ra.io.replaceWay(indexWire)
 	val flushIndexWire 	= io.fromPC(indexWidth+offsetWidth-1, offsetWidth)
 	when(flushReg) {

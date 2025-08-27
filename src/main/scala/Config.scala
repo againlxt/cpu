@@ -18,4 +18,11 @@ object Config {
     def m: 		        Int = log2Ceil(sizeOfCache >> 3)
 	  def n:			      Int = log2Up(numOfCache/ways)
   }
+
+  object BPConfig {
+    def depthOfTable: Int = 8
+    def offsetWidth:  Int = 2
+    def tagWidth:     Int = 10
+    def way:          Int = 4
+  }
 }
