@@ -8,6 +8,7 @@ import cpu.Config
 import basemode.AXIAccessFault
 import dpic.PerformanceCounter
 import dpic.PerformanceCounterType
+import os.group.set
 
 /**
   * @param numOfCaches	:Number of caches
@@ -17,232 +18,6 @@ import dpic.PerformanceCounterType
   * @param burstLen		:AXI size
   * @param burstSize	:burst size(byte)
   */
-class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, burstSize: Int, way: Int, policy: ReplacePolicy.Type) extends Module {
-    val io = IO(new Bundle {
-        val ifu2ICache	= Flipped(Decoupled(new IFU2ICache))
-		val icache2IFU 	= Decoupled(new ICache2IFU)
-        val icache2Mem  = new AXI
-		val wbu2Icache	= Input(Bool())
-		val flush 		= Input(Bool())
-    })
-	val cacheValidReg 	= RegInit(VecInit(Seq.fill(numOfCache/way)(VecInit(Seq.fill(way)(false.B)))))
-	val tagReg   		= RegInit(VecInit(Seq.fill(numOfCache/way)(VecInit(Seq.fill(way)(0.U((32-m-n).W))))))
-	val cache  			= RegInit(VecInit(Seq.fill(numOfCache/way)(VecInit(Seq.fill(way)(VecInit(Seq.fill(burstSize >> 2)(0.U(32.W))))))))
-
-    val addrReg         = RegEnable(io.ifu2ICache.bits.pc, io.ifu2ICache.valid & io.ifu2ICache.ready)
-	val tagWire			= addrReg(31, m+n)
-	val indexWire 		= addrReg(m+n-1, m)
-	val offsetWire 		= addrReg(m-1,0) >> 2
-	val wayValidVec 	= cacheValidReg(indexWire)
-	val wayTagVec		= tagReg(indexWire)
-	val hitVec 			= wayValidVec.zip(wayTagVec).map { case (v, t) => v && (t === tagWire) }
-	val hitWire     	= hitVec.reduce(_ || _)
-	val hitWay 			= PriorityEncoder(hitVec)
-	val flushReg 		= RegInit(0.B)
-
-	val s_idle   = "b00001".U
-    val s_check  = "b00010".U
-    val s_find   = "b00100".U
-	val s_find_b = "b01000".U
-	val s_wait 	 = "b10000".U
-    val state       = RegInit(1.U(5.W))
-
-	val sets 			= numOfCache/way
-	val wayIndexWidth 	= log2Up(way)
-	val replacement_algorithm	= Module(new Replacement_Algorithm
-	(way, sets, n, policy))
-	replacement_algorithm.io.update_entry 	:= !hitWire & (state === s_check)
-	replacement_algorithm.io.update_index	:= indexWire
-	val wayIndex 		= replacement_algorithm.io.replaceWay(indexWire)
-
-    val findEndWire = Wire(Bool())
-	val busrtCnt 	  	= RegInit(0.U(8.W))
-	if(Config.SoC) {
-		findEndWire := io.icache2Mem.rvalid & io.icache2Mem.rready & io.icache2Mem.rlast & (busrtCnt === ((burstSize.U >> 2)-1.U))
-	} else {
-		findEndWire := io.icache2Mem.rvalid & io.icache2Mem.rready
-	}
-	val isSdram 	= (addrReg(31,28) >= 10.U)
-    state := MuxLookup(state, s_idle)(List(
-        s_idle      -> Mux(io.ifu2ICache.valid & io.ifu2ICache.ready, s_check, s_idle),
-        s_check     -> Mux(hitWire, s_wait, Mux(isSdram, s_find_b, s_find)),
-        s_find      -> Mux(findEndWire, s_wait, s_find),
-		s_find_b    -> Mux(findEndWire, s_wait, s_find_b),
-		s_wait 		-> Mux((io.icache2IFU.valid & io.icache2IFU.ready) | io.flush | flushReg, s_idle, s_wait)
-    ))
-
-    /* AW */
-	val awvalidReg		= RegInit(0.B)
-	val awaddrReg		= RegInit(0.U(32.W))
-	val awidReg 		= RegInit(0.U(4.W))
-	val awlenReg 		= RegInit(0.U(8.W))
-	val awsizeReg 		= RegInit(2.U(3.W))
-	val awburstReg 		= RegInit(1.U(2.W))
-	/* W */
-	val wvalidReg		= RegInit(0.B)
-	val wdataReg		= RegInit(0.U(32.W))
-	val wstrbReg		= RegInit(15.U(4.W))
-	val wlastReg 		= RegInit(0.B)
-	/* B */
-	/* AR */
-	val arvalidReg		= RegInit(0.U(1.W))
-	val aridReg 		= RegInit(0.U(4.W))
-	val arlenReg 		= RegInit(0.U(8.W))
-	val arsizeReg 		= RegInit(2.U(3.W))
-	val arburstReg 		= RegInit(1.U(2.W))
-	/* R */
-	val rreadyReg		= RegInit(0.B)
-
-    /* Signal Connection */
-	/* AW */
-	val awreadyWire		    = io.icache2Mem.awready
-	io.icache2Mem.awvalid	:= awvalidReg
-	io.icache2Mem.awaddr	:= awaddrReg
-	io.icache2Mem.awid 	    := awidReg
-	io.icache2Mem.awlen 	:= awlenReg
-	io.icache2Mem.awsize 	:= awsizeReg
-	io.icache2Mem.awburst	:= awburstReg
-	/* W */
-	val wreadyWire 		= io.icache2Mem.wready
-	io.icache2Mem.wvalid 	:= wvalidReg
-	io.icache2Mem.wdata 	:= wdataReg
-	io.icache2Mem.wstrb 	:= wstrbReg
-	io.icache2Mem.wlast 	:= wlastReg
-	/* B */
-	io.icache2Mem.bready	:= 0.B
-	val bvalidWire 		= io.icache2Mem.bvalid
-	val brespWire 		= io.icache2Mem.bresp
-	val bidWire 		= io.icache2Mem.bid
-	/* AR */
-	val arreadyWire 	    = io.icache2Mem.arready
-	io.icache2Mem.arvalid	:= arvalidReg
-	io.icache2Mem.araddr	:= Mux(isSdram, Cat(addrReg(31,4), 0.U(4.W)), Cat(addrReg(31,4), 0.U(4.W)) + (busrtCnt << 2)) 
-	io.icache2Mem.arid 	    := aridReg
-	io.icache2Mem.arlen 	:= arlenReg
-	io.icache2Mem.arsize 	:= arsizeReg
-	io.icache2Mem.arburst	:= arburstReg
-	/* R */
-	io.icache2Mem.rready 	:= rreadyReg
-	val rvalidWire 		= io.icache2Mem.rvalid
-	val rrespWire 		= io.icache2Mem.rresp
-	val rdataWire 		= io.icache2Mem.rdata
-	val rlastWire 		= io.icache2Mem.rlast
-	val ridWire 		= io.icache2Mem.rid
-
-    /* State Machine */
-	when(io.icache2Mem.rvalid & io.icache2Mem.rready) { 
-		cache(addrReg(m+n-1, m))(wayIndex)(busrtCnt) := rdataWire
-		when(busrtCnt === ((burstSize.U >> 2)-1.U)) {
-			busrtCnt := 0.U
-		} .otherwise {
-			busrtCnt := busrtCnt + 1.U
-		}
-	}
-	when(io.wbu2Icache) {
-		for (i <- 0 until (numOfCache / way)) {
-			for (j <- 0 until way) {
-			    cacheValidReg(i)(j) := false.B
-			}
-		}
-	} .otherwise {
-		switch(state) {
-			is(s_check) { cacheValidReg(indexWire)(wayIndex)	:= 
-			Mux(addrReg(31,m+n) === tagReg(indexWire)(wayIndex), cacheValidReg(indexWire)(wayIndex), false.B)}
-			is(s_find) { cacheValidReg(addrReg(m+n-1, m))(wayIndex)  	:= findEndWire}
-			is(s_find_b) { cacheValidReg(addrReg(m+n-1, m))(wayIndex)  	:= findEndWire }
-		}
-	}
-	switch(state) {
-		is(s_find) { tagReg(indexWire)(wayIndex) := addrReg(31,m+n) }
-		is(s_find_b) { tagReg(indexWire)(wayIndex) := addrReg(31,m+n) }
-	}
-    switch(state) {
-        is(s_check) {
-			arvalidReg 	:= !hitWire
-			arlenReg 	:= Mux(isSdram, burstLen.U-1.U, 0.U)
-		}
-        is(s_find)  {
-			when (io.icache2Mem.arvalid & io.icache2Mem.arready) {
-				arvalidReg := 0.B
-			} .elsewhen(io.icache2Mem.rvalid & io.icache2Mem.rready & (busrtCnt < ((burstSize.U >> 2)-1.U))) {
-				arvalidReg := 1.B
-			}
-		}
-		is(s_find_b) {
-			when (io.icache2Mem.arvalid & io.icache2Mem.arready) {
-				arvalidReg := 0.B
-			}
-		}
-    }
-    switch(rreadyReg) {
-        is(0.B) { rreadyReg := rvalidWire }
-        is(1.B) { rreadyReg := !(rvalidWire & rlastWire) }
-    }
-	/* Counter */
-	if (Config.hasPerformanceCounter & (!Config.isSTA)) {
-		val accessTimeCounter 	= RegInit(0.U(32.W))
-		val missPenaltyCounter	= RegInit(0.U(32.W))
-		val hitRateCounter 		= RegInit(0.U(32.W))
-
-		val hitReg 				= RegInit(0.B)
-
-		switch(state) {
-			is(s_check) { 
-				hitReg := hitWire 
-				accessTimeCounter := 2.U
-			}
-		}
-		switch(state) {
-			is(s_find) {
-                missPenaltyCounter := Mux(findEndWire, 0.U, missPenaltyCounter + 1.U) 
-			}
-			is(s_find_b) {
-				missPenaltyCounter := Mux(findEndWire, 0.U, missPenaltyCounter + 1.U) 
-			}
-		}
-		
-
-		val ATC 			= Module(new PerformanceCounter)
-		ATC.io.valid		:= hitWire & (state === s_check)
-		ATC.io.counterType	:= PerformanceCounterType.ICACHE_ACCESS_TIME.asUInt
-		ATC.io.data 		:= accessTimeCounter
-		val MPC 			= Module(new PerformanceCounter)
-		MPC.io.valid		:= !hitReg & (findEndWire)
-		MPC.io.counterType	:= PerformanceCounterType.ICACHE_MISS_PENALTY.asUInt
-		MPC.io.data 		:= missPenaltyCounter
-	}
-	val oValidReg	= RegInit(0.B)
-	val rdataReg    = RegEnable(io.icache2Mem.rdata, findEndWire)
-	when((state === s_wait) | (state === s_idle)) {
-		flushReg := 0.B
-	} .otherwise {
-		flushReg := Mux(flushReg, flushReg, io.flush)
-	}
-	switch(state) {
-		is(s_idle) {
-			oValidReg 	:= 0.B
-		}
-		is(s_check){
-			oValidReg 	:= hitWire
-		}
-		is(s_find) {
-			oValidReg := findEndWire
-		}
-		is(s_find_b) {
-			oValidReg := findEndWire
-		}
-		is(s_wait) {
-			oValidReg := Mux((io.icache2IFU.valid & io.icache2IFU.ready) | io.flush | flushReg, 0.B, oValidReg)
-		}
-	}
-
-	io.ifu2ICache.ready			:= (state === s_idle)
-    io.icache2IFU.valid 		:= oValidReg & !(io.flush | flushReg)
-    io.icache2IFU.bits.inst    	:= Mux(((state =/= s_check) & findEndWire & (offsetWire === 3.U))
-    , rdataReg, cache(addrReg(m+n-1, m))(wayIndex)(offsetWire))
-	io.icache2IFU.bits.pc		:= addrReg
-}
-
 class IcachePipe(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, burstSize: Int, way: Int, policy: ReplacePolicy.Type) extends Module {
     val io = IO(new Bundle {
         val ifu2ICache	= Flipped(Decoupled(new IFU2ICache))
@@ -318,7 +93,6 @@ class CheckUnit(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int
 	val feq2CheckHandWire	= io.checkUnitIO.fetchReq2CheckUnit.valid & io.checkUnitIO.fetchReq2CheckUnit.ready
 	val feq2CheckHandReg 	= RegNext(feq2CheckHandWire)
 	val pcWire 				= io.checkUnitIO.fetchReq2CheckUnit.bits
-	val memIndexWire 		= io.checkUnitIO.fetchReq2CheckUnit.bits(m+n-1, m)
 	val tagWire 			= pcWire(31, m+n)
 	val indexWire 			= pcWire(m+n-1, m)
 	val offsetWire 			= pcWire(m-1,0) >> 2
@@ -326,7 +100,7 @@ class CheckUnit(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int
 	val cacheValidReg	= RegInit(VecInit(Seq.fill(numOfCache/way)(VecInit(Seq.fill(way)(false.B)))))
 	val cacheLineRegVec = io.checkUnitIO.checkUnit2Sram.cacheLineVec
 	val wayTagRegVec 	= io.checkUnitIO.checkUnit2Sram.tagVec
-	val wayValidVec 	= cacheValidReg(memIndexWire)
+	val wayValidVec 	= cacheValidReg(indexWire)
 	val hitVec 			= wayValidVec.zip(wayTagRegVec).map { case (v, t) => v && (t === tagWire) }
 	val hitWire 		= hitVec.reduce(_ || _)
 	val hitWay 			= PriorityEncoder(hitVec)
@@ -350,9 +124,11 @@ class CheckUnit(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int
 
 	/* Replace */
 	val replaceWay = WireInit(0.U)
-	val ra 				= Module(new Replacement_Algorithm(way, numOfCache/way, log2Up(way), policy))
-	ra.io.update_entry	:= (hitWire & feq2CheckHandReg) | (state === s_load)
-	ra.io.update_index	:= indexWire
+	val ra 				= Module(new Replacement_Algorithm(way, numOfCache/way, policy))
+	ra.io.hit			:= (hitWire & feq2CheckHandReg)
+	ra.io.hitway		:= hitWay
+	ra.io.replaceEn		:= (state === s_load)
+	ra.io.index			:= indexWire
 	replaceWay			:= ra.io.replaceWay(indexWire)
 	/* ReplaceEnd */
 
@@ -468,7 +244,6 @@ class CheckUnit(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int
         is(0.B) { rreadyReg := rvalidWire }
         is(1.B) { rreadyReg := !(rvalidWire & rlastWire) }
     }
-
 	/* AXI End */
 	val validReg = RegInit(0.B)
 	when (io.checkUnitIO.flush) {
@@ -543,11 +318,12 @@ class PreDecoder extends Module {
 	io.preDecoderIO.preDecoder2IFU.bits 		:= io.preDecoderIO.checkUnit2PreDecoder.bits	
 }
 
-class LRU(way: Int, indexWidth: Int) extends Module {
+class LRUBitScheme(way: Int) extends Module {
 	val io = IO(new Bundle {
-		val update_entry	= Input(Bool())
-		val update_index	= Input(UInt(indexWidth.W))
-		val lru_index		= Output(UInt(indexWidth.W))
+		val replaceEn 		= Input(Bool())
+		val hitWay 			= Input(UInt((log2Up(way).W)))
+		val hit 			= Input(Bool())
+		val lru_index		= Output(UInt(log2Up(way).W))
 	})
 
 	// 优先矩阵寄存器
@@ -555,7 +331,7 @@ class LRU(way: Int, indexWidth: Int) extends Module {
 
 	// 矩阵更新逻辑
 	for (i <- 0 until way) {
-		when(io.update_entry && (i.U === io.update_index)) {
+		when((io.hit | io.replaceEn) & (io.hitWay === i.asUInt)) {
 			// 更新访问行
 			for (j <- 0 until way) {
 				matrix(i)(j) := 1.U
@@ -565,7 +341,7 @@ class LRU(way: Int, indexWidth: Int) extends Module {
 	}
 
 	// 查找 LRU
-	val lruIndexNext = Wire(UInt(indexWidth.W))
+	val lruIndexNext = Wire(UInt(log2Up(way).W))
 	lruIndexNext := 0.U
 	for (i <- 0 until way) {
 		when(matrix(i).reduce(_&_) === 0.U) {
@@ -574,25 +350,23 @@ class LRU(way: Int, indexWidth: Int) extends Module {
 	}
 
 	// 输出 LRU
-	val lruIndexReg = RegNext(lruIndexNext, 0.U)
-	io.lru_index := lruIndexReg
+	io.lru_index := lruIndexNext
 }
 
-class FIFO(way: Int, indexWidth: Int) extends Module {
+class FIFO(way: Int) extends Module {
 	val io = IO(new Bundle {
-		val update_entry = Input(Bool())
-		val update_index = Input(UInt(indexWidth.W)) // FIFO 不需要，用于接口统一可忽略
-		val fifo_index   = Output(UInt(indexWidth.W))
+		val replaceEn = Input(Bool())
+		val fifo_index   = Output(UInt(log2Up(way).W))
 	})
 
 	// 轮转替换指针
-	val fifo_ptr = RegInit(0.U(indexWidth.W))
+	val fifo_ptr = RegInit(0.U(log2Up(way).W))
 
 	// 输出当前指针
 	io.fifo_index := fifo_ptr
 
 	// 每次更新后，指针后移（轮转）
-	when(io.update_entry) {
+	when(io.replaceEn) {
 		when(fifo_ptr === (way - 1).U) {
 			fifo_ptr := 0.U
 		}.otherwise {
@@ -601,64 +375,66 @@ class FIFO(way: Int, indexWidth: Int) extends Module {
 	}
 }
 
-class Random(way: Int, indexWidth: Int) extends Module {
+class Random(way: Int) extends Module {
 	val io = IO(new Bundle {
-		val update_entry  = Input(Bool())
-		val update_index  = Input(UInt(indexWidth.W)) // 实际上不需要，用于接口统一
-		val random_index  = Output(UInt(indexWidth.W))
+		val replaceEn  	= Input(Bool())
+		val random_index= Output(UInt(log2Up(way).W))
 	})
 
 	// 伪随机数发生器 (LFSR)
-	val lfsr = chisel3.util.random.LFSR(indexWidth)
+	val lfsr = RegEnable(chisel3.util.random.LFSR(log2Up(way)), io.replaceEn)
 	io.random_index := lfsr
 }
 
-class Replacement_Algorithm_Unit(way: Int, indexWidth: Int, policy: ReplacePolicy.Type) extends Module {
+class Replacement_Algorithm_Unit(way: Int, policy: ReplacePolicy.Type) extends Module {
 	val io = IO(new Bundle {
-		val update_entry	= Input(Bool())
-		val update_index	= Input(UInt(indexWidth.W))
-		val index			= Output(UInt(indexWidth.W))
+		val replaceEn 		= Input(Bool())
+		val hit 			= Input(Bool())
+		val hitway 			= Input(UInt((log2Up(way)).W))
+		val replaceWay		= Output(UInt((log2Up(way)).W))
 	})
 
 	policy match {
-		case ReplacePolicy.LRU => {
+		case ReplacePolicy.BSLRU => {
 		// 实例化 LRU 管理逻辑
-			val lru = Module(new LRU(way, indexWidth))
-			lru.io.update_entry := io.update_entry
-			lru.io.update_index := io.update_index
-			io.index := lru.io.lru_index
+			val lru = Module(new LRUBitScheme(way))
+			lru.io.replaceEn 	:= io.replaceEn
+			lru.io.hit 			:= io.hit
+			lru.io.hitWay		:= io.hitway
+			io.replaceWay 		:= lru.io.lru_index
 		}
 
 		case ReplacePolicy.FIFO => {
-			val fifo = Module(new FIFO(way, indexWidth))
-			fifo.io.update_entry := io.update_entry
-			fifo.io.update_index := io.update_index
-			io.index := fifo.io.fifo_index
+			val fifo = Module(new FIFO(way))
+			fifo.io.replaceEn 	:= io.replaceEn
+			io.replaceWay 		:= fifo.io.fifo_index
 		}
 
 		case ReplacePolicy.RANDOM => {
-			val random = Module(new Random(way, indexWidth))
-			random.io.update_entry := io.update_entry
-			random.io.update_index := io.update_index
-			io.index := random.io.random_index
+			val random = Module(new Random(way))
+			random.io.replaceEn 	:= io.replaceEn
+			io.replaceWay 			:= random.io.random_index
 		}
 	}
 }
 
-class Replacement_Algorithm(way: Int, sets: Int, indexWidth: Int, policy: ReplacePolicy.Type) extends Module {
+class Replacement_Algorithm(way: Int, sets: Int, policy: ReplacePolicy.Type) extends Module {
 	val io = IO(new Bundle {
-		val update_entry	= Input(Bool())
-		val update_index	= Input(UInt(indexWidth.W))
-		val replaceWay		= Output(Vec(sets, UInt(indexWidth.W)))
+		val replaceEn 		= Input(Bool())
+		val index 			= Input(UInt((log2Up(sets)).W))
+		val hit 			= Input(Bool())
+		val hitway 			= Input(UInt((log2Up(way)).W))
+		val replaceWay		= Output(Vec(sets, UInt((log2Up(way)).W)))
 	})
 
-	val wayArray = Wire(Vec(sets, UInt(indexWidth.W)))
-	val uints = Seq.fill(sets)(Module(new Replacement_Algorithm_Unit(way, indexWidth, policy)))
+	val wayArray = Wire(Vec(sets, UInt((log2Up(way)).W)))
+	val uints = Seq.fill(sets)(Module(new Replacement_Algorithm_Unit(way, policy)))
 
 	for (i <- 0 until sets) {
-		uints(i).io.update_entry := io.update_entry && (io.update_index === i.U)
-		uints(i).io.update_index := io.update_index
-		wayArray(i) := uints(i).io.index
+		uints(i).io.replaceEn	:= io.replaceEn & (io.index === i.U)
+		uints(i).io.hit			:= io.hit
+		uints(i).io.hitway 		:= io.hitway
+		wayArray(i) 			:= uints(i).io.replaceWay
 	}
 
 	io.replaceWay := wayArray

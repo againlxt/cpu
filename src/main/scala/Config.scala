@@ -10,12 +10,19 @@ object Config {
   def SoC:                    Boolean = true
 
   object ICacheConfig {
-    def numOfCache:   Int = 4
+    def numOfCache:   Int = 16
     def sizeOfCache:  Int = 128 /* Bits */
-    def ways:         Int = 1
+    def ways:         Int = 4
     def burstLen:     Int = 4
     def burstSize:    Int = 16 /* Bytes */
     def m: 		        Int = log2Ceil(sizeOfCache >> 3)
 	  def n:			      Int = log2Up(numOfCache/ways)
+  }
+
+  object BPConfig {
+    def depthOfTable: Int = 8
+    def offsetWidth:  Int = 2
+    def tagWidth:     Int = 10
+    def way:          Int = 4
   }
 }
