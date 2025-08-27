@@ -81,6 +81,14 @@ class LSU2WBU extends Bundle {
 	val skip 		= Output(Bool())
 }
 
+class LSU2DCache extends Bundle {
+	val addr 		= Output(UInt(32.W))
+}
+
+class DCache2LSU extends Bundle {
+	val data 		= Output(UInt(32.W))
+}
+
 class IDUBypass extends Bundle {
 	val rd 		= Input(Vec(3, UInt(4.W)))
 	val data 	= Input(Vec(3, UInt(32.W)))

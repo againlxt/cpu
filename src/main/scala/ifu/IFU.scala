@@ -28,7 +28,7 @@ class IFU extends Module {
 		val fromPC 		= Input(UInt(32.W))
     })
 	/* Module */
-	val branchPredict 	= Module(new BranchPredict(8, 2, 10, 1, ReplacePolicy.LRU, DPPolicy.BTFN))
+	val branchPredict 	= Module(new BranchPredict(8, 2, 10, 1, ReplacePolicy.FIFO, DPPolicy.BTFN))
 
 	/* HandShake */
 

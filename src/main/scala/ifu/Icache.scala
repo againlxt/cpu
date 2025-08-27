@@ -351,8 +351,8 @@ class CheckUnit(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int
 	/* Replace */
 	val replaceWay = WireInit(0.U)
 	val ra 				= Module(new Replacement_Algorithm(way, numOfCache/way, log2Up(way), policy))
-	ra.io.update_entry	:= (!hitWire) & feq2CheckHandReg
-	ra.io.update_index	:= hitWay
+	ra.io.update_entry	:= (hitWire & feq2CheckHandReg) | (state === s_load)
+	ra.io.update_index	:= indexWire
 	replaceWay			:= ra.io.replaceWay(indexWire)
 	/* ReplaceEnd */
 
@@ -551,29 +551,24 @@ class LRU(way: Int, indexWidth: Int) extends Module {
 	})
 
 	// 优先矩阵寄存器
-	val matrix = RegInit(VecInit(Seq.fill(way)(0.U(way.W))))
+	val matrix = RegInit(VecInit(Seq.fill(way)(VecInit(Seq.fill(way)(0.U(1.W))))))
 
 	// 矩阵更新逻辑
-	val matrixNext = Wire(Vec(way, UInt(way.W)))
 	for (i <- 0 until way) {
 		when(io.update_entry && (i.U === io.update_index)) {
 			// 更新访问行
-			matrixNext(i) := (~(1.U << i)) & ((1 << way).U - 1.U)
-		}.otherwise {
-			matrixNext(i) := matrix(i)
+			for (j <- 0 until way) {
+				matrix(i)(j) := 1.U
+				matrix(j)(i) := 0.U
+			}
 		}
-	}
-
-	// 寄存器更新
-	for (i <- 0 until way) {
-		matrix(i) := matrixNext(i)
 	}
 
 	// 查找 LRU
 	val lruIndexNext = Wire(UInt(indexWidth.W))
 	lruIndexNext := 0.U
 	for (i <- 0 until way) {
-		when(matrix(i) === 0.U) {
+		when(matrix(i).reduce(_&_) === 0.U) {
 			lruIndexNext := i.U
 		}
 	}
