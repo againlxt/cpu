@@ -89,10 +89,10 @@ class BranchPredict(depthOfTable: Int, offsetWidth: Int, tagWidth: Int, way: Int
 
 	/* RA */
 	val flushReg 		= RegNext(io.flush)
-	val ra 				= Module(new Replacement_Algorithm(way, depthOfTable, indexWidth, raPolicy))
+	val ra 				= Module(new Replacement_Algorithm(way, depthOfTable, log2Up(way), raPolicy))
 	ra.io.update_entry	:= flushReg
 	ra.io.update_index	:= indexWire
-	val wayIndexWire 	= ra.io.way_index
+	val wayIndexWire 	= ra.io.replaceWay(indexWire)
 	val flushIndexWire 	= io.fromPC(indexWidth+offsetWidth-1, offsetWidth)
 	when(flushReg) {
 		BTB.validVec(flushIndexWire)(wayIndexWire) 	:= 1.B

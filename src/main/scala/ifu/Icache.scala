@@ -53,7 +53,7 @@ class Icache(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int, b
 	(way, sets, n, policy))
 	replacement_algorithm.io.update_entry 	:= !hitWire & (state === s_check)
 	replacement_algorithm.io.update_index	:= indexWire
-	val wayIndex 		= replacement_algorithm.io.way_index
+	val wayIndex 		= replacement_algorithm.io.replaceWay(indexWire)
 
     val findEndWire = Wire(Bool())
 	val busrtCnt 	  	= RegInit(0.U(8.W))
@@ -350,6 +350,10 @@ class CheckUnit(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int
 
 	/* Replace */
 	val replaceWay = WireInit(0.U)
+	val ra 				= Module(new Replacement_Algorithm(way, numOfCache/way, log2Up(way), policy))
+	ra.io.update_entry	:= (!hitWire) & feq2CheckHandReg
+	ra.io.update_index	:= hitWay
+	replaceWay			:= ra.io.replaceWay(indexWire)
 	/* ReplaceEnd */
 
 	/* AXI */
@@ -650,7 +654,7 @@ class Replacement_Algorithm(way: Int, sets: Int, indexWidth: Int, policy: Replac
 	val io = IO(new Bundle {
 		val update_entry	= Input(Bool())
 		val update_index	= Input(UInt(indexWidth.W))
-		val way_index		= Output(UInt(indexWidth.W))
+		val replaceWay		= Output(Vec(sets, UInt(indexWidth.W)))
 	})
 
 	val wayArray = Wire(Vec(sets, UInt(indexWidth.W)))
@@ -662,5 +666,5 @@ class Replacement_Algorithm(way: Int, sets: Int, indexWidth: Int, policy: Replac
 		wayArray(i) := uints(i).io.index
 	}
 
-	io.way_index := wayArray(io.update_index)
+	io.replaceWay := wayArray
 }
