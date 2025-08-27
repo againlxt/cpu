@@ -123,13 +123,12 @@ class CheckUnit(numOfCache: Int, sizeOfCache: Int, m: Int, n: Int, burstLen: Int
 	))
 
 	/* Replace */
-	val replaceWay = WireInit(0.U)
 	val ra 				= Module(new Replacement_Algorithm(way, numOfCache/way, policy))
 	ra.io.hit			:= (hitWire & feq2CheckHandReg)
 	ra.io.hitway		:= hitWay
 	ra.io.replaceEn		:= (state === s_load)
 	ra.io.index			:= indexWire
-	replaceWay			:= ra.io.replaceWay(indexWire)
+	val replaceWay		= ra.io.replaceWay(indexWire)
 	/* ReplaceEnd */
 
 	/* AXI */
@@ -319,38 +318,50 @@ class PreDecoder extends Module {
 }
 
 class LRUBitScheme(way: Int) extends Module {
-	val io = IO(new Bundle {
-		val replaceEn 		= Input(Bool())
-		val hitWay 			= Input(UInt((log2Up(way).W)))
-		val hit 			= Input(Bool())
-		val lru_index		= Output(UInt(log2Up(way).W))
-	})
+    require(way > 0, "Number of ways must be positive")
+    
+    val io = IO(new Bundle {
+        val replaceEn    = Input(Bool())
+        val hitWay       = Input(UInt(log2Up(way).W))
+        val hit          = Input(Bool())
+        val lru_index    = Output(UInt(log2Up(way).W))
+    })
 
-	// 优先矩阵寄存器
-	val matrix = RegInit(VecInit(Seq.fill(way)(VecInit(Seq.fill(way)(0.U(1.W))))))
+    // 优先矩阵寄存器 - 初始化全0
+    val matrix = RegInit(VecInit(Seq.fill(way)(VecInit(Seq.fill(way)(false.B)))))
 
-	// 矩阵更新逻辑
-	for (i <- 0 until way) {
-		when((io.hit | io.replaceEn) & (io.hitWay === i.asUInt)) {
-			// 更新访问行
-			for (j <- 0 until way) {
-				matrix(i)(j) := 1.U
-				matrix(j)(i) := 0.U
-			}
-		}
-	}
+    // 正确的矩阵更新逻辑
+    when(io.hit || io.replaceEn) {
+        val hitWayIdx = io.hitWay
+        
+        // 更新被访问way的行和列
+        for (i <- 0 until way) {
+            // 设置被访问way的行：所有位设为1（表示它比所有其他way都新）
+            when(i.U === hitWayIdx) {
+                for (j <- 0 until way) {
+                    matrix(i)(j) := (j.U =/= hitWayIdx) // 对角线保持0
+                }
+            }.otherwise {
+                // 设置其他way的对应列：设为0（表示它们比被访问way旧）
+                matrix(i)(hitWayIdx) := false.B
+                // 设置被访问way的对应列：设为1
+                matrix(hitWayIdx)(i) := true.B
+            }
+        }
+    }
 
-	// 查找 LRU
-	val lruIndexNext = Wire(UInt(log2Up(way).W))
-	lruIndexNext := 0.U
-	for (i <- 0 until way) {
-		when(matrix(i).reduce(_&_) === 0.U) {
-			lruIndexNext := i.U
-		}
-	}
+    // 正确的LRU查找：找到全0的行（最久未使用）
+    val lruCandidates = Wire(Vec(way, Bool()))
+    for (i <- 0 until way) {
+        // 检查第i行是否全为0（除了对角线）
+        val isAllZero = (0 until way).map(j => 
+            if (i == j) true.B else !matrix(i)(j)
+        ).reduce(_ && _)
+        lruCandidates(i) := isAllZero
+    }
 
-	// 输出 LRU
-	io.lru_index := lruIndexNext
+    // 优先级编码器选择LRU
+    io.lru_index := PriorityEncoder(lruCandidates)
 }
 
 class FIFO(way: Int) extends Module {
