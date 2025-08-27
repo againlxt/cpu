@@ -23,10 +23,6 @@ object Config {
     def depthOfTable: Int = 8
     def offsetWidth:  Int = 2
     def tagWidth:     Int = 10
-<<<<<<< HEAD
-    def way:          Int = 4
-=======
     def way:          Int = 1
->>>>>>> pipeline
   }
 }
