@@ -27,7 +27,6 @@ class top extends Module {
 	val io = IO(new Bundle {
 		val interrupt 	= Input(UInt(1.W))
 		val master 	= if (Config.SoC) Some(new AXI) else None
-		//val slave 	= if (Config.SoC) Some(Flipped(new AXI)) else None
 		val slave 	= Flipped(new AXI)
 	})
 	val ifu 			= Module(new IFU)
