@@ -19,6 +19,7 @@ import java.awt.MouseInfo
 import _root_.basemode.AXIAccessFault
 import dpic.PerformanceCounter
 import dpic.PerformanceCounterType
+import java.awt.event.MouseMotionAdapter
 object Main extends App {
 	emitVerilog(new top, Array("--emit-modules", "verilog", "--target-dir", "generated"))
 }
@@ -53,6 +54,9 @@ class top extends Module {
 	val state = RegNext(nextState, s_flow)
 	val branchFlush 	= WireInit(0.B)
 	val flushWire 		= branchFlush | wbu.io.flush
+	val flushReg 		= RegNext(flushWire)
+	val flush2IcacheReg = RegNext(flushWire)
+	val correctPCReg 	= RegInit(0.U(32.W))
 	val flushEndWire 	= exu.io.idu2EXU.ready & exu.io.idu2EXU.valid
 	/* Bypass */
 	val bypassRd 		= Wire(Vec(3, UInt(4.W)))
@@ -129,15 +133,23 @@ class top extends Module {
 		s_flush	-> Mux(flushEndWire, s_flow, s_flush)
 	))	
 	pipelineConnect(ifu.io.inst, idu.io.inst)
-	pipelineConnect(idu.io.idu2EXU, exu.io.idu2EXU)
+	val skidBuffer 	= Module(new PipeLineBuffer(new IDU2EXU))
+	idu.io.idu2EXU 		<> skidBuffer.io.enq
+	skidBuffer.io.flush	:= flushWire
+	pipelineConnect(skidBuffer.io.deq, exu.io.idu2EXU)
 	pipelineConnect(exu.io.exu2LSU, lsu.io.exu2LSU)
 	pipelineConnect(lsu.io.lsu2WBU, wbu.io.lsu2WBU)
-	icache.io.flush			:= flushWire
-	ifu.io.flush 			:= flushWire
-	ifu.io.correctPC 		:= Mux(wbu.io.flush, wbu.io.correctPC, Mux(exu.io.flush, nextPC, 0.U))
+	icache.io.flush			:= flush2IcacheReg
+	ifu.io.flush 			:= flushReg
+	when(wbu.io.flush) {
+		correctPCReg := wbu.io.correctPC
+	} .elsewhen(branchFlush) {
+		correctPCReg := nextPC
+	}
+	ifu.io.correctPC 		:= correctPCReg
 	ifu.io.fromPC			:= fromPCReg
 	idu.io.isRAW 			:= (isRAW & ((state === s_flow) | (state === s_raw)))
-	idu.io.flush 			:= flushWire
+	idu.io.flush 			:= flushReg
 	idu.io.iduBypass.rd		:= bypassRd
 	idu.io.iduBypass.data 	:= bypassData
 	idu.io.iduBypass.regWR	:= bypassRegWR

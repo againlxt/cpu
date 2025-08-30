@@ -780,3 +780,30 @@ class AXISkidBuffer(val AW: Boolean, val W: Boolean, val B: Boolean, val AR: Boo
     }
 
 }
+
+class PipeLineBuffer[T <: Data](gen: T) extends Module {
+  val io = IO(new Bundle {
+    val enq   = Flipped(Decoupled(gen))
+    val deq   = Decoupled(gen)
+    val flush = Input(Bool())
+  })
+
+  val buffer    = Reg(gen)
+  val readyReg  = RegInit(1.B)
+  val bufValid  = !io.enq.ready
+
+  when(io.enq.ready) {
+    buffer := io.enq.bits
+  }
+  when(io.flush) {
+    readyReg := 1.B
+  } .elsewhen(io.deq.ready) {
+    readyReg := 1.B
+  } .elsewhen(io.enq.valid) {
+    readyReg := 0.B
+  }
+
+  io.enq.ready  := readyReg
+  io.deq.bits   := Mux(io.enq.ready, io.enq.bits, buffer)
+  io.deq.valid  := Mux(io.enq.ready, io.enq.valid, bufValid)
+}
